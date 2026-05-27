@@ -1,0 +1,32 @@
+{
+  "app": { "title": "insa-IT", "subtitle": "HR Management" },
+  "login": {
+    "title": "Sign in",
+    "loginId": "Employee ID",
+    "password": "Password",
+    "companyCd": "Company code",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "failed": "Sign-in failed",
+    "required": "Required"
+  },
+  "nav": {
+    "logout": "Sign out",
+    "admin": "System",
+    "service": "Services",
+    "entity": "Entities",
+    "message": "Messages",
+    "sql": "SQL",
+    "object": "Objects"
+  },
+  "common": {
+    "search": "Search",
+    "save": "Save",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "loading": "Loading...",
+    "empty": "No data",
+    "totalRows": "Total: {n}"
+  }
+}

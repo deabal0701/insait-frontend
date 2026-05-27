@@ -1,0 +1,15 @@
+/* ★ (2026-05-27, dspark): design-system v2 의 토큰을 그대로 재사용.
+ * 절대 경로 import 로 SSOT 유지. design-system 변경 시 자동 추종.
+ * Tailwind v4 @theme 디렉티브는 design-system v2 styles/index.css 안에 이미 정의됨. */
+@import '../../../../design-system/v2/src/styles/index.css';
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  font-family: var(--in-font-family-body, 'Pretendard Variable', system-ui, sans-serif);
+  color: var(--in-text-default, #565656);
+  background: var(--in-bg-default, #fbfbfb);
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
