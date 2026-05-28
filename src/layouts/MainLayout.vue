@@ -7,7 +7,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { useThemeStore } from '@/stores/theme';
 import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
@@ -16,14 +15,11 @@ import InLNB from '@/components/ui/InLNB.vue';
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
-const themeStore = useThemeStore();
 const { logout } = useAuth();
 
 function onUserCommand(cmd) {
   if (cmd === 'settings') {
     router.push({ name: 'SETTINGS' });
-  } else if (cmd === 'theme-white' || cmd === 'theme-green') {
-    themeStore.setTheme(cmd.replace('theme-', ''));
   } else if (cmd === 'logout') {
     logout();
   }
@@ -392,25 +388,7 @@ const currentTitle = computed(() => route.meta?.title || '');
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item disabled>
-                <span class="dd-label">테마 색상</span>
-              </el-dropdown-item>
-              <el-dropdown-item
-                command="theme-white"
-                :class="{ 'is-current-theme': themeStore.theme === 'white' }"
-              >
-                <span class="dd-swatch dd-swatch--white" />
-                화이트 (기본){{ themeStore.theme === 'white' ? ' ✓' : '' }}
-              </el-dropdown-item>
-              <el-dropdown-item
-                command="theme-green"
-                divided
-                :class="{ 'is-current-theme': themeStore.theme === 'green' }"
-              >
-                <span class="dd-swatch dd-swatch--green" />
-                그린{{ themeStore.theme === 'green' ? ' ✓' : '' }}
-              </el-dropdown-item>
-              <el-dropdown-item command="settings" divided>환경 설정</el-dropdown-item>
+              <el-dropdown-item command="settings">환경 설정</el-dropdown-item>
               <el-dropdown-item command="logout" divided>로그아웃</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -539,25 +517,6 @@ const currentTitle = computed(() => route.meta?.title || '');
 .main-layout__user-caret {
   color: var(--in-text-subtle, #888);
   font-size: 10px;
-}
-:global(.dd-swatch) {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  margin-right: 8px;
-  border-radius: 50%;
-  vertical-align: middle;
-}
-:global(.dd-swatch--white) { background: linear-gradient(135deg, #13a9e9, #0488c7); }
-:global(.dd-swatch--green) { background: linear-gradient(135deg, #1cac6f, #06683e); }
-:global(.dd-label) {
-  font-size: 11px;
-  color: var(--in-text-subtle);
-  font-weight: 500;
-}
-:global(.is-current-theme) {
-  color: var(--in-text-brand) !important;
-  font-weight: 500;
 }
 .main-layout__content {
   flex: 1 1 auto;

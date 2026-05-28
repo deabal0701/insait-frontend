@@ -31,10 +31,6 @@ async function ping() {
 <template>
   <div class="dashboard">
     <h2 class="dashboard__title">환영합니다, {{ auth.loginId || auth.empId }}</h2>
-    <p class="dashboard__hint">
-      백엔드 alpha 8090 (JWT 평문 envelope 모드) 와 통신 검증용 임시 화면입니다.
-      정식 dashboard 는 P3 Step 12 에서 작성됩니다.
-    </p>
 
     <el-card shadow="never" class="dashboard__card">
       <template #header>
@@ -57,9 +53,8 @@ async function ping() {
 </template>
 
 <style scoped>
-.dashboard { max-width: 960px; }
-.dashboard__title { margin: 0 0 4px; font-size: 18px; font-weight: 500; color: var(--in-text-accent, #010101); }
-.dashboard__hint { margin: 0 0 16px; font-size: 12px; color: var(--in-text-subtle, #888); }
+.dashboard { width: 100%; }
+.dashboard__title { margin: 0 0 16px; font-size: 18px; font-weight: 500; color: var(--in-text-accent, #010101); }
 .dashboard__card { background: var(--in-bg-white, #fff); }
 .dashboard__card-header { display: flex; justify-content: space-between; align-items: center; }
 .dashboard__pre {
