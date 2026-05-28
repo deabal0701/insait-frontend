@@ -70,7 +70,10 @@ const activeItem = computed(() =>
   props.items.find((it) => it.key === props.activeKey),
 );
 
-const showPanel = computed(() => !!activeItem.value?.submenu?.length);
+// ★ (2026-05-27, dspark): submenu 가 빈 배열 [] 이어도 panel + 1depth-Title 박스 표시.
+//   "메뉴 미정" 상태 (예: 스마트 플레이스) 에서도 panel 헤더만 보이게 하는 의도.
+//   정확한 메뉴가 정해지면 submenu 에 children 채워 자동 활성.
+const showPanel = computed(() => Array.isArray(activeItem.value?.submenu));
 
 const totalWidth = computed(() => (showPanel.value ? 110 + 182 + 16 : 110 + 16));
 

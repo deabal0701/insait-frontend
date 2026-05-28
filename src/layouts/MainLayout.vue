@@ -34,7 +34,6 @@ function onUserCommand(cmd) {
 //   그 외 카테고리는 click 시 '준비 중' 토스트).
 const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false });
 const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
-const placeExpanded = ref({ shortcut: true, recent: false });
 const operationExpanded = ref({ attendance: true, leave: false, dispatch: false, order: false });
 const performanceExpanded = ref({ eval: true, meeting: false, config: false });
 const compensationExpanded = ref({ pay: true, bonus: false, deduction: false });
@@ -107,21 +106,10 @@ function onFixedClickItem(item) {
 const items = computed(() => {
   const current = route.name;
   return [
-    {
-      key: 'place', label: '스마트 플레이스', icon: 'lnb-search',
-      submenu: [
-        {
-          key: 'shortcut', label: '바로가기',
-          expanded: placeExpanded.value.shortcut,
-          children: [
-            { key: 'place-dashboard', label: '대시보드' },
-            { key: 'place-todo', label: '오늘 할 일' },
-            { key: 'place-news', label: '공지사항' },
-          ],
-        },
-        { key: 'recent', label: '최근 메뉴', expanded: placeExpanded.value.recent },
-      ],
-    },
+    // ★ (2026-05-27, dspark): 스마트 플레이스 — submenu 미정 (Figma 진본·AS-IS 카탈로그에
+    //   구체 메뉴 부재). submenu: [] 로 두면 panel 의 1depth-Title 상단 박스만 보이고
+    //   2depth/3depth 메뉴는 비어 있음. 추후 정확한 메뉴 확정 시 children 채울 것.
+    { key: 'place', label: '스마트 플레이스', icon: 'lnb-search', submenu: [] },
     {
       key: 'planning',
       label: '인사기획',
@@ -329,7 +317,6 @@ function onClick1depth(item) {
 
 // 카테고리(1depth key) → 해당 expanded ref 매핑
 const EXPANDED_REFS = {
-  place: placeExpanded,
   planning: planningExpanded,
   operation: operationExpanded,
   performance: performanceExpanded,
