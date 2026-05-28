@@ -1,8 +1,9 @@
 // ★ (2026-05-27, dspark): axios instance + interceptor. 가이드 03_axios-interceptor.md §3 정합.
 //   JWT Bearer 자동 부착 / 401 refresh + 동시 401 race 큐 / envelope HEADER.resultType 분기.
+//   ★ 2026-05-27: services/http.js 로 이동 (이전 lib/axios.js). Vue 3 시장 표준 정합.
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
-import { isSuccess, getResultMessage } from '@/lib/envelope';
+import { isSuccess, getResultMessage } from '@/services/envelope';
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '', // 비어 있으면 vite proxy 사용

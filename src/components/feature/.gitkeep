@@ -1,0 +1,3 @@
+# 도메인별 재사용 컴포넌트 자리. 진입 시 admin/ phm/ pay/ … 디렉토리 신설.
+# 예: feature/common/InEmployeePicker.vue (사원 검색 모달, 모든 도메인 공통)
+#     feature/admin/InMetaTree.vue (메타 트리)

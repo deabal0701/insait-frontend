@@ -1,0 +1,2 @@
+# 로컬 폰트 자리. 현재 design-system v2 가 Pretendard Variable CDN 사용 중 (styles/index.css)
+# 이라 거의 비어 있음. 오프라인 배포 등 필요 시 Pretendard 파일을 본 디렉토리에 추가 + CDN 대체.

@@ -1,6 +1,7 @@
 // ★ (2026-05-27, dspark): envelope 표준 조립·해체. 가이드 03_axios-interceptor.md §4 정합.
 //   HEADER 7 키 + BODY 메시지 슬롯 + ENC_KEYS 9개 평문 송신 정책.
 //   JWT 평문 모드 (commit 9bf46242) 전제: HEADER.sessionId = "" marker.
+//   ★ 2026-05-27: services/envelope.js 로 이동 (이전 lib/envelope.js). Vue 3 시장 표준 정합.
 
 import { useAuthStore } from '@/stores/auth';
 

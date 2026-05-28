@@ -3,8 +3,8 @@
 //   - loading / error / data 상태 자동 관리
 //   - 컴포넌트는 axios·envelope 직접 호출 금지 — 본 composable 단일 진입점
 import { ref } from 'vue';
-import http from '@/lib/axios';
-import { buildEnvelope } from '@/lib/envelope';
+import http from '@/services/http';
+import { buildEnvelope } from '@/services/envelope';
 
 export function useService() {
   const loading = ref(false);
