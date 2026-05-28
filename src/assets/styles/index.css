@@ -1,4 +1,15 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+/* ★ (2026-05-27, dspark): Pretendard Variable 로컬 호스팅 (운영·사내망 정합).
+ *   이전: CDN @import (jsdelivr) — 인터넷 의존, 사내망 환경 차단 가능
+ *   이후: src/assets/fonts/PretendardVariable.woff2 (v1.3.9, OFL 라이센스, ~2MB)
+ *   font-display: swap → FOIT 회피, 시스템 폰트 fallback 으로 즉시 텍스트 렌더링 */
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;          /* Variable font: 45 (Thin) ~ 920 (Black) */
+  font-style: normal;
+  font-display: swap;
+  src: url('../fonts/PretendardVariable.woff2') format('woff2-variations'),
+       url('../fonts/PretendardVariable.woff2') format('woff2');
+}
 
 @import './tokens.css';
 /* ★ Figma 자동 생성 토큰 — _generated-tokens.css. tokens.css 와 병행 (전자=수기, 후자=Figma SSOT)
