@@ -29,10 +29,20 @@ function onUserCommand(cmd) {
   }
 }
 
-// 설정 카테고리의 2depth 그룹 펼침 상태 (사용자 toggle 보존)
+// ★ (2026-05-27, dspark): 각 1depth 카테고리별 2depth 그룹 펼침 상태 (사용자 toggle 보존).
+//   Figma 진본 정합으로 모든 1depth 에 placeholder submenu 트리 (router 진입은 시스템관리만,
+//   그 외 카테고리는 click 시 '준비 중' 토스트).
 const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false });
-// 인사기획 카테고리의 2depth 그룹 펼침 상태 (디자인 시스템 default 정합)
 const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
+const placeExpanded = ref({ shortcut: true, recent: false });
+const operationExpanded = ref({ attendance: true, leave: false, dispatch: false, order: false });
+const performanceExpanded = ref({ eval: true, meeting: false, config: false });
+const compensationExpanded = ref({ pay: true, bonus: false, deduction: false });
+const approvalExpanded = ref({ line: true, doc: false, inbox: false, list: false });
+const analyticsExpanded = ref({ 'hr-data': true, 'recruit-data': false });
+const mailExpanded = ref({ box: true });
+const bookmarkExpanded = ref({ list: true });
+const bentoExpanded = ref({ all: true });
 
 // admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
 const ADMIN_PARENT = {
@@ -97,15 +107,28 @@ function onFixedClickItem(item) {
 const items = computed(() => {
   const current = route.name;
   return [
-    { key: 'place', label: '스마트 플레이스', icon: 'lnb-search' },
+    {
+      key: 'place', label: '스마트 플레이스', icon: 'lnb-search',
+      submenu: [
+        {
+          key: 'shortcut', label: '바로가기',
+          expanded: placeExpanded.value.shortcut,
+          children: [
+            { key: 'place-dashboard', label: '대시보드' },
+            { key: 'place-todo', label: '오늘 할 일' },
+            { key: 'place-news', label: '공지사항' },
+          ],
+        },
+        { key: 'recent', label: '최근 메뉴', expanded: placeExpanded.value.recent },
+      ],
+    },
     {
       key: 'planning',
       label: '인사기획',
       icon: 'lnb-people',
       submenu: [
         {
-          key: 'org',
-          label: '조직 관리',
+          key: 'org', label: '조직 관리',
           expanded: planningExpanded.value.org,
           children: [
             { key: 'org-info', label: '조직정보' },
@@ -119,14 +142,135 @@ const items = computed(() => {
         { key: 'recruit', label: '채용 관리', expanded: planningExpanded.value.recruit },
       ],
     },
-    { key: 'operation',    label: '인사운영',   icon: 'lnb-demography' },
-    { key: 'performance',  label: '성과관리',   icon: 'lnb-analytics' },
-    { key: 'compensation', label: '보상관리',   icon: 'lnb-cases' },
-    { key: 'approval',     label: '결재관리',   icon: 'lnb-inventory' },
-    { key: 'analytics',    label: '시각화',     icon: 'lnb-finance' },
-    { key: 'mail',         label: '메일',       icon: 'lnb-mail', notificationDot: true },
-    { key: 'bookmark',     label: '즐겨찾기',   icon: 'lnb-bookmark-add' },
-    { key: 'bento',        label: '전체보기',   icon: 'lnb-bento' },
+    {
+      key: 'operation', label: '인사운영', icon: 'lnb-demography',
+      submenu: [
+        {
+          key: 'attendance', label: '근태관리',
+          expanded: operationExpanded.value.attendance,
+          children: [
+            { key: 'attendance-daily', label: '일일근태' },
+            { key: 'attendance-monthly', label: '월간근태' },
+            { key: 'attendance-overtime', label: '연장근무' },
+          ],
+        },
+        { key: 'leave', label: '휴가관리', expanded: operationExpanded.value.leave },
+        { key: 'dispatch', label: '출장관리', expanded: operationExpanded.value.dispatch },
+        { key: 'order', label: '발령관리', expanded: operationExpanded.value.order },
+      ],
+    },
+    {
+      key: 'performance', label: '성과관리', icon: 'lnb-analytics',
+      submenu: [
+        {
+          key: 'eval', label: '성과 평가',
+          expanded: performanceExpanded.value.eval,
+          children: [
+            { key: 'eval-mine', label: '나의 평가' },
+            { key: 'eval-manage', label: '평가관리' },
+          ],
+        },
+        { key: 'meeting', label: '면담', expanded: performanceExpanded.value.meeting },
+        { key: 'config', label: '평가설정', expanded: performanceExpanded.value.config },
+      ],
+    },
+    {
+      key: 'compensation', label: '보상관리', icon: 'lnb-cases',
+      submenu: [
+        {
+          key: 'pay', label: '급여지급',
+          expanded: compensationExpanded.value.pay,
+          children: [
+            { key: 'pay-date',   label: '급여일자관리' },
+            { key: 'pay-target', label: '대상자현황' },
+            { key: 'pay-base',   label: '기초원장' },
+            { key: 'pay-retro',  label: '소급처리' },
+            { key: 'pay-close',  label: '기본계산마감' },
+            { key: 'pay-except', label: '예외사항관리' },
+            { key: 'pay-deduct', label: '공제내역' },
+            { key: 'pay-calc',   label: '급여계산' },
+          ],
+        },
+        { key: 'bonus',     label: '상여관리', expanded: compensationExpanded.value.bonus },
+        { key: 'deduction', label: '공제관리', expanded: compensationExpanded.value.deduction },
+      ],
+    },
+    {
+      key: 'approval', label: '결재관리', icon: 'lnb-inventory',
+      submenu: [
+        {
+          key: 'line', label: '결재선지정',
+          expanded: approvalExpanded.value.line,
+          children: [
+            { key: 'approval-personal', label: '개인결재선' },
+            { key: 'approval-delegate', label: '대리결재선' },
+            { key: 'approval-final',    label: '전결자지정' },
+          ],
+        },
+        { key: 'doc',   label: '결재문서', expanded: approvalExpanded.value.doc },
+        { key: 'inbox', label: '상신함',   expanded: approvalExpanded.value.inbox },
+        { key: 'list',  label: '결재함',   expanded: approvalExpanded.value.list },
+      ],
+    },
+    {
+      key: 'analytics', label: '시각화', icon: 'lnb-finance',
+      submenu: [
+        {
+          key: 'hr-data', label: '인사데이터',
+          expanded: analyticsExpanded.value['hr-data'],
+          children: [
+            { key: 'hr-headcount', label: '인력구성' },
+            { key: 'hr-turnover',  label: '이직률' },
+            { key: 'hr-age',       label: '연령및근속연수' },
+            { key: 'hr-position',  label: '직무별분포' },
+            { key: 'hr-diversity', label: '다양성지표' },
+          ],
+        },
+        { key: 'recruit-data', label: '채용데이터', expanded: analyticsExpanded.value['recruit-data'] },
+      ],
+    },
+    {
+      key: 'mail', label: '메일', icon: 'lnb-mail', notificationDot: true,
+      submenu: [
+        {
+          key: 'box', label: '메일함',
+          expanded: mailExpanded.value.box,
+          children: [
+            { key: 'mail-write',  label: '편지쓰기' },
+            { key: 'mail-inbox',  label: '받은편지함' },
+            { key: 'mail-sent',   label: '보낸편지함' },
+            { key: 'mail-draft',  label: '임시보관함' },
+            { key: 'mail-outbox', label: '보낼편지함' },
+            { key: 'mail-spam',   label: '스팸편지함' },
+            { key: 'mail-trash',  label: '휴지통' },
+          ],
+        },
+      ],
+    },
+    {
+      key: 'bookmark', label: '즐겨찾기', icon: 'lnb-bookmark-add',
+      submenu: [
+        {
+          key: 'list', label: '즐겨찾기 목록',
+          expanded: bookmarkExpanded.value.list,
+          children: [
+            { key: 'bookmark-empty', label: '(등록된 즐겨찾기 없음)' },
+          ],
+        },
+      ],
+    },
+    {
+      key: 'bento', label: '전체보기', icon: 'lnb-bento',
+      submenu: [
+        {
+          key: 'all', label: '전체 메뉴',
+          expanded: bentoExpanded.value.all,
+          children: [
+            { key: 'bento-all', label: '전체 메뉴 트리' },
+          ],
+        },
+      ],
+    },
     // ★ 시스템관리(설정) — 1depth 맨 하단 배치. 클릭 시 submenu 패널이 메타·권한·자료실 트리로 전환.
     {
       key: 'settings',
@@ -183,8 +327,24 @@ function onClick1depth(item) {
   }
 }
 
+// 카테고리(1depth key) → 해당 expanded ref 매핑
+const EXPANDED_REFS = {
+  place: placeExpanded,
+  planning: planningExpanded,
+  operation: operationExpanded,
+  performance: performanceExpanded,
+  compensation: compensationExpanded,
+  approval: approvalExpanded,
+  analytics: analyticsExpanded,
+  mail: mailExpanded,
+  bookmark: bookmarkExpanded,
+  bento: bentoExpanded,
+  settings: settingsExpanded,
+};
+
 function onClick2depth(parent, group) {
-  const targetState = parent.key === 'settings' ? settingsExpanded : planningExpanded;
+  const targetState = EXPANDED_REFS[parent.key];
+  if (!targetState) return;
   targetState.value = { ...targetState.value, [group.key]: !targetState.value[group.key] };
 }
 
