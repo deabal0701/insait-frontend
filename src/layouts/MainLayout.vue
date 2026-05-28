@@ -326,10 +326,12 @@ const currentTitle = computed(() => route.meta?.title || '');
   flex: 0 0 182px;
 }
 
-/* ★ (2026-05-27, dspark): InLNB(fixed) collapsed 시각 — Figma 진본 정합 정정.
- *   이전: rail/home/profile 모두 --in-text-default(#565656 회색) 으로 override 했음.
- *   진본 (사용자 제공 이미지) 은 rail 전체 brand. design-system InLNB default 그대로
- *   사용 (rail/home bg = --in-bg-brand). 별도 override 불필요. */
+/* ★ (2026-05-27, dspark): InLNB(fixed) collapsed — Figma 진본 정합.
+ *   rail/profile 은 brand (design-system default) / home cell 만 어두운 회색.
+ *   (InLNBSubmenu home 과 동일 패턴 — 종이비행기 로고 뒤 사각형은 항상 회색) */
+.main-layout__lnb--fixed :deep(.in-lnb__home) {
+  background: var(--in-text-default) !important;   /* #565656 회색 — Figma 진본 정합 (펼쳐짐의 home 과 동일) */
+}
 .main-layout__main {
   flex: 1 1 auto;
   display: flex;
