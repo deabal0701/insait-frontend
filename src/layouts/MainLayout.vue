@@ -302,10 +302,9 @@ const currentTitle = computed(() => route.meta?.title || '');
   flex: 0 0 50px;
   width: 50px;
 }
-.main-layout__lnb--open :deep(.in-lnb2__home) {
-  background: var(--in-bg-brand);   /* 회색 default → brand */
-  border-bottom: none;
-}
+/* ★ (2026-05-27, dspark): .in-lnb2__home 는 design-system default (--in-text-default
+ *   #565656 회색 + 옅은 blue border-bottom) 그대로 유지. Figma 진본에서 home cell 만
+ *   어두운 회색 사각형 (종이비행기 뒤). 이전 brand override 는 제거. */
 .main-layout__lnb--open :deep(.in-lnb2__cats) {
   padding: 5px 0 10px 0;
   align-items: center;
@@ -327,12 +326,10 @@ const currentTitle = computed(() => route.meta?.title || '');
   flex: 0 0 182px;
 }
 
-/* ★ InLNB(fixed) collapsed rail bg 회색 정합 — 동일 패턴 (root + :deep 분리). */
-.main-layout__lnb--fixed :deep(.in-lnb__rail),
-.main-layout__lnb--fixed :deep(.in-lnb__home),
-.main-layout__lnb--fixed :deep(.in-lnb__profile) {
-  background: var(--in-text-default);
-}
+/* ★ (2026-05-27, dspark): InLNB(fixed) collapsed 시각 — Figma 진본 정합 정정.
+ *   이전: rail/home/profile 모두 --in-text-default(#565656 회색) 으로 override 했음.
+ *   진본 (사용자 제공 이미지) 은 rail 전체 brand. design-system InLNB default 그대로
+ *   사용 (rail/home bg = --in-bg-brand). 별도 override 불필요. */
 .main-layout__main {
   flex: 1 1 auto;
   display: flex;
