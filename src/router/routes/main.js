@@ -15,6 +15,14 @@ const routes = [
         meta: { requiresAuth: true, title: '대시보드' },
       },
       ...adminRoutes,
+      // ★ (2026-05-28, dspark): dev playground — LNB 노출 X, URL /dev/grid 직접 진입.
+      //   InDataTable + tui-grid 시연. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
+      {
+        path: 'dev/grid',
+        name: 'DevGridPlayground',
+        component: () => import('@/pages/dev/GridPlayground.vue'),
+        meta: { requiresAuth: true, title: 'Grid Playground (dev)' },
+      },
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
   },

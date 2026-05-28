@@ -1,6 +1,8 @@
 // ★ (2026-05-27, dspark): tui-grid Vue 통합 composable — 가이드 05_composables §5 정합.
 //   인스턴스 라이프사이클 (마운트·destroy) + 컬럼/데이터 바인딩 + dirty rows 추출.
 //   P2 Step 9 진입 시 본격 사용. 현재 골격.
+// ★ (2026-05-28, dspark): 일반 사용처는 InDataTable.vue 권장. useGrid 는 컴포넌트 외부에서
+//   직접 그리드 조작이 필요한 고급 case 용 helper. 명칭 매핑 layer 없음 (tui-grid native API).
 import { ref, onBeforeUnmount, shallowRef } from 'vue';
 import { loadGrid } from '@/plugins/tui-grid';
 

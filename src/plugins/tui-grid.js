@@ -6,6 +6,9 @@
 //   plugins/ 가 시장 표준 (vben-admin / pure-admin 정합).
 //
 // 사용: const Grid = await loadGrid();  →  new Grid({ el, columns, data, ... })
+// ★ (2026-05-28, dspark): tui-grid 기본 CSS 1회 진입점. side-effect import.
+import 'tui-grid/dist/tui-grid.css';
+
 let _Grid = null;
 let _initialized = false;
 
