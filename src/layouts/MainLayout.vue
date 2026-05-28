@@ -7,18 +7,30 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useThemeStore } from '@/stores/theme';
 import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
-import InLNBSubmenu from '@ds/components/ui/InLNBSubmenu.vue';
-import InLNB from '@ds/components/ui/InLNB.vue';
+import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
+import InLNB from '@/components/ui/InLNB.vue';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const themeStore = useThemeStore();
 const { logout } = useAuth();
 
+function onUserCommand(cmd) {
+  if (cmd === 'settings') {
+    router.push({ name: 'SETTINGS' });
+  } else if (cmd === 'theme-white' || cmd === 'theme-green') {
+    themeStore.setTheme(cmd.replace('theme-', ''));
+  } else if (cmd === 'logout') {
+    logout();
+  }
+}
+
 // 설정 카테고리의 2depth 그룹 펼침 상태 (사용자 toggle 보존)
-const settingsExpanded = ref({ meta: true, auth: false, pds: false });
+const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false });
 // 인사기획 카테고리의 2depth 그룹 펼침 상태 (디자인 시스템 default 정합)
 const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
 
@@ -27,6 +39,7 @@ const ADMIN_PARENT = {
   CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
   AUT0030: 'auth', AUT0040: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
+  SETTINGS: 'env',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -150,6 +163,14 @@ const items = computed(() => {
             { key: 'FRM0090', label: '파일자료실', active: current === 'FRM0090' },
           ],
         },
+        {
+          key: 'env',
+          label: '환경설정',
+          expanded: settingsExpanded.value.env,
+          children: [
+            { key: 'SETTINGS', label: '테마·환경', active: current === 'SETTINGS' },
+          ],
+        },
       ],
     },
   ];
@@ -216,10 +237,37 @@ const currentTitle = computed(() => route.meta?.title || '');
     <div class="main-layout__main">
       <header class="main-layout__header">
         <div class="main-layout__crumb">{{ currentTitle }}</div>
-        <div class="main-layout__user">
-          <span class="main-layout__user-name">{{ displayName }}</span>
-          <el-button size="small" link @click="logout">로그아웃</el-button>
-        </div>
+        <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
+          <span class="main-layout__user">
+            <span class="main-layout__user-avatar">{{ (displayName[0] || '?').toUpperCase() }}</span>
+            <span class="main-layout__user-name">{{ displayName }}</span>
+            <el-icon class="main-layout__user-caret"><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled>
+                <span class="dd-label">테마 색상</span>
+              </el-dropdown-item>
+              <el-dropdown-item
+                command="theme-white"
+                :class="{ 'is-current-theme': themeStore.theme === 'white' }"
+              >
+                <span class="dd-swatch dd-swatch--white" />
+                화이트 (기본){{ themeStore.theme === 'white' ? ' ✓' : '' }}
+              </el-dropdown-item>
+              <el-dropdown-item
+                command="theme-green"
+                divided
+                :class="{ 'is-current-theme': themeStore.theme === 'green' }"
+              >
+                <span class="dd-swatch dd-swatch--green" />
+                그린{{ themeStore.theme === 'green' ? ' ✓' : '' }}
+              </el-dropdown-item>
+              <el-dropdown-item command="settings" divided>환경 설정</el-dropdown-item>
+              <el-dropdown-item command="logout" divided>로그아웃</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </header>
 
       <main class="main-layout__content">
@@ -239,23 +287,23 @@ const currentTitle = computed(() => route.meta?.title || '');
   flex: 0 0 auto;
 }
 
-/* ★ InLNBSubmenu rail 라벨 hiding + 50px icon-only 강제 (이미지 정합).
- * design-system v2 의 InLNBSubmenu 는 rail 110px (icon + 라벨) 이 default 이나
- * 본 layout 에서는 50px icon-only rail + 182 panel + 16 toggle = 248px 로 좁힘.
- * inline style 보다 우선순위 높이기 위해 !important. */
-.main-layout__lnb--open :deep(.in-lnb2) {
-  width: 248px !important;
-  min-width: 248px;
-  max-width: 248px;
+/* ★ (2026-05-27, dspark): InLNBSubmenu rail 라벨 hiding + 50px icon-only 강제.
+ * design-system v2 InLNBSubmenu 의 root <aside class="in-lnb2"> 가 본 부모 class
+ * (.main-layout__lnb--open) 와 같은 element 에 결합. 따라서 :deep(.in-lnb2) 자손
+ * selector 가 매칭 실패 → root width 는 .main-layout__lnb--open 으로 직접 override.
+ * 내부 element (__rail / __panel / __1dep* 등) 만 :deep() 으로 처리.
+ * inline style 의 width: 308px 를 이기려면 !important 필수. */
+.main-layout__lnb--open {
+  width: 248px !important;          /* rail 50 + panel 182 + toggle 16 */
+  min-width: 248px !important;
+  max-width: 248px !important;
 }
 .main-layout__lnb--open :deep(.in-lnb2__rail) {
-  width: 50px !important;
-  min-width: 50px;
-  max-width: 50px;
   flex: 0 0 50px;
+  width: 50px;
 }
 .main-layout__lnb--open :deep(.in-lnb2__home) {
-  background: var(--in-bg-brand);      /* 회색 default → brand (이미지 정합) */
+  background: var(--in-bg-brand);   /* 회색 default → brand */
   border-bottom: none;
 }
 .main-layout__lnb--open :deep(.in-lnb2__cats) {
@@ -264,13 +312,13 @@ const currentTitle = computed(() => route.meta?.title || '');
   width: 100%;
 }
 .main-layout__lnb--open :deep(.in-lnb2__1dep) {
-  width: 100% !important;
+  width: 100%;
   justify-content: center;
   gap: 0;
   padding: 0;
 }
 .main-layout__lnb--open :deep(.in-lnb2__1dep-label) {
-  display: none;                       /* 라벨 hiding — icon-only rail */
+  display: none;                    /* 라벨 hiding — icon-only rail */
 }
 .main-layout__lnb--open :deep(.in-lnb2__profile) {
   width: 100%;
@@ -279,15 +327,9 @@ const currentTitle = computed(() => route.meta?.title || '');
   flex: 0 0 182px;
 }
 
-/* ★ InLNB(fixed) collapsed 시각 정합 — 이미지의 회색 rail 정합.
- *   design-system 의 fixed rail bg = brand 인데 이미지는 회색 (text-default).
- *   home cell + rail 모두 회색 으로 override, active 1depth 만 brand 박스 유지. */
-.main-layout__lnb--fixed :deep(.in-lnb__rail) {
-  background: var(--in-text-default);
-}
-.main-layout__lnb--fixed :deep(.in-lnb__home) {
-  background: var(--in-text-default);
-}
+/* ★ InLNB(fixed) collapsed rail bg 회색 정합 — 동일 패턴 (root + :deep 분리). */
+.main-layout__lnb--fixed :deep(.in-lnb__rail),
+.main-layout__lnb--fixed :deep(.in-lnb__home),
 .main-layout__lnb--fixed :deep(.in-lnb__profile) {
   background: var(--in-text-default);
 }
@@ -296,12 +338,13 @@ const currentTitle = computed(() => route.meta?.title || '');
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--in-bg-white, #fff);   /* LNB panel(옅은 파랑) 과 시각 분리 */
 }
 .main-layout__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px 20px 12px 16px;        /* left 16 — LNB panel 우측에 바로 인접 */
   background: var(--in-bg-white, #fff);
   border-bottom: 1px solid var(--in-border-default, #e2e2e2);
 }
@@ -311,13 +354,65 @@ const currentTitle = computed(() => route.meta?.title || '');
   color: var(--in-text-accent, #010101);
 }
 .main-layout__user {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 4px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 13px;
   color: var(--in-text-default, #565656);
+  transition: background-color 120ms;
+  outline: none;
 }
-.main-layout__user-name { font-weight: 500; }
+.main-layout__user:hover,
+.main-layout__user:focus-visible {
+  background: var(--in-surface-state-default, #f5f5f5);
+}
+.main-layout__user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--in-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.main-layout__user-name {
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.main-layout__user-caret {
+  color: var(--in-text-subtle, #888);
+  font-size: 10px;
+}
+:global(.dd-swatch) {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+:global(.dd-swatch--white) { background: linear-gradient(135deg, #13a9e9, #0488c7); }
+:global(.dd-swatch--green) { background: linear-gradient(135deg, #1cac6f, #06683e); }
+:global(.dd-label) {
+  font-size: 11px;
+  color: var(--in-text-subtle);
+  font-weight: 500;
+}
+:global(.is-current-theme) {
+  color: var(--in-text-brand) !important;
+  font-weight: 500;
+}
 .main-layout__content {
   flex: 1 1 auto;
   padding: 20px;

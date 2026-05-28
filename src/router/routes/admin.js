@@ -6,6 +6,7 @@
 const VIEWS = {
   Placeholder:        () => import('@/pages/admin/Placeholder.vue'),
   CCD0020Placeholder: () => import('@/pages/admin/CCD0020Placeholder.vue'),
+  SettingsPage:       () => import('@/pages/admin/SettingsPage.vue'),
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
   // IST0050: () => import('@/pages/admin/IST0050.vue'),
@@ -22,6 +23,7 @@ const ADMIN_SCREENS = [
   { object: 'AUT0040', path: 'aut0040', menuId: '',         title: 'AUT0040 권한 관리',    view: 'Placeholder' },
   { object: 'AUT0050', path: 'aut0050', menuId: '',         title: 'AUT0050 메뉴 관리',    view: 'Placeholder' },
   { object: 'FRM0090', path: 'frm0090', menuId: 'SD_PDS',   title: 'FRM0090 파일자료실',   view: 'Placeholder' },
+  { object: 'SETTINGS', path: 'settings', menuId: '',       title: '환경 설정',            view: 'SettingsPage' },
 ];
 
 const routes = ADMIN_SCREENS.map((s) => ({

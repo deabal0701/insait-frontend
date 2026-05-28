@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="check-box">
+<rect id="square-1" x="0.5" y="0.5" width="15" height="15" rx="1.5" fill="var(--fill-0, #13A9E9)" stroke="var(--stroke-0, #13A9E9)"/>
+<path id="check" d="M6.63129 11.8128L3 8.18156L4.25698 6.92458L6.63129 9.29888L11.743 4.18715L13 5.44413L6.63129 11.8128Z" fill="var(--fill-0, white)"/>
+</g>
+</svg>

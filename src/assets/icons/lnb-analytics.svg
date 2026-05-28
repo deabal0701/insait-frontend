@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+  <g transform="translate(0.0000 0.0000) scale(1.777778)">
+    <g id="Vector">
+<path d="M12 0H1.5C0.675 0 0 0.675 0 1.5V12C0 12.825 0.675 13.5 1.5 13.5H12C12.825 13.5 13.5 12.825 13.5 12V1.5C13.5 0.675 12.825 0 12 0ZM12 12H1.5V1.5H12V12Z" fill="var(--fill-0, white)"/>
+<path d="M4.5 6.75H3V10.5H4.5V6.75Z" fill="var(--fill-0, white)"/>
+<path d="M10.5 3H9V10.5H10.5V3Z" fill="var(--fill-0, white)"/>
+<path d="M7.5 8.25H6V10.5H7.5V8.25Z" fill="var(--fill-0, white)"/>
+<path d="M7.5 5.25H6V6.75H7.5V5.25Z" fill="var(--fill-0, white)"/>
+</g>
+  </g>
+</svg>

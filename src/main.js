@@ -13,13 +13,12 @@ import 'element-plus/dist/index.css';
 import 'tui-grid/dist/tui-grid.css';
 import './styles/index.css';
 
-// ★ (2026-05-27, dspark): 녹색 테마 활성화 — design-system v2 의 [data-theme='green']
-//   셀렉터가 --in-brand semantic alias 를 green ramp 로 재바인딩.
-//   Element Plus / Tailwind / In* 컴포넌트 모두 자동 추종.
-document.documentElement.dataset.theme = 'green';
-
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
+
+// ★ (2026-05-27, dspark): theme store 의 persist 복원값을 DOM 에 반영. 시스템관리 > 환경 설정
+//   페이지에서 사용자가 white/green 전환 가능. main.js 의 hardcoded data-theme 은 제거.
+import { useThemeStore } from '@/stores/theme';
 
 const i18n = createI18n({
   legacy: false,
@@ -28,4 +27,9 @@ const i18n = createI18n({
   messages: { ko, en },
 });
 
-createApp(App).use(pinia).use(router).use(i18n).mount('#app');
+const app = createApp(App).use(pinia).use(router).use(i18n);
+
+// theme store 의 persist 복원값을 DOM 에 즉시 반영 (mount 직전 — FOUC 최소화)
+useThemeStore().applyCurrent();
+
+app.mount('#app');

@@ -1,0 +1,29 @@
+/* Base resets and global defaults for insait DS v2 */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--in-font-family-body);
+  font-size: var(--in-font-size-md);
+  line-height: var(--in-line-height-md);
+  color: var(--in-text-default);
+  background: var(--in-bg-default);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: var(--in-letter-spacing-md);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+}

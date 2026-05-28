@@ -5,8 +5,7 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@ds/*": ["../../design-system/v2/src/*"]
+      "@/*": ["src/*"]
     },
     "allowJs": true,
     "checkJs": false,

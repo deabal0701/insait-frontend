@@ -1,0 +1,123 @@
+/* === Light → Dark Token Override (W5 #5) === */
+/* 자동 생성됨. scripts/build-dark-tokens.mjs 재실행 필요. */
+/* Light → Dark 매핑 출처: tokens/dark-tokens.json (수기) */
+
+[data-theme="dark"] {
+  --in-bg-brand: #0ea1da;
+  --in-bg-white: #1a1a1a;
+  --in-bg-default: #0f0f0f;
+  --in-bg-accent-brand: #103a4a;
+  --in-bg-accent-bold: #103a4a99;
+  --in-bg-accent-subtler: #1a2630;
+  --in-bg-info-default: #103a4a4d;
+  --in-bg-info-disabled: #2a2a2a;
+  --in-bg-state-hover: #36c1e8;
+  --in-bg-state-active: #54d3f0;
+  --in-bg-state-disabled: #2a2a2a;
+  --in-surface-white: #1a1a1a;
+  --in-surface-accent-brand: #0e2530;
+  --in-surface-action-bolder: #36c1e8;
+  --in-surface-error: #e3313114;
+  --in-surface-warning: #ed6c0214;
+  --in-surface-success: #37ae3414;
+  --in-text-accent: #f5f5f5;
+  --in-text-default: #c4c4c4;
+  --in-text-subtle: #a0a0a0;
+  --in-text-subtler: #8a8a8a;
+  --in-text-white: #1a1a1a;
+  --in-text-brand: #36c1e8;
+  --in-text-state-hover: #54d3f0;
+  --in-text-state-active: #82d4f3;
+  --in-text-state-disabled: #666666;
+  --in-text-info-disabled: #8a8a8a;
+  --in-text-accent-red: #ff6b6b;
+  --in-text-error: #ff6b6b;
+  --in-text-warning: #ffa726;
+  --in-text-success: #66bb6a;
+  --in-border-default: #3a3a3a;
+  --in-border-bold: #525252;
+  --in-border-brand: #36c1e8;
+  --in-border-input-default: #6a6a6a;
+  --in-border-state-enabled: #525252;
+  --in-border-state-disabled: #3a3a3a99;
+  --in-border-error: #ff6b6b;
+  --in-border-warning: #ffa726;
+  --in-border-success: #66bb6a;
+  --in-icon-default: #a0a0a0;
+  --in-icon-subtle: #666666;
+  --in-icon-accent: #cccccc;
+  --in-icon-white: #1a1a1a;
+  --in-icon-brand: #36c1e8;
+  --in-icon-bold: #54d3f0;
+  --in-icon-state-hover: #54d3f0;
+  --in-icon-state-active: #82d4f3;
+  --in-icon-state-disabled: #525252;
+  --in-icon-info-error: #ff6b6b;
+  --in-icon-info-accent: #ffa726;
+  --in-blue-200: #36c1e8;
+  --in-blue-600: #82d4f3;
+  --in-shadow-color-layer1: #0000003d;
+  --in-shadow-color-1depon-drop: #1cb0ef;
+  --in-shadow-color-1depon-inner: #0e2530cc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"], :root:not([data-theme]) {
+    --in-bg-brand: #0ea1da;
+    --in-bg-white: #1a1a1a;
+    --in-bg-default: #0f0f0f;
+    --in-bg-accent-brand: #103a4a;
+    --in-bg-accent-bold: #103a4a99;
+    --in-bg-accent-subtler: #1a2630;
+    --in-bg-info-default: #103a4a4d;
+    --in-bg-info-disabled: #2a2a2a;
+    --in-bg-state-hover: #36c1e8;
+    --in-bg-state-active: #54d3f0;
+    --in-bg-state-disabled: #2a2a2a;
+    --in-surface-white: #1a1a1a;
+    --in-surface-accent-brand: #0e2530;
+    --in-surface-action-bolder: #36c1e8;
+    --in-surface-error: #e3313114;
+    --in-surface-warning: #ed6c0214;
+    --in-surface-success: #37ae3414;
+    --in-text-accent: #f5f5f5;
+    --in-text-default: #c4c4c4;
+    --in-text-subtle: #a0a0a0;
+    --in-text-subtler: #8a8a8a;
+    --in-text-white: #1a1a1a;
+    --in-text-brand: #36c1e8;
+    --in-text-state-hover: #54d3f0;
+    --in-text-state-active: #82d4f3;
+    --in-text-state-disabled: #666666;
+    --in-text-info-disabled: #8a8a8a;
+    --in-text-accent-red: #ff6b6b;
+    --in-text-error: #ff6b6b;
+    --in-text-warning: #ffa726;
+    --in-text-success: #66bb6a;
+    --in-border-default: #3a3a3a;
+    --in-border-bold: #525252;
+    --in-border-brand: #36c1e8;
+    --in-border-input-default: #6a6a6a;
+    --in-border-state-enabled: #525252;
+    --in-border-state-disabled: #3a3a3a99;
+    --in-border-error: #ff6b6b;
+    --in-border-warning: #ffa726;
+    --in-border-success: #66bb6a;
+    --in-icon-default: #a0a0a0;
+    --in-icon-subtle: #666666;
+    --in-icon-accent: #cccccc;
+    --in-icon-white: #1a1a1a;
+    --in-icon-brand: #36c1e8;
+    --in-icon-bold: #54d3f0;
+    --in-icon-state-hover: #54d3f0;
+    --in-icon-state-active: #82d4f3;
+    --in-icon-state-disabled: #525252;
+    --in-icon-info-error: #ff6b6b;
+    --in-icon-info-accent: #ffa726;
+    --in-blue-200: #36c1e8;
+    --in-blue-600: #82d4f3;
+    --in-shadow-color-layer1: #0000003d;
+    --in-shadow-color-1depon-drop: #1cb0ef;
+    --in-shadow-color-1depon-inner: #0e2530cc;
+  }
+}

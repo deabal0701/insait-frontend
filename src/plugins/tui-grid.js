@@ -26,7 +26,7 @@ export async function loadGrid() {
  *  본 wrapper 는 우리 frontend 의 단일 진입점. */
 async function applyDefaultTheme() {
   try {
-    const theme = await import('@ds/themes/tui-grid-figma');
+    const theme = await import('@/themes/tui-grid-figma');
     const preset = theme.default || theme.figmaTheme || theme;
     if (preset && _Grid?.applyTheme) {
       _Grid.applyTheme('default', preset);

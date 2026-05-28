@@ -12,7 +12,7 @@ const routes = [
         path: '',
         name: 'Dashboard',
         component: () => import('@/pages/DashboardPage.vue'),
-        meta: { requiresAuth: true, title: 'app.title' },
+        meta: { requiresAuth: true, title: '대시보드' },
       },
       ...adminRoutes,
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes

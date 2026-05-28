@@ -1,0 +1,5 @@
+<!-- Figma DS 1168:15860 (bg) — Background = Blue/600 (#0d9bdb)
+     CSS 토큰 매핑: --in-blue-600. SVG 가 <img> 로 로드되므로 fallback hex 가 실제 적용 색. -->
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle id="bg" cx="14" cy="14" r="14" fill="var(--in-blue-600, #0D9BDB)"/>
+</svg>

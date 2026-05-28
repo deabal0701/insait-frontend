@@ -1,0 +1,240 @@
+/*
+ * insait Design Tokens v2 — Single Source of Truth
+ *
+ * 추출 출처: Figma IDS 파일 `2JLLC4tRCQQLljUktjwGNM` (Import to insa-IT team, 2026-05-16)
+ * 검증: get_variable_defs(1152:21795 Button) 결과와 1:1 일치 확인
+ *
+ *  - Primitive 램프(--in-iblue-*, --in-green-*)는 항상 고정값
+ *  - Semantic alias(--in-brand, --in-text-*, --in-bg-* 등)는 테마에 따라 스위치
+ *  - 컴포넌트는 Semantic alias 만 참조 → 테마 전환 시 자동 적용
+ *  - v1 (`h5-saas-design-system/src/styles/tokens.css`) 의 값과 동일 (이미 Figma 정합)
+ */
+
+:root {
+  /* === Primitive: iblue ramp === */
+  --in-iblue-50:  #e1f5fc;
+  --in-iblue-100: #b3e5f8;
+  --in-iblue-200: #82d4f3;
+  --in-iblue-300: #53c3ee;
+  --in-iblue-400: #31b6ec;
+  --in-iblue-500: #13a9e9; /* Primary — Figma Background/Brand */
+  --in-iblue-600: #0d9bdb;
+  --in-iblue-700: #0488c7; /* Figma Background/State/Hover, Text/State/Hover */
+  --in-iblue-800: #0477b3;
+  --in-iblue-900: #005892; /* Figma Background/State/Active, Text/State/Active */
+
+  /* === Primitive: green ramp === */
+  --in-green-50:  #e4faf0;
+  --in-green-100: #bff3dd;
+  --in-green-200: #7fe3b8;
+  --in-green-300: #45d296;
+  --in-green-400: #22c07d;
+  --in-green-500: #1cac6f;
+  --in-green-600: #0a8953;
+  --in-green-700: #06683e;
+  --in-green-800: #043a23;
+  --in-green-900: #011c11;
+
+  /* === Semantic brand (default = blue theme) === */
+  --in-brand-50:  var(--in-iblue-50);
+  --in-brand-100: var(--in-iblue-100);
+  --in-brand-200: var(--in-iblue-200);
+  --in-brand-300: var(--in-iblue-300);
+  --in-brand-400: var(--in-iblue-400);
+  --in-brand-500: var(--in-iblue-500);
+  --in-brand-600: var(--in-iblue-600);
+  --in-brand-700: var(--in-iblue-700);
+  --in-brand-800: var(--in-iblue-800);
+  --in-brand-900: var(--in-iblue-900);
+
+  --in-brand:        var(--in-brand-500);
+  --in-brand-bolder: var(--in-brand-700);
+
+  /* === Text === */
+  --in-text-default:        #565656; /* Figma Text/Default */
+  --in-text-subtle:         #7c7c7c; /* Figma Icon/Default 와 동일 톤 */
+  --in-text-subtler:        #9e9e9e;
+  --in-text-accent:         #262626; /* Figma text/default 다크 */
+  --in-text-brand:          var(--in-brand);
+  --in-text-white:          #ffffff;
+  --in-text-error:          #e33131; /* Figma Text/Info/Error */
+  --in-text-warning:        #ed6c02; /* Figma Text/Info/Warning */
+  --in-text-success:        #37ae34; /* Figma Text/Info/Success */
+  --in-text-state-hover:    #0488c7;
+  --in-text-state-active:   #005892;
+  --in-text-state-disabled: #c4c4c4;
+  --in-text-info-disabled:  #bbbbbb;  /* Figma Text/Info/Disabled */
+
+  /* === Background / Surface === */
+  --in-bg-default:         #fbfbfb;
+  --in-bg-white:           #ffffff;
+  --in-bg-brand:           var(--in-brand);
+  --in-bg-accent-brand:    #e1f5fc99;  /* Figma Background/Accent/Bold */
+  --in-bg-accent-subtle:   #e8f1f4;
+  --in-bg-accent-subtler:  #e8f1f44d;  /* Figma Background/Accent/Subtler (subtle + 30% alpha) */
+  --in-bg-accent-subtle-alpha: #e8f1f466;  /* Figma Background/Accent/Subtle (alpha 66/40% — PageHeader 등) */
+  --in-bg-accent-subtlest: #00accc08;  /* Figma Background/Accent/Subtlest (cyan tint) */
+  --in-bg-info-default:    #e1f5fc4d;  /* Figma Background/Info/Default */
+  --in-bg-info-disabled:   #ececec;    /* Figma Background/Info/Disabled */
+  --in-bg-state-hover:     #0488c7;    /* Figma Background/State/Hover */
+  --in-bg-state-active:    #005892;    /* Figma Background/State/Active */
+  --in-bg-state-disabled:  #e7e7e7;
+  --in-surface-default:    #f5f5f5;
+  --in-surface-accent-brand: #f5fbff;
+  --in-surface-white:      #ffffff;
+  --in-surface-overlay:    #ffffff;
+  --in-surface-error:      #e3313114; /* Figma Surface/Error  (#e33131 + alpha 14) */
+  --in-surface-warning:    #ed6c0214; /* Figma Surface/Warning */
+  --in-surface-success:    #37ae3414; /* Figma Surface/Success */
+
+  /* === Border === */
+  --in-border-default:        #e2e2e2; /* Figma Border/Default */
+  --in-border-bold:           #b6b6b6; /* Figma Border/Bold */
+  --in-border-input:          #9e9e9e; /* Figma Border/Input/Default */
+  --in-border-brand:          var(--in-brand);
+  --in-border-state-enabled:  #b6b6b6;
+  --in-border-state-disabled: #d9d9d999;
+  --in-border-error:          #e33131; /* Figma Border/Error */
+  --in-border-warning:        #ed6c02; /* Figma Border/Warning */
+  --in-border-success:        #37ae34; /* Figma Border/Success */
+
+  /* === Icon === */
+  --in-icon-default:        #7c7c7c; /* Figma Icon/Default */
+  --in-icon-subtle:         #c4c4c4;
+  --in-icon-bold:           var(--in-brand-300);
+  --in-icon-brand:          var(--in-brand);
+  --in-icon-accent:         #666666;
+  --in-icon-white:          #ffffff;
+  --in-icon-state-hover:    #0488c7;
+  --in-icon-state-active:   #005892;
+  --in-icon-state-disabled: #c4c4c4;
+  --in-icon-info-accent:    #ffa830;
+  --in-icon-info-error:     #e33131;
+
+  /* === Spacing scale (4px base) === */
+  --in-space-0:   0;
+  --in-space-1:   4px;
+  --in-space-2:   8px;
+  --in-space-3:  12px;
+  --in-space-4:  16px;
+  --in-space-5:  20px;
+  --in-space-6:  24px;
+  --in-space-8:  32px;
+  --in-space-10: 40px;
+  --in-space-12: 48px;
+  --in-space-16: 64px;
+  --in-space-20: 80px;
+
+  /* === Z-index === */
+  --in-z-dropdown:     100;
+  --in-z-sticky:       200;
+  --in-z-drawer:       900;
+  --in-z-modal:       1000;
+  --in-z-popover:     1100;
+  --in-z-tooltip:     1200;
+  --in-z-toast:       1300;
+  --in-z-notification:1400;
+
+  /* === Animation === */
+  --in-duration-fast:     100ms;
+  --in-duration-base:     150ms;
+  --in-duration-slow:     250ms;
+  --in-easing-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --in-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --in-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* === Radius === */
+  --in-radius-xxs:  2px;
+  --in-radius-xs:   4px;  /* Figma Corner/xs */
+  --in-radius-sm:   8px;
+  --in-radius-md:  12px;
+  --in-radius-lg:  16px;
+  --in-radius-full: 9999px;
+
+  /* === Shadow === */
+  --in-shadow-elev-1: 1px 2px 4px 0 #d4b7b714;
+  --in-shadow-elev-3: 0 4px 10px 0 #00000014;
+  --in-shadow-1depon: 1px 4px 5px 0 #1cb0ef, inset 2px 2px 4px 0 #1c759b4d;
+
+  /* === Focus Ring (W6 #3 #6 표준화) ===
+   *   모든 인터랙티브 컴포넌트의 :focus-visible outline 토큰 단일 출처.
+   *   사용: outline: var(--in-focus-ring-style) var(--in-focus-ring-width) var(--in-focus-ring-color);
+   *         outline-offset: var(--in-focus-ring-offset);
+   */
+  --in-focus-ring-color:  var(--in-border-brand);
+  --in-focus-ring-width:  2px;
+  --in-focus-ring-style:  solid;
+  --in-focus-ring-offset: 2px;          /* 표준 (button/menu/checkbox 등) */
+  --in-focus-ring-offset-inset: -2px;   /* 내부 (tabs 의 border-bottom 영역 내부) */
+
+  /* === Typography (Figma Pretendard scale) === */
+  --in-font-family-body: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+
+  /* Body — Figma Font/Size/{xs,sm,md,lg,xl} (★ W6 #4 #1: xs 신설) */
+  --in-font-size-xs:    11px;  /* Figma Body/xs (Badge, micro caption) */
+  --in-font-size-sm:    12px;
+  --in-font-size-md:    13px;
+  --in-font-size-lg:    14px;
+  --in-font-size-xl:    15px;
+  --in-line-height-xs:  14px;  /* Figma Body/xs */
+  --in-line-height-sm:  19px;
+  --in-line-height-md:  20px;
+  --in-line-height-lg:  21px;
+  --in-line-height-xl:  22px;
+  --in-letter-spacing-xs: 0;
+  --in-letter-spacing-sm: 0;
+  --in-letter-spacing-md: -0.1px;
+  --in-letter-spacing-lg: -0.1px;
+  --in-letter-spacing-xl: -0.1px;
+
+  --in-font-weight-regular: 400;
+  --in-font-weight-medium:  500;
+
+  /* === Element Plus 변수 매핑 (semantic alias → 자동 테마 추종) === */
+  --el-color-primary:         var(--in-brand);
+  --el-color-primary-light-3: var(--in-brand-300);
+  --el-color-primary-light-5: var(--in-brand-200);
+  --el-color-primary-light-7: var(--in-brand-100);
+  --el-color-primary-light-8: var(--in-brand-100);
+  --el-color-primary-light-9: var(--in-brand-50);
+  --el-color-primary-dark-2:  var(--in-brand-700);
+
+  --el-color-danger:  var(--in-text-error);
+  --el-color-warning: var(--in-icon-info-accent);
+
+  --el-text-color-primary:     var(--in-text-accent);
+  --el-text-color-regular:     var(--in-text-default);
+  --el-text-color-secondary:   var(--in-text-subtle);
+  --el-text-color-placeholder: var(--in-text-subtler);
+
+  --el-border-color:         var(--in-border-default);
+  --el-border-color-light:   var(--in-border-default);
+  --el-border-color-lighter: var(--in-border-default);
+
+  --el-bg-color:      var(--in-bg-white);
+  --el-bg-color-page: var(--in-bg-default);
+
+  --el-fill-color-light: var(--in-surface-default);
+
+  --el-border-radius-base:  var(--in-radius-xs);
+  --el-border-radius-small: var(--in-radius-xxs);
+  --el-border-radius-round: var(--in-radius-sm);
+
+  --el-font-family:    var(--in-font-family-body);
+  --el-font-size-base: var(--in-font-size-md);
+}
+
+/* === Green theme override === */
+[data-theme='green'] {
+  --in-brand-50:  var(--in-green-50);
+  --in-brand-100: var(--in-green-100);
+  --in-brand-200: var(--in-green-200);
+  --in-brand-300: var(--in-green-300);
+  --in-brand-400: var(--in-green-400);
+  --in-brand-500: var(--in-green-500);
+  --in-brand-600: var(--in-green-600);
+  --in-brand-700: var(--in-green-700);
+  --in-brand-800: var(--in-green-800);
+  --in-brand-900: var(--in-green-900);
+  --in-shadow-1depon: 1px 4px 5px 0 #1cac6f, inset 2px 2px 4px 0 #06683e4d;
+}

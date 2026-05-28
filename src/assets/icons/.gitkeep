@@ -1,2 +1,2 @@
-# design-system v2 에 없는 추가 SVG 아이콘 (도메인 한정).
-# design-system 의 lnb-* / arrow-* / company-logo* 등은 @ds/assets/icons/ 사용.
+# SVG 아이콘 자산. design-system v2 에서 가져온 사본 60+ 종 + registry.ts ICON_REGISTRY 매핑.
+# 신규 아이콘 추가 시 design-system v2 에 먼저 추가 (Figma 정합) → 본 디렉토리로 복사 + registry 등록.

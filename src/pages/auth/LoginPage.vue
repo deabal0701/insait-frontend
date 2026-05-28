@@ -5,14 +5,14 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuth } from '@/composables/useAuth';
-import InCard from '@ds/components/ui/InCard.vue';
-import InCompanyLogo from '@ds/components/ui/InCompanyLogo.vue';
-import InTextField from '@ds/components/ui/InTextField.vue';
-import InPasswordField from '@ds/components/ui/InPasswordField.vue';
-import InButton from '@ds/components/ui/InButton.vue';
-import InCheckbox from '@ds/components/ui/InCheckbox.vue';
-import InToast from '@ds/components/ui/InToast.vue';
-import CardIdIcon from '@ds/assets/icons/card-id.svg';
+import InCard from '@/components/ui/InCard.vue';
+import InCompanyLogo from '@/components/ui/InCompanyLogo.vue';
+import InTextField from '@/components/ui/InTextField.vue';
+import InPasswordField from '@/components/ui/InPasswordField.vue';
+import InButton from '@/components/ui/InButton.vue';
+import InCheckbox from '@/components/ui/InCheckbox.vue';
+import InToast from '@/components/ui/InToast.vue';
+import CardIdIcon from '@/assets/icons/card-id.svg';
 
 const { t } = useI18n();
 const { login } = useAuth();
@@ -90,6 +90,8 @@ function reset() {
             <div class="login-field">
               <InTextField
                 v-model="userId"
+                label="아이디"
+                layout="vertical"
                 placeholder="아이디를 입력하세요"
                 :status="inputStatus"
                 :disabled="inputDisabled"
@@ -102,6 +104,8 @@ function reset() {
               <InPasswordField
                 v-model="password"
                 :visible="showPwd"
+                label="비밀번호"
+                layout="vertical"
                 input="비밀번호를 입력하세요"
                 :status="inputStatus"
                 :disabled="inputDisabled"
@@ -185,6 +189,13 @@ function reset() {
   width: 360px;
   max-width: 100%;
 }
+/* ★ (2026-05-27, dspark): 로그인 카드 테두리·shadow 강화 — Figma 진본 정합 + stage bg
+ *   (옅은 파랑 반투명) 위에서 시각 명확하게. InCard default 의 옅은 border (#e2e2e2)
+ *   + alpha 5% shadow 를 강화. */
+.login-card-wrap :deep(.in-card) {
+  border-color: var(--in-border-bold);              /* #b6b6b6 — 더 진한 회색 */
+  box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.08);     /* 좀 더 두드러진 shadow */
+}
 .login-card {
   display: flex;
   flex-direction: column;
@@ -210,7 +221,51 @@ function reset() {
   flex-direction: column;
   gap: 14px;
 }
-.login-field { display: flex; }
+/* ★ (2026-05-27, dspark): .login-field 가 flex container 면 자식 .in-tf 의 main-axis
+ *   width 가 content-based (198px) 가 되어 input 폭이 좁아짐. block + width 100% 강제. */
+.login-field { display: block; width: 100%; }
+.login-field :deep(.in-tf),
+.login-field :deep(.in-pf) { width: 100%; }
+.login-field :deep(.in-tf__control),
+.login-field :deep(.in-pf__control) { width: 100%; }
+.login-field :deep(.el-input) { width: 100%; }
+
+/* ★ (2026-05-27, dspark): 로그인 화면 한정 — InTextField / InPasswordField 의 default
+ *   밑줄형(border-bottom only + grey bg) 을 box style 로 override.
+ *   로그인 같은 1-shot 폼은 박스형이 시각 정합 더 자연 (사용자 요청). */
+.login-field :deep(.el-input__wrapper) {
+  background: var(--in-bg-white) !important;
+  border: 1px solid var(--in-border-input-default) !important;
+  border-radius: 6px;
+  height: 40px !important;
+  padding: 0 12px;
+  transition: border-color 120ms;
+}
+.login-field :deep(.el-input__wrapper:hover):not(:focus-within) {
+  border-color: var(--in-text-default) !important;
+}
+.login-field :deep(.el-input__wrapper:focus-within) {
+  border-color: var(--in-border-brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--in-brand) 18%, transparent) !important;
+}
+.login-field :deep(.in-tf--error .el-input__wrapper),
+.login-field :deep(.in-pf--error .el-input__wrapper) {
+  border-color: var(--in-border-error) !important;
+}
+
+/* ★ (2026-05-27, dspark): Chrome / Edge / Safari 의 password-manager autofill highlight
+ *   (옅은 노랑·파랑 배경) 제거. box-shadow inset 으로 wrapper bg 를 강제 덮고,
+ *   transition 을 9999s 로 늘려 autofill 의 색 전환을 사실상 영구 차단. */
+.login-field :deep(input:-webkit-autofill),
+.login-field :deep(input:-webkit-autofill:hover),
+.login-field :deep(input:-webkit-autofill:focus),
+.login-field :deep(input:-webkit-autofill:active) {
+  -webkit-box-shadow: 0 0 0 100px var(--in-bg-white) inset !important;
+  box-shadow: 0 0 0 100px var(--in-bg-white) inset !important;
+  -webkit-text-fill-color: var(--in-text-accent) !important;
+  caret-color: var(--in-text-accent);
+  transition: background-color 9999s ease-out, color 9999s ease-out;
+}
 .login-aux {
   display: flex;
   align-items: center;

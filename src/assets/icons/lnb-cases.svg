@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+  <g transform="translate(0.0000 0.5455) scale(1.454545)">
+    <g id="Vector">
+<path d="M1.5 6H0V14.25C0 15.0825 0.6675 15.75 1.5 15.75H14.25V14.25H1.5V6Z" fill="var(--fill-0, white)"/>
+<path d="M12.75 3V1.5C12.75 0.675 12.075 0 11.25 0H8.25C7.425 0 6.75 0.675 6.75 1.5V3H3V11.25C3 12.075 3.675 12.75 4.5 12.75H15C15.825 12.75 16.5 12.075 16.5 11.25V3H12.75ZM8.25 1.5H11.25V3H8.25V1.5ZM15 11.25H4.5V4.5H15V11.25Z" fill="var(--fill-0, white)"/>
+</g>
+  </g>
+</svg>

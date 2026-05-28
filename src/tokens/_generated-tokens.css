@@ -1,0 +1,146 @@
+/* === Figma → tokens.json → _generated-tokens.css === */
+/* 자동 생성됨. 직접 수정 금지. scripts/build-tokens.mjs 재실행 필요. */
+/* ★ (2026-05-27, dspark): 6 brand hex hardcode 를 var(--in-brand*) 참조로 교체하여
+ *   [data-theme='green'] 의 cascade 가 작동하도록 보강. Figma 자동 생성본은 blue
+ *   기준으로 fix 되어 있어 green 테마 적용 시 brand 토큰이 추종 안 됨.
+ *   변경 토큰: --in-bg-brand · --in-bg-accent-brand · --in-surface-accent-brand
+ *             · --in-text-brand · --in-border-brand · --in-icon-brand */
+:root {
+  /* background */
+  --in-bg-brand: var(--in-brand);
+  --in-bg-white: #ffffff;
+  --in-bg-default: #fbfbfb;
+  --in-bg-accent-brand: var(--in-brand-50);
+  --in-bg-accent-bold: #e1f5fc99;
+  --in-bg-accent-subtler: #e8f1f44d;
+  --in-bg-accent-subtle: #e8f1f466;
+  --in-bg-info-disabled: #f5f5f5;
+  --in-bg-info-default: #e1f5fc4d;
+  --in-bg-accent-subtlest: #00accc08;
+  --in-bg-state-hover: #0488c7;
+  --in-bg-state-active: #005892;
+  --in-bg-state-disabled: #e7e7e7;
+
+  /* surface */
+  --in-surface-white: #ffffff;
+  --in-surface-accent-brand: var(--in-brand-50);  /* ★ (2026-05-27, dspark): brand-50 alias */
+  --in-surface-action-bolder: #0488c7;
+  --in-surface-state-default: #f5f5f5;
+  --in-surface-state-disabled: #e7e7e7;
+  --in-surface-error: #e3313114;
+  --in-surface-warning: #ed6c0214;
+  --in-surface-success: #37ae3414;
+
+  /* text */
+  --in-text-accent: #010101;
+  --in-text-default: #565656;
+  --in-text-subtle: #7c7c7c;
+  --in-text-subtler: #9e9e9e;
+  --in-text-white: #ffffff;
+  --in-text-brand: var(--in-brand);
+  --in-text-state-hover: #0488c7;
+  --in-text-state-active: #005892;
+  --in-text-state-disabled: #9e9e9e;
+  --in-text-accent-red: #e33131;
+  --in-text-info-error: #e33131;
+  --in-text-info-warning: #ed6c02;
+  --in-text-info-success: #37ae34;
+  --in-text-info-disabled: #bbbbbb;
+
+  /* border */
+  --in-border-default: #e2e2e2;
+  --in-border-bold: #b6b6b6;
+  --in-border-brand: var(--in-brand);
+  --in-border-input-default: #9e9e9e;
+  --in-border-state-enabled: #b6b6b6;
+  --in-border-state-disabled: #d9d9d999;
+  --in-border-neutral: #d9d9d999;
+  --in-border-error: #e33131;
+  --in-border-warning: #ed6c02;
+  --in-border-success: #37ae34;
+
+  /* icon */
+  --in-icon-default: #7c7c7c;
+  --in-icon-subtle: #c4c4c4;
+  --in-icon-accent: #666666;
+  --in-icon-white: #ffffff;
+  --in-icon-brand: var(--in-brand);
+  --in-icon-bold: #53c3ee;
+  --in-icon-state-hover: #0488c7;
+  --in-icon-state-active: #005892;
+  --in-icon-state-disabled: #c4c4c4;
+  --in-icon-info-error: #e33131;
+  --in-icon-info-warning: #ed6c02;
+  --in-icon-info-success: #37ae34;
+  --in-icon-info-accent: #ffa830;
+  --in-icon-info-disabled: #bbbbbb;
+
+  /* blue */
+  --in-blue-200: #82d4f3;
+  --in-blue-600: #0d9bdb;
+
+  /* corner */
+  --in-radius-none: 0px;
+  --in-radius-xxs: 2px;
+  --in-radius-xs: 4px;
+  --in-radius-sm: 8px;
+  --in-radius-full: 9999px;
+
+  /* other */
+  --in-radius-m: 8px;
+
+  /* font-familly — ★ (2026-05-27, dspark): CDN 의 실제 family 명은 'Pretendard Variable'.
+     단일 'Pretendard' 로는 매칭 실패 → system fallback 발생. multi-fallback 으로 보강. */
+  --in-font-family-body: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Malgun Gothic', '맑은 고딕', Roboto, 'Helvetica Neue', sans-serif;
+  --in-font-family-heading: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Malgun Gothic', '맑은 고딕', Roboto, 'Helvetica Neue', sans-serif;
+
+  /* font-weight */
+  --in-font-weight-regular: Regular;
+
+  /* shadow */
+  --in-shadow-medium: Medium;
+
+  /* font-size */
+  --in-font-size-xs: 11px;
+  --in-font-size-sm: 12px;
+  --in-font-size-md: 13px;
+  --in-font-size-lg: 14px;
+  --in-font-size-xl: 15px;
+  --in-font-size-2xl: 16px;
+
+  /* font-line height */
+  --in-line-height-xs: 16px;
+  --in-line-height-sm: 19px;
+  --in-line-height-md: 20px;
+  --in-line-height-lg: 21px;
+  --in-line-height-xl: 22px;
+  --in-line-height-2xl: 24px;
+
+  /* font-letter spacing */
+  --in-letter-spacing-xs: 0px;
+  --in-letter-spacing-sm: 0px;
+  --in-letter-spacing-md: -0.1px;
+  --in-letter-spacing-lg: -0.1px;
+  --in-letter-spacing-xl: -0.1px;
+
+  /* shadow-color */
+  --in-shadow-color-layer1: #00000014;
+  --in-shadow-color-1dep-on-drop: #1cb0ef;
+  --in-shadow-color-1dep-on-inner: #1c759b4d;
+
+}
+
+/* === Composite tokens (font / shadow) — 참고용 === */
+/* Body/sm_w400: Font(family: 'Pretendard', weight: 400, size: 12, lineHeight: 19, letterSpacing: 0) */
+/* Body/md_w400: Font(family: 'Pretendard', weight: 400, size: 13, lineHeight: 20, letterSpacing: -0.1) */
+/* Body/lg_w400: Font(family: 'Pretendard', weight: 400, size: 14, lineHeight: 21, letterSpacing: -0.1) */
+/* Body/lg_w500: Font(family: 'Pretendard', weight: 500, size: 14, lineHeight: 21, letterSpacing: -0.1) */
+/* Body/xs: Font(family: 'Pretendard', weight: 400, size: 11, lineHeight: 16, letterSpacing: 0) */
+/* Heading/md: Font(family: 'Pretendard', weight: 400, size: 13, lineHeight: 20, letterSpacing: -0.1) */
+/* Heading/lg: Font(family: 'Pretendard', weight: 500, size: 14, lineHeight: 20, letterSpacing: -0.1) */
+/* Heading/xl: Font(family: 'Pretendard', weight: 500, size: 15, lineHeight: 22, letterSpacing: -0.1) */
+/* Heading/2xl: Font(family: 'Pretendard', weight: 500, size: 16, lineHeight: 24, letterSpacing: -2.5) */
+/* Heading/sm_w400: Font(family: 'Pretendard', weight: 400, size: 11, lineHeight: 16, letterSpacing: 0) */
+/* Heading/sm_w500: Font(family: 'Pretendard', weight: 500, size: 12, lineHeight: 19, letterSpacing: 0) */
+/* Elevation Light/3: Effect(type: DROP_SHADOW, color: '#00000014', offset: '0 4', radius: 10, spread: 0) */
+/* 1depOn: Effect(type: DROP_SHADOW, color: '#1cb0ef', offset: '1 4', radius: 5, spread: 0); Effect(type: INNER_SHADOW, color: '#1c759b4d', offset: '2 2', radius: 4, spread: 0) */
