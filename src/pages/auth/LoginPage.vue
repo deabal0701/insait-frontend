@@ -100,6 +100,9 @@ function reset() {
             </div>
 
             <!-- 비밀번호 -->
+            <!-- ★ (2026-05-28, dspark): 로그인 실패 메시지를 비밀번호 필드 인라인으로 표시.
+                 이전엔 하단 InToast 로만 떠서 시각 동선이 어긋남 → 보안상 ID/PW 어느 쪽이
+                 틀렸는지 노출 X 원칙에 맞춰 비밀번호란 아래 단일 위치에 표시. -->
             <div class="login-field">
               <InPasswordField
                 v-model="password"
@@ -108,6 +111,7 @@ function reset() {
                 layout="vertical"
                 input="비밀번호를 입력하세요"
                 :status="inputStatus"
+                :message="state === 'error' ? errorMsg : undefined"
                 :disabled="inputDisabled"
                 @update:visible="showPwd = $event"
                 @input="state === 'error' && (state = 'typing')"
@@ -165,11 +169,10 @@ function reset() {
     </InCard>
   </div>
 
-  <!-- Toast: error / success -->
-  <div v-if="state === 'error'" class="login-toast">
-    <InToast status="error" :message="errorMsg" closable @close="errorMsg = ''" />
-  </div>
-  <div v-else-if="state === 'success'" class="login-toast">
+  <!-- Toast: success 만 (error 는 비밀번호 필드 인라인으로 이동) -->
+  <!-- ★ (2026-05-28, dspark): error toast 제거. 로그인 실패는 비밀번호 필드 :message 로
+       inline 표시 (위 .login-field 참조). success toast 는 라우터 redirect 직전 안내용 유지. -->
+  <div v-if="state === 'success'" class="login-toast">
     <InToast status="success" message="로그인되었습니다." closable />
   </div>
   </div>
