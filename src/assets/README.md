@@ -6,7 +6,8 @@ Vite 가 빌드 시 hash + optimization 처리하는 자산. 컴포넌트에서 
 
 | 디렉토리 | 용도 | 현재 |
 |---|---|---|
-| `icons/` | SVG 아이콘 카탈로그 + `registry.ts` (ICON_REGISTRY 매핑) | 60+ icon (design-system v2 에서 가져옴) |
+| `styles/` | **글로벌 CSS·토큰 SSOT** (index/tokens/base + tokens/_generated/_dark) — [styles/README](styles/README.md) | ★ CSS 관리 단일 출처 |
+| `icons/` | SVG 아이콘 카탈로그 + `registry.js` (ICON_REGISTRY 매핑) | 60+ icon (design-system v2 에서 가져옴) |
 | `logos/` | 인사잇 브랜드 로고 (PNG + mark SVG) | insait-logo.png, mark-l.svg, mark-r.svg |
 | `fonts/` | 로컬 폰트 (현재 Pretendard CDN 사용 중이라 비어 있음) | (비어 있음) |
 | `images/` | placeholder · splash · empty state · 도메인 일러스트 | (점진 추가) |

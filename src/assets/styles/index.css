@@ -4,7 +4,7 @@
 /* ★ Figma 자동 생성 토큰 — _generated-tokens.css. tokens.css 와 병행 (전자=수기, 후자=Figma SSOT)
  * 신규 변수: --in-border-input-default, --in-text-info-{error,warning,success}, --in-surface-state-default,
  *           --in-surface-{error,warning,success}, --in-border-{error,warning,success}, --in-radius-none 등 */
-@import '../tokens/_generated-tokens.css';
+@import './tokens/_generated-tokens.css';
 @import 'tailwindcss';
 @import './base.css';
 

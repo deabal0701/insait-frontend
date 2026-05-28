@@ -11,7 +11,7 @@ import en from './locales/en.json';
 
 import 'element-plus/dist/index.css';
 import 'tui-grid/dist/tui-grid.css';
-import './styles/index.css';
+import './assets/styles/index.css';
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
