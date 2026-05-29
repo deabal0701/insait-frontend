@@ -45,6 +45,7 @@ const ADMIN_PARENT = {
   AUT0030: 'auth', AUT0040: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
   SETTINGS: 'env',
+  COMPONENTS: 'env',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -296,7 +297,8 @@ const items = computed(() => {
           label: '환경설정',
           expanded: settingsExpanded.value.env,
           children: [
-            { key: 'SETTINGS', label: '테마·환경', active: current === 'SETTINGS' },
+            { key: 'SETTINGS',   label: '테마·환경',  active: current === 'SETTINGS' },
+            { key: 'COMPONENTS', label: '컴포넌트',   active: current === 'COMPONENTS' },
           ],
         },
       ],
