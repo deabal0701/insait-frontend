@@ -226,7 +226,7 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
   height: 50px;
   padding: 18px 0;
   background: var(--in-text-default);             /* Figma Text/Default #565656 */
-  border-bottom: 1px solid #82d4f3;               /* Figma Blue/200 */
+  border-bottom: 1px solid var(--in-blue-200);    /* ★ (2026-05-29, dspark): hex 하드코딩 → 토큰 정합 */
   flex-shrink: 0;
 }
 

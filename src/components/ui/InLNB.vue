@@ -232,14 +232,19 @@ function onItemClick(it, idx) {
   z-index: 1;
 }
 
-/* Home cell — Figma 진본 정합 (배경 없음, rail 의 brand 노출) */
+/* Home cell — Figma 진본 (50×50)
+ * ★ (2026-05-29, dspark): design-system v2 정합. 진한 회색 (#565656) bg + blue-200 border-bottom
+ *   으로 brand rail 과 의도된 시각 대비 (이전 brand 통일은 비정합 — 사용자 재확인 2026-05-27)
+ */
 .in-lnb__home {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 50px;
-  background: var(--in-bg-brand);
+  padding: 18px 0;
+  background: var(--in-text-default);             /* Figma Text/Default #565656 */
+  border-bottom: 1px solid var(--in-blue-200);    /* Figma Blue/200 #82d4f3 */
   flex-shrink: 0;
 }
 

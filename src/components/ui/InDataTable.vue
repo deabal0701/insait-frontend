@@ -1,6 +1,10 @@
 <script setup>
 // ★ (2026-05-28, dspark): tui-grid Vue wrapper (얇은 layer). IBSheet 명칭 모사 X.
 //   tui-grid native API 그대로 노출 — expose: getInstance() 로 사용자가 직접 호출.
+// ★ (2026-05-29, dspark): design-system v2 의 동명 컴포넌트와 의도된 분기 — v2 는
+//   InTableTop/Bottom 합성 패턴 (Top/Bottom UI 가 props 로 강결합). 운영본은
+//   "tui-grid + 호출 측 자유 구성" 을 선호하여 wrapper 만 제공 (Top/Bottom 은
+//   호출 측 페이지가 직접 배치). 따라서 1:1 사본 정책의 예외로 유지.
 //   책임:
 //     1) props 통일 (columns / data / options / rowKey / height / loading)
 //     2) lifecycle (mount / destroy)
