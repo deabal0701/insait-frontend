@@ -16,19 +16,18 @@
  *   <InBadge state="online" badge-style="dot" />
  */
 
-const STATES = ['primary', 'error', 'warning', 'success', 'online', 'offline', 'seat-vacancy', 'self'];
-const STYLES = ['standard', 'dot'];
-
+// Note: defineProps() hoists outside setup(), so validators must inline arrays
+// (cannot reference locally-declared const). Vue 3.5 strict SFC compiler rule.
 defineProps({
   state: {
     type: String,
     default: 'primary',
-    validator: (v) => STATES.includes(v),
+    validator: (v) => ['primary', 'error', 'warning', 'success', 'online', 'offline', 'seat-vacancy', 'self'].includes(v),
   },
   badgeStyle: {
     type: String,
     default: 'standard',
-    validator: (v) => STYLES.includes(v),
+    validator: (v) => ['standard', 'dot'].includes(v),
   },
   label: { type: String, default: '99+' },
 });

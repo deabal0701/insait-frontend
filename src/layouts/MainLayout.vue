@@ -4,7 +4,7 @@
 //   실제 admin 9 화면 (메타관리 5 + 권한관리 3 + 자료실 1) 을 OBJECT_ID 기반으로 매핑.
 //   타 카테고리 (인사기획·인사운영·성과관리·보상관리·결재관리·시각화·메일 등) 는 디자인 시스템
 //   default submenu 를 그대로 노출 (3depth 클릭 시 '준비 중' 토스트 — 점진 활성화 대상).
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useAuth } from '@/composables/useAuth';
@@ -41,6 +41,7 @@ const bentoExpanded = ref({ all: true });
 
 // admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
 const ADMIN_PARENT = {
+  META_HUB: 'meta', META_NEW: 'meta',
   CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
   AUT0030: 'auth', AUT0040: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
@@ -56,6 +57,10 @@ function syncActiveKey() {
   if (parent) settingsExpanded.value = { ...settingsExpanded.value, [parent]: true };
 }
 syncActiveKey();
+// ★ (2026-05-29, dspark): route 변경 시 LNB activeKey + 메뉴 그룹 펼침 상태 재계산.
+//   미적용 시 admin 화면 간 이동 후 LNB 강조가 stale. router.afterEach 보다 컴포넌트
+//   생명주기에 묶어 두는 편이 디버깅 용이.
+watch(() => route.name, syncActiveKey);
 
 // ★ LNB 접기 상태 — collapsed=true 일 때 InLNB (fixed 66px), false 일 때 InLNBSubmenu (open 308px).
 //   localStorage 로 사용자 선호 persist.
@@ -267,11 +272,13 @@ const items = computed(() => {
           label: '메타관리',
           expanded: settingsExpanded.value.meta,
           children: [
-            { key: 'CCD0020', label: '공통코드',    active: current === 'CCD0020' },
-            { key: 'IST0050', label: '서비스 관리', active: current === 'IST0050' },
-            { key: 'IST0030', label: '메시지 관리', active: current === 'IST0030' },
-            { key: 'IST0020', label: '엔터티 관리', active: current === 'IST0020' },
-            { key: 'IST0010', label: 'SQL 관리',    active: current === 'IST0010' },
+            { key: 'META_HUB', label: '메타관리 홈',       active: current === 'META_HUB' },
+            { key: 'META_NEW', label: '+ 신규 화면 등록',  active: current === 'META_NEW' },
+            { key: 'CCD0020',  label: '공통코드',         active: current === 'CCD0020' },
+            { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
+            { key: 'IST0030',  label: '메시지 관리',      active: current === 'IST0030' },
+            { key: 'IST0020',  label: '엔터티 관리',      active: current === 'IST0020' },
+            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
           ],
         },
         {
@@ -398,7 +405,10 @@ const currentTitle = computed(() => route.meta?.title || '');
       </header>
 
       <main class="main-layout__content">
-        <RouterView />
+        <!-- ★ (2026-05-29, dspark): :key 로 route 변경 시 강제 remount.
+             SPA navigation 후 blank 화면 (HMR/lazy-import 캐시 race) 방지 — 사용자
+             "메타관리 홈 클릭 시 빈 화면 / 새로고침 시 정상" 보고에 대응. -->
+        <RouterView :key="$route.fullPath" />
       </main>
     </div>
   </div>
