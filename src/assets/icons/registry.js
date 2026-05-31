@@ -65,6 +65,13 @@ import CheckIcon from './check.svg';
 import CancelIcon from './cancel.svg';
 import ArrowUpIcon from './arrow-up.svg';
 import ArrowForwardIcon from './arrow-forward.svg';
+// ★ (2026-05-31, dspark): 공식 Material chevron 4종 (Apache-2.0) — 24×24 viewBox 내부 여백 보유.
+//   기존 arrow-left/right(여백 0, 박스 꽉 참)와 달리 일반적인 "작은 꺽쇠" 로 렌더. content-copy 와 무게 정합.
+//   사용자 명시 승인으로 registry 의 Figma-only 기본 정책을 본 건 한정 완화. Figma 정합 노드 ID = TBD.
+import ChevronLeftIcon from './chevron-left.svg';
+import ChevronRightIcon from './chevron-right.svg';
+import ChevronUpIcon from './chevron-up.svg';
+import ChevronDownIcon from './chevron-down.svg';
 import AccountCircleIcon from './account-circle.svg';
 import GroupsIcon from './groups.svg';
 
@@ -129,6 +136,10 @@ export const ICON_REGISTRY = {
   'cancel': CancelIcon,
   'arrow-up': ArrowUpIcon,
   'arrow-forward': ArrowForwardIcon,
+  'chevron-left': ChevronLeftIcon,
+  'chevron-right': ChevronRightIcon,
+  'chevron-up': ChevronUpIcon,
+  'chevron-down': ChevronDownIcon,
   'account-circle': AccountCircleIcon,
   'groups': GroupsIcon,
 };

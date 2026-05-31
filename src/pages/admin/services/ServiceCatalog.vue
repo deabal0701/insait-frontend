@@ -224,7 +224,6 @@ const detailJson = computed(() => {
           layout="vertical"
           size="md"
           show-label
-          helper="영문 prefix(PHM) / 한글(인사) 둘 다 매칭"
           @keyup.enter="loadServices"
         />
       </div>
@@ -330,7 +329,9 @@ const detailJson = computed(() => {
             </td>
             <td class="svc-cat__col-actions">
               <button type="button" class="svc-cat__act-btn" title="테스트" @click.stop="onTest(r)">
-                <InIcon name="arrow-right" :size="12" /> 테스트
+                <!-- ★ (2026-05-31, dspark): arrow-right(여백 0, 박스 꽉 찬 굵은 꺾쇠) → chevron-right
+                     (24×24 내부 여백 보유 → 작은 꺾쇠). content-copy(복제) 와 시각 무게 정합. -->
+                <InIcon name="chevron-right" :size="12" /> 테스트
               </button>
               <button type="button" class="svc-cat__act-btn" title="마법사로 복제" @click.stop="onCloneToWizard(r)">
                 <InIcon name="content-copy" :size="12" /> 복제
@@ -412,7 +413,8 @@ const detailJson = computed(() => {
           :right-icon-show="false"
           @click="onTest(detail.row)"
         >
-          ▶ 테스트
+          <!-- ★ (2026-05-31, dspark): unicode ▶ → InIcon chevron-right (테이블 행 액션과 아이콘 일관성). -->
+          <InIcon name="chevron-right" :size="12" /> 테스트
         </InButton>
       </template>
     </InMetaDetailDrawer>
@@ -490,7 +492,8 @@ const detailJson = computed(() => {
   background: var(--in-bg-accent-subtle, var(--in-brand-50, #e1f5fc));
 }
 .svc-cat__row td {
-  padding: 8px 12px;
+  /* ★ (2026-05-31, dspark): 8px → 5px 행 높이 콤팩트화 (리스트 사이즈 축소 요청). */
+  padding: 5px 12px;
   border-bottom: 1px solid var(--in-border-default);
   vertical-align: middle;
 }
@@ -500,6 +503,8 @@ const detailJson = computed(() => {
   font-family: 'Consolas', 'Menlo', monospace;
   color: var(--in-text-accent);
   font-weight: var(--in-font-weight-medium);
+  /* ★ (2026-05-31, dspark): 서비스명 폰트 sm → xs (리스트 사이즈 축소 요청). */
+  font-size: var(--in-font-size-xs);
 }
 .svc-cat__col-class code,
 .svc-cat__col-map code {
@@ -518,6 +523,8 @@ const detailJson = computed(() => {
 .svc-cat__chip {
   display: inline-flex;
   align-items: center;
+  /* ★ (2026-05-31, dspark): 좁은 칸(사용 등)에서 "미사용" 두 줄 줄바꿈 방지. */
+  white-space: nowrap;
   padding: 2px 8px;
   border-radius: var(--in-radius-full);
   background: var(--in-surface-default, #fafafa);
