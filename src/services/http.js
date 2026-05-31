@@ -17,6 +17,10 @@ http.interceptors.request.use((config) => {
   if (auth.accessToken) {
     config.headers.Authorization = `${auth.tokenType || 'Bearer'} ${auth.accessToken}`;
   }
+  // ★ (2026-05-31, dspark): 임시 — 서버에 "이 요청은 JSON 렌더러(EnvelopeJsonRenderer)로 처리" 표식.
+  //   서버 ServiceRequestController 가 헤더 없으면 success_response.jsp(정답지) 로 forward,
+  //   'java' 면 JSON 직접 응답. JSP 폐기 + parity 검증 완료 시 본 줄 제거 예정.
+  config.headers['X-Insait-Render'] = 'java';
   return config;
 });
 
