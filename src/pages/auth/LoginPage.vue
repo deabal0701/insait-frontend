@@ -33,6 +33,7 @@ const inputStatus = computed(() => (state.value === 'error' ? 'error' : undefine
 const inputDisabled = computed(() => state.value === 'submitting' || state.value === 'success');
 
 async function submit() {
+  if (state.value === 'submitting' || state.value === 'success') return; // 중복 제출 가드
   if (!userId.value || !password.value) {
     state.value = 'error';
     errorMsg.value = '아이디와 비밀번호를 입력해주세요.';
@@ -133,7 +134,6 @@ function reset() {
                 :left-icon-show="false"
                 :right-icon-show="false"
                 :disabled="inputDisabled"
-                @click="submit"
               >
                 <template v-if="state === 'submitting'">로그인 중...</template>
                 <template v-else-if="state === 'success'">로그인됨</template>

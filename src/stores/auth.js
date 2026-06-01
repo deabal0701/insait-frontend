@@ -15,7 +15,6 @@ export const useAuthStore = defineStore('auth', {
     loginId: '',
     companyCd: '',
     tokenType: 'Bearer',
-    expiresAt: 0,
   }),
   getters: {
     isLoggedIn: (s) => !!s.accessToken,
@@ -59,7 +58,6 @@ export const useAuthStore = defineStore('auth', {
       this.loginId = payload.loginId || '';
       this.companyCd = payload.companyCd || '';
       this.tokenType = payload.tokenType || 'Bearer';
-      this.expiresAt = payload.expiresAt || 0;
     },
     setAccessToken(token) {
       this.accessToken = token || '';
