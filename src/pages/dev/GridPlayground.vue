@@ -8,9 +8,17 @@
 import { ref } from 'vue';
 import { ElButton, ElMessage } from 'element-plus';
 import InDataTable from '@/components/ui/InDataTable.vue';
-import { extractDirtyForEnvelope } from '@/utils/grid';
 
 const gridRef = ref(null);
+const fileRef = ref(null);
+
+// 우클릭 컨텍스트 메뉴 항목 (#1)
+const contextMenuItems = [
+  { key: 'add-below', label: '아래에 행 추가' },
+  { key: 'delete-row', label: '이 행 삭제' },
+  { divider: true },
+  { key: 'export', label: 'Excel 내보내기' },
+];
 
 const columns = [
   { name: 'empNo', header: '사번', width: 90, sortable: true },
@@ -47,47 +55,45 @@ const options = {
   bodyHeight: 320,
 };
 
+// ★ (2026-06-01, dspark): 저수준 getInstance() 대신 InDataTable 래퍼 메서드(#3) 사용.
 function addRow() {
-  const grid = gridRef.value?.getInstance();
-  if (!grid) return;
-  grid.appendRow(
-    { empNo: '', name: '', dept: 'DEV', salary: 0, hireDt: '' },
-    { focus: true }
-  );
+  gridRef.value?.addRow({ empNo: '', name: '', dept: 'DEV', salary: 0, hireDt: '' });
 }
 function removeChecked() {
-  const grid = gridRef.value?.getInstance();
-  if (!grid) return;
-  const checked = grid.getCheckedRows();
-  if (!checked.length) {
-    ElMessage.warning('체크된 행이 없습니다.');
-    return;
-  }
-  checked.forEach((r) => grid.removeRow(r.rowKey));
+  const removed = gridRef.value?.removeCheckedRows() || [];
+  if (!removed.length) ElMessage.warning('체크된 행이 없습니다.');
 }
 function save() {
-  const grid = gridRef.value?.getInstance();
-  if (!grid) return;
-  // ★ (2026-06-01, dspark): 편집 중인 셀 강제 커밋 (Enter/blur 없이 저장 시 변경 누락 방지)
-  try { grid.finishEditing?.(); } catch (_) { /* 편집 중 아님 */ }
-  const modified = grid.getModifiedRows();
-  lastSavePayload.value = extractDirtyForEnvelope(modified);
+  lastSavePayload.value = gridRef.value?.getDirty() || [];   // finishEditing + sStatus/_seq (#3)
   ElMessage.success(`dirty rows ${lastSavePayload.value.length} 건`);
 }
 function reset() {
-  const grid = gridRef.value?.getInstance();
-  if (!grid) return;
-  grid.resetData([...initialData]);
+  rows.value = [...initialData];
   lastSavePayload.value = null;
 }
-function excel() {
+
+// #1 결손기능 시연 — Excel 다운/업 + 인쇄
+function excelExport() {
+  gridRef.value?.exportExcel({ fileName: 'employees', sheetName: '직원' });
+}
+function excelImportClick() { fileRef.value?.click(); }
+async function onExcelFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const rows2 = await gridRef.value?.importExcel(file);
+  ElMessage.success(`Excel ${rows2?.length || 0}행 로드`);
+  e.target.value = '';
+}
+function printIt() {
+  gridRef.value?.printGrid({ title: '직원 목록' });
+}
+
+// #1 컨텍스트 메뉴 액션
+function onContextAction({ key, rowKey }) {
   const grid = gridRef.value?.getInstance();
-  if (!grid) return;
-  if (typeof grid.export === 'function') {
-    grid.export('xlsx', { fileName: 'employees' });
-  } else {
-    ElMessage.warning('현재 tui-grid 버전은 export() 미지원입니다.');
-  }
+  if (key === 'add-below') gridRef.value?.addRow({ empNo: '', name: '', dept: 'DEV', salary: 0, hireDt: '' }, { at: (rowKey ?? -1) + 1 });
+  else if (key === 'delete-row' && rowKey != null && grid) grid.removeRow(rowKey);
+  else if (key === 'export') excelExport();
 }
 </script>
 
@@ -99,12 +105,16 @@ function excel() {
     </p>
 
     <div class="pg__toolbar">
-      <ElButton size="small" type="primary" @click="addRow">행 추가</ElButton>
+      <ElButton size="small" type="primary" @click="addRow">행 추가(선택 행 다음)</ElButton>
       <ElButton size="small" @click="removeChecked">체크 삭제</ElButton>
       <ElButton size="small" type="success" @click="save">저장 (dirty 추출)</ElButton>
       <ElButton size="small" @click="reset">초기화</ElButton>
-      <ElButton size="small" @click="excel">Excel export</ElButton>
+      <ElButton size="small" @click="excelExport">Excel 내보내기</ElButton>
+      <ElButton size="small" @click="excelImportClick">Excel 불러오기</ElButton>
+      <ElButton size="small" @click="printIt">인쇄</ElButton>
+      <input ref="fileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="onExcelFile" />
     </div>
+    <p class="pg__hint">우클릭 → 컨텍스트 메뉴 (아래에 행 추가 / 삭제 / Excel).</p>
 
     <InDataTable
       ref="gridRef"
@@ -112,6 +122,8 @@ function excel() {
       :data="rows"
       :options="options"
       :height="380"
+      :context-menu-items="contextMenuItems"
+      @context-action="onContextAction"
     />
 
     <div v-if="lastSavePayload" class="pg__payload">

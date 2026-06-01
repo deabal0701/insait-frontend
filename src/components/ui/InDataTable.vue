@@ -26,6 +26,8 @@ const props = defineProps({
   height: { type: [Number, String], default: 400 },     // wrapper outer height
   bodyHeight: { type: [Number, String], default: undefined },
   loading: { type: Boolean, default: false },
+  // ★ (2026-06-01, dspark): #1 우클릭 컨텍스트 메뉴 항목 [{key,label,disabled,divider}]. 비우면 비활성.
+  contextMenuItems: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits([
@@ -36,7 +38,7 @@ const emit = defineEmits([
   'editing-start', 'editing-finish',
   'selection-change', 'sort', 'filter', 'scroll-end',
   // wrapper events
-  'instance-ready',
+  'instance-ready', 'context-action',
 ]);
 
 const gridRef = ref(null);
@@ -174,11 +176,74 @@ function focusCell(rowKey, columnName) { instance.value?.focus?.(rowKey, columnN
 function on(eventName, handler) { instance.value?.on?.(eventName, handler); }
 function off(eventName, handler) { instance.value?.off?.(eventName, handler); }
 
+// ★ (2026-06-01, dspark): #1 결손기능 — Excel 다운/업(exceljs 동적 import) + 인쇄.
+async function exportExcel(opts = {}) {
+  const g = instance.value;
+  if (!g) return;
+  const { exportGridToExcel } = await import('@/utils/grid-excel');
+  await exportGridToExcel(g, opts);
+}
+
+/** .xlsx File → rows. opts.append=true 면 기존에 추가, 아니면 resetData. 파싱 rows 반환. */
+async function importExcel(file, opts = {}) {
+  const g = instance.value;
+  if (!g || !file) return [];
+  const { importExcelToRows } = await import('@/utils/grid-excel');
+  const rows = await importExcelToRows(file, { columns: props.columns, ...opts });
+  if (opts.append) rows.forEach((r) => g.appendRow(r));
+  else g.resetData(rows);
+  return rows;
+}
+
+/** 현재 그리드 데이터를 인쇄용 HTML 표로 새 창에 출력 (IBSheet 인쇄 대체). */
+function printGrid(opts = {}) {
+  const g = instance.value;
+  if (!g) return;
+  const cols = (g.getColumns?.() || []).filter((c) => c && c.name && c.name !== '_number' && c.name !== '_checked');
+  const data = g.getData?.() || [];
+  const esc = (v) => String(v ?? '').replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+  const html =
+    `<html><head><title>${esc(opts.title || '인쇄')}</title><style>` +
+    'table{border-collapse:collapse;width:100%;font-family:Pretendard,sans-serif;font-size:12px}' +
+    'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f3f3f3}' +
+    '</style></head><body>' +
+    (opts.title ? `<h3>${esc(opts.title)}</h3>` : '') +
+    '<table><thead><tr>' + cols.map((c) => `<th>${esc(c.header || c.name)}</th>`).join('') + '</tr></thead><tbody>' +
+    data.map((r) => '<tr>' + cols.map((c) => `<td>${esc(r[c.name])}</td>`).join('') + '</tr>').join('') +
+    '</tbody></table></body></html>';
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+// 우클릭 컨텍스트 메뉴
+const ctxMenu = ref({ open: false, x: 0, y: 0, rowKey: null, columnName: null });
+function onContextMenu(e) {
+  if (!props.contextMenuItems.length) return;
+  e.preventDefault();
+  const td = e.target.closest?.('td[data-row-key]');
+  ctxMenu.value = {
+    open: true, x: e.clientX, y: e.clientY,
+    rowKey: td ? Number(td.getAttribute('data-row-key')) : null,
+    columnName: td ? td.getAttribute('data-column-name') : null,
+  };
+}
+function closeCtx() { ctxMenu.value.open = false; }
+function onCtxSelect(item) {
+  if (item.disabled) return;
+  emit('context-action', { key: item.key, rowKey: ctxMenu.value.rowKey, columnName: ctxMenu.value.columnName, item });
+  closeCtx();
+}
+
 defineExpose({
   getInstance, rebuild,
   addRow, removeCheckedRows, getCheckedRows,
   getModified, getDirty, clearModified, focusCell,
   on, off,
+  exportExcel, importExcel, printGrid,
 });
 </script>
 
@@ -190,7 +255,30 @@ defineExpose({
     <div v-show="loading" class="in-dt__loading" aria-live="polite">
       <div class="in-dt__spinner" aria-label="loading"></div>
     </div>
-    <div ref="gridRef" class="in-dt__grid"></div>
+    <div ref="gridRef" class="in-dt__grid" @contextmenu="onContextMenu"></div>
+
+    <!-- ★ (2026-06-01, dspark): #1 우클릭 컨텍스트 메뉴 -->
+    <Teleport to="body">
+      <div
+        v-if="ctxMenu.open && contextMenuItems.length"
+        class="in-dt__ctx-backdrop"
+        @click="closeCtx"
+        @contextmenu.prevent="closeCtx"
+      >
+        <ul class="in-dt__ctx" :style="{ top: ctxMenu.y + 'px', left: ctxMenu.x + 'px' }" @click.stop>
+          <template v-for="(it, i) in contextMenuItems">
+            <li v-if="it.divider" :key="`d${i}`" class="in-dt__ctx-divider" role="separator"></li>
+            <li
+              v-else
+              :key="it.key || i"
+              class="in-dt__ctx-item"
+              :class="{ 'is-disabled': it.disabled }"
+              @click="onCtxSelect(it)"
+            >{{ it.label }}</li>
+          </template>
+        </ul>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -223,5 +311,44 @@ defineExpose({
 }
 @keyframes in-dt-spin {
   to { transform: rotate(360deg); }
+}
+
+/* 우클릭 컨텍스트 메뉴 (Teleport to body — scoped attr 자동 적용) */
+.in-dt__ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+}
+.in-dt__ctx {
+  position: fixed;
+  min-width: 140px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--in-bg-white, #fff);
+  border: 1px solid var(--in-border-default, #e2e2e2);
+  border-radius: var(--in-radius-xs, 6px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  font-family: var(--in-font-family-body);
+  font-size: var(--in-font-size-sm, 13px);
+}
+.in-dt__ctx-item {
+  padding: 7px 14px;
+  color: var(--in-text-default, #565656);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.in-dt__ctx-item:hover {
+  background: var(--in-surface-accent-brand, #f5fbff);
+  color: var(--in-brand, #13a9e9);
+}
+.in-dt__ctx-item.is-disabled {
+  color: var(--in-text-state-disabled, #b0b0b0);
+  cursor: not-allowed;
+}
+.in-dt__ctx-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--in-border-default, #e2e2e2);
 }
 </style>
