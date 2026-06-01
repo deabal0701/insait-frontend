@@ -3,6 +3,8 @@
 //   운영 LNB 노출 X — URL /dev/grid 직접 진입.
 //   시연 영역: CRUD (행 추가/체크 삭제/저장) + format(Integer/Ymd) + frozenCount + Excel +
 //   dirty 추출 (extractDirtyForEnvelope) → envelope BODY 슬롯 형태 확인.
+// ★ (2026-06-01, dspark): extractDirtyForEnvelope 가 이제 sStatus + _seq 부여 (ROW_STATUS 폐기).
+//   실 entity 화면은 본 저수준 호출 대신 useEntityGrid composable 권장 (06b §3).
 import { ref } from 'vue';
 import { ElButton, ElMessage } from 'element-plus';
 import InDataTable from '@/components/ui/InDataTable.vue';
@@ -111,7 +113,7 @@ function excel() {
     />
 
     <div v-if="lastSavePayload" class="pg__payload">
-      <h3>envelope BODY 슬롯 형태 (ROW_STATUS prepend)</h3>
+      <h3>envelope BODY 슬롯 형태 (sStatus + _seq — 백엔드 BusinessEntity 계약)</h3>
       <pre>{{ JSON.stringify(lastSavePayload, null, 2) }}</pre>
     </div>
   </div>
