@@ -22,6 +22,8 @@ import { extractDirtyForEnvelope } from '@/utils/grid';
  * @param {string}  [config.statusKey='sStatus'] - 상태 컬럼명 (백엔드 계약)
  * @param {boolean} [config.softDelete=false]    - 삭제를 sStatus='U' + sDelete='Y' 로 송신
  * @param {boolean} [config.reloadAfterSave=true] - 저장 성공 후 자동 재조회
+ * @param {object}  [config.header]              - HEADER 옵션 ({ objectId, actionType, companyCd, localeCd }).
+ *                                                  serviceId 접두와 objectId 가 다른 서비스(예: INT_*_S01 / objectId=ORM9999) 필수
  */
 export function useEntityGrid(config = {}) {
   const {
@@ -34,6 +36,7 @@ export function useEntityGrid(config = {}) {
     statusKey = 'sStatus',
     softDelete = false,
     reloadAfterSave = true,
+    header = {},
   } = config;
 
   const { call, loading, error } = useService();
@@ -49,7 +52,7 @@ export function useEntityGrid(config = {}) {
 
   /** 조회 — 응답 슬롯을 rows 에 반영하고 반환. */
   async function retrieve(body = {}, options = {}) {
-    const resp = await call(retrieveServiceId, body || {}, options);
+    const resp = await call(retrieveServiceId, body || {}, { ...header, ...options });
     rows.value = parseResponse(resp, retrieveSlot || slot);
     return rows.value;
   }
@@ -75,7 +78,7 @@ export function useEntityGrid(config = {}) {
     dirtyCount.value = dirty.length;
     if (!dirty.length) return { skipped: true, dirty: [] };
 
-    const response = await call(saveServiceId, { [saveSlot || slot]: dirty });
+    const response = await call(saveServiceId, { [saveSlot || slot]: dirty }, { ...header });
 
     const g = grid();
     if (g && typeof g.clearModifiedData === 'function') g.clearModifiedData();
