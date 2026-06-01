@@ -68,6 +68,8 @@ function removeChecked() {
 function save() {
   const grid = gridRef.value?.getInstance();
   if (!grid) return;
+  // ★ (2026-06-01, dspark): 편집 중인 셀 강제 커밋 (Enter/blur 없이 저장 시 변경 누락 방지)
+  try { grid.finishEditing?.(); } catch (_) { /* 편집 중 아님 */ }
   const modified = grid.getModifiedRows();
   lastSavePayload.value = extractDirtyForEnvelope(modified);
   ElMessage.success(`dirty rows ${lastSavePayload.value.length} 건`);

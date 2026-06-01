@@ -58,6 +58,9 @@ export function useEntityGrid(config = {}) {
   function collectDirty() {
     const g = grid();
     if (!g || typeof g.getModifiedRows !== 'function') return [];
+    // ★ (2026-06-01, dspark): 편집 중인 셀을 강제 커밋. Enter/blur 없이 저장 버튼을 바로
+    //   누르면 in-progress 편집이 getModifiedRows() 에 반영 안 돼 변경이 누락됨(빈 배열).
+    try { g.finishEditing?.(); } catch (_) { /* 편집 중 아님 */ }
     return extractDirtyForEnvelope(g.getModifiedRows(), { statusKey, softDelete });
   }
 
