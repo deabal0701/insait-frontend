@@ -66,3 +66,32 @@ export const figmaTheme = {
 };
 
 export default figmaTheme;
+
+// ★ (2026-06-01, dspark): #4 green 테마 추종. applyTheme 는 CSS var 미지원이라,
+//   적용 시점에 :root 의 현재 semantic 토큰(--in-brand 등) 실측값을 읽어 preset 을 만든다.
+//   data-theme='green' 이면 --in-brand 가 green 으로 재바인딩되어 있으므로 그대로 반영됨.
+//   (white 기본은 blue) → 테마 토글 시 reapply + grid rebuild 로 추종.
+function readToken(name, fallback) {
+  if (typeof document === 'undefined') return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+export function buildFigmaTheme() {
+  const brand = readToken('--in-brand', '#13a9e9');                       // focus/outline/selection border
+  const surfaceBrand = readToken('--in-surface-accent-brand', '#f5fbff'); // focused/current row bg
+  const bgAccentBrand = readToken('--in-bg-accent-brand', '#e1f5fc');     // selection/selected header bg
+  return {
+    ...figmaTheme,
+    outline: { ...figmaTheme.outline, border: brand },
+    selection: { background: bgAccentBrand, border: brand },
+    area: { ...figmaTheme.area, summary: { ...figmaTheme.area.summary, border: brand } },
+    cell: {
+      ...figmaTheme.cell,
+      selectedHeader: { background: bgAccentBrand },
+      selectedRowHeader: { background: bgAccentBrand },
+      focused: { background: surfaceBrand, border: brand },
+      currentRow: { background: surfaceBrand },
+    },
+  };
+}
