@@ -23,6 +23,13 @@ const routes = [
         component: () => import('@/pages/dev/GridPlayground.vue'),
         meta: { requiresAuth: true, title: 'Grid Playground (dev)' },
       },
+      {
+        path: 'dev/grid2',
+        name: 'DevGridPlayground2',
+        component: () => import('@/pages/dev/GridPlayground2.vue'),
+        meta: { requireAuth: true, title: 'Grid Playground(dev)'}
+
+      }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
   },
