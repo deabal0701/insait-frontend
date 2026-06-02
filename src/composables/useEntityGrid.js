@@ -48,6 +48,10 @@ export function useEntityGrid(config = {}) {
   const { call, loading, error } = useService();
   const rows = ref([]);
   const dirtyCount = ref(0);
+  // ★ (2026-06-02, dspark): 직전 조회 body 기억. 저장 후 자동 재조회가 빈 {} 를 보내면
+  //   MultiQuery 의 검색 IN 메시지(queryParamMessage)가 null → NPE(AbsBusinessCommand:178)
+  //   발생. "저장 후엔 방금 본 그 조회를 다시" 하도록 마지막 retrieve body 를 재사용한다.
+  let lastRetrieveBody = {};
 
   /** gridRef(컴포넌트 ref | 인스턴스 | ref(인스턴스)) → tui-grid 인스턴스 해석. */
   function grid() {
@@ -56,9 +60,10 @@ export function useEntityGrid(config = {}) {
     return typeof c.getInstance === 'function' ? c.getInstance() : c;
   }
 
-  /** 조회 — 응답 슬롯을 rows 에 반영하고 반환. */
+  /** 조회 — 응답 슬롯을 rows 에 반영하고 반환. body 는 자동 재조회용으로 기억. */
   async function retrieve(body = {}, options = {}) {
-    const resp = await call(retrieveServiceId, body || {}, { ...header, ...options });
+    lastRetrieveBody = body || {};
+    const resp = await call(retrieveServiceId, lastRetrieveBody, { ...header, ...options });
     rows.value = parseResponse(resp, retrieveSlot || slot);
     return rows.value;
   }
@@ -89,7 +94,8 @@ export function useEntityGrid(config = {}) {
     const g = grid();
     if (g && typeof g.clearModifiedData === 'function') g.clearModifiedData();
     if (reloadAfterSave && opts.reloadBody !== null) {
-      await retrieve(opts.reloadBody || {});
+      // ★ (2026-06-02, dspark): reloadBody 미지정 시 직전 조회 body 재사용 (빈 {} → NPE 회피).
+      await retrieve(opts.reloadBody || lastRetrieveBody);
     }
     return { skipped: false, dirty, response };
   }
