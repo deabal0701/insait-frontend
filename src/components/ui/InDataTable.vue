@@ -13,9 +13,18 @@
 //     5) raw grid event → emit forwarding (네이티브 명칭 kebab-case 변환)
 //   columns 의 `format` 키는 utils/grid.js 의 formatRegistry 로 자동 변환.
 //   dirty row 추출은 extractDirtyForEnvelope(grid.getModifiedRows()) 사용.
+// ★ (2026-06-02, dspark): [옵션 1 — 단일 창구 통합] AS-IS IBSheet 의 "sheet 객체 하나에
+//   조회·저장·엑셀·dirty 가 전부 매달리던" 사용감을 복원한다. 기존 useEntityGrid composable
+//   (조회→sStatus 저장→재조회 흐름) 을 본 컴포넌트 내부로 흡수 — 화면은 InDataTable 하나만
+//   import 하면 된다 (useEntityGrid/useGrid/plugins/utils 직접 import 불필요).
+//     · 서비스 props (retrieveServiceId/saveServiceId/slotName/header) 를 주면 self-managed 모드:
+//       gridRef.retrieve() / gridRef.save() 만 호출 (envelope 조립·POST·재조회 내부 처리).
+//     · 서비스 props 없이 :data 만 주면 controlled 모드 (부모가 데이터 소유 — 기존 동작).
+//   내부 구현은 여전히 useEntityGrid 를 재사용(DRY) — 단 개발자 시야에서는 숨는다.
 import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vue';
 import { loadGrid, reapplyTheme } from '@/plugins/tui-grid';
 import { resolveColumnFormats, extractDirtyForEnvelope } from '@/utils/grid';
+import { useEntityGrid } from '@/composables/useEntityGrid';
 import { useThemeStore } from '@/stores/theme';
 
 const props = defineProps({
@@ -28,6 +37,18 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   // ★ (2026-06-01, dspark): #1 우클릭 컨텍스트 메뉴 항목 [{key,label,disabled,divider}]. 비우면 비활성.
   contextMenuItems: { type: Array, default: () => [] },
+  // ★ (2026-06-02, dspark): [옵션 1] self-managed 모드 — 서비스 props. 주면 조회·저장을
+  //   InDataTable 이 내부 처리(useEntityGrid 흡수). :data 와는 배타적(서비스 props 우선).
+  retrieveServiceId: { type: String, default: undefined },   // 조회 serviceId (예: 'ORM9999_01_R01')
+  saveServiceId: { type: String, default: undefined },       // 저장 serviceId (예: 'INT_Y19_0001_01_S01')
+  slotName: { type: String, default: undefined },            // BODY 메시지 슬롯명 (조회·저장 공통)
+  retrieveSlot: { type: String, default: undefined },        // 조회 응답 슬롯 (slotName 과 다를 때)
+  saveSlot: { type: String, default: undefined },            // 저장 요청 슬롯 (slotName 과 다를 때)
+  header: { type: Object, default: () => ({}) },             // HEADER 옵션 ({ objectId, actionType, ... })
+  statusKey: { type: String, default: 'sStatus' },           // 상태 컬럼명 (백엔드 계약)
+  softDelete: { type: Boolean, default: false },             // 삭제를 sStatus='U' + sDelete='Y' 로 송신
+  reloadAfterSave: { type: Boolean, default: true },         // 저장 성공 후 자동 재조회
+  autoRetrieve: { type: Boolean, default: false },           // 마운트 직후 자동 조회 (retrieveServiceId 필요)
 });
 
 const emit = defineEmits([
@@ -44,6 +65,29 @@ const emit = defineEmits([
 const gridRef = ref(null);
 const instance = shallowRef(null);
 const themeStore = useThemeStore();
+
+// ★ (2026-06-02, dspark): [옵션 1] 조회·저장 흐름 내부 흡수. useEntityGrid 를 그대로
+//   재사용하되 grid 인스턴스를 본 컴포넌트 내부에서 공급(getInstance 게터)한다. 따라서
+//   화면은 useEntityGrid 를 직접 import 하지 않는다 — IBSheet sheet 객체처럼 InDataTable
+//   ref 하나에 retrieve/save 가 매달린다. (useEntityGrid 는 internal 부품으로 격하)
+const entity = useEntityGrid({
+  retrieveServiceId: props.retrieveServiceId,
+  saveServiceId: props.saveServiceId,
+  slot: props.slotName,
+  retrieveSlot: props.retrieveSlot,
+  saveSlot: props.saveSlot,
+  gridRef: { getInstance: () => instance.value },   // 호출 시점에 살아있는 인스턴스 해석
+  statusKey: props.statusKey,
+  softDelete: props.softDelete,
+  reloadAfterSave: props.reloadAfterSave,
+  header: props.header,
+});
+
+// self-managed 조회/재조회 결과(entity.rows)를 그리드에 반영. controlled 모드(:data)는
+// 아래 watch(() => props.data) 가 담당 — 둘 중 실제 변하는 쪽만 동작한다.
+watch(entity.rows, (r) => {
+  if (instance.value) instance.value.resetData(r || []);
+});
 
 const GRID_EVENT_MAP = [
   ['click', 'click'],
@@ -124,8 +168,17 @@ watch(() => themeStore.theme, async () => {
   if (instance.value) await rebuild();
 });
 
-onMounted(build);
+// ★ (2026-06-02, dspark): [옵션 1] 마운트 후 autoRetrieve 옵션이면 즉시 1회 조회.
+onMounted(async () => {
+  await build();
+  if (props.autoRetrieve && props.retrieveServiceId) {
+    try { await entity.retrieve({}); } catch (_) { /* 조회 실패는 entity.error 로 노출 */ }
+  }
+});
 onBeforeUnmount(destroyGrid);
+
+// ★ (2026-06-02, dspark): 스피너는 수동 loading prop + 내부 조회/저장 통신 상태를 합산.
+const showLoading = computed(() => props.loading || entity.loading.value);
 
 function getInstance() {
   return instance.value;
@@ -244,6 +297,16 @@ defineExpose({
   getModified, getDirty, clearModified, focusCell,
   on, off,
   exportExcel, importExcel, printGrid,
+  // ★ (2026-06-02, dspark): [옵션 1] 조회·저장 단일 창구. self-managed 모드 진입점.
+  //   retrieve(body, options) / save(opts) — envelope 조립·POST·재조회 내부 처리.
+  //   rows(조회 결과) · dirtyCount(직전 변경 건수) · loading · error 도 노출.
+  retrieve: entity.retrieve,
+  save: entity.save,
+  collectDirty: entity.collectDirty,
+  rows: entity.rows,
+  dirtyCount: entity.dirtyCount,
+  loading: entity.loading,
+  error: entity.error,
 });
 </script>
 
@@ -252,7 +315,7 @@ defineExpose({
     class="in-dt"
     :style="{ height: typeof height === 'number' ? `${height}px` : height }"
   >
-    <div v-show="loading" class="in-dt__loading" aria-live="polite">
+    <div v-show="showLoading" class="in-dt__loading" aria-live="polite">
       <div class="in-dt__spinner" aria-label="loading"></div>
     </div>
     <div ref="gridRef" class="in-dt__grid" @contextmenu="onContextMenu"></div>

@@ -4,7 +4,19 @@
 //   시연 영역: CRUD (행 추가/체크 삭제/저장) + format(Integer/Ymd) + frozenCount + Excel +
 //   dirty 추출 (extractDirtyForEnvelope) → envelope BODY 슬롯 형태 확인.
 // ★ (2026-06-01, dspark): extractDirtyForEnvelope 가 이제 sStatus + _seq 부여 (ROW_STATUS 폐기).
-//   실 entity 화면은 본 저수준 호출 대신 useEntityGrid composable 권장 (06b §3).
+// ★ (2026-06-02, dspark): [옵션 1 — 단일 창구] 실 entity 화면은 useEntityGrid 를 직접 import 하지
+//   않는다. InDataTable 에 service props 만 주면 조회·저장이 내부 처리된다 (IBSheet sheet 객체 패턴):
+//
+//     <InDataTable ref="grid" :columns="columns"
+//                  retrieve-service-id="ORM9999_01_R01"
+//                  save-service-id="INT_Y19_0001_01_S01"
+//                  slot-name="ME_INT0001_02"
+//                  :header="{ objectId: 'ORM9999' }"
+//                  auto-retrieve />
+//     // 조회: grid.value.retrieve({ ...검색조건 })   /  저장: grid.value.save()
+//     // grid.value.rows / grid.value.dirtyCount / grid.value.loading 도 노출.
+//
+//   ↓ 아래 데모는 서버 없이 로컬 데이터로 CRUD·format·Excel·dirty 추출만 보이는 controlled 모드.
 import { ref } from 'vue';
 import { ElButton, ElMessage } from 'element-plus';
 import InDataTable from '@/components/ui/InDataTable.vue';

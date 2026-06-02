@@ -6,6 +6,12 @@
 //
 //   흐름: retrieve(조회) → 사용자 편집(tui-grid) → save(getModifiedRows → extractDirtyForEnvelope
 //         → /serviceBroker.h5 S-service POST → 성공 시 dirty clear + 재조회).
+//
+// ★ (2026-06-02, dspark): [옵션 1 — 단일 창구 통합] 이후 본 composable 은 INTERNAL 부품으로 격하.
+//   화면(페이지)은 더 이상 useEntityGrid 를 직접 import 하지 않는다 — InDataTable 이 service props
+//   (retrieveServiceId/saveServiceId/...) 를 받아 본 composable 을 내부에서 사용하고, gridRef.retrieve()
+//   / gridRef.save() 로 노출한다. 따라서 신규 화면은 InDataTable 하나만 쓰면 된다.
+//   (직접 import 는 InDataTable 밖에서 그리드를 조작해야 하는 드문 고급/테스트 케이스에만.)
 import { ref } from 'vue';
 import { useService } from '@/composables/useService';
 import { parseResponse } from '@/services/envelope';
