@@ -28,7 +28,7 @@ function onUserCommand(cmd) {
 // ★ (2026-05-27, dspark): 각 1depth 카테고리별 2depth 그룹 펼침 상태 (사용자 toggle 보존).
 //   Figma 진본 정합으로 모든 1depth 에 placeholder submenu 트리 (router 진입은 시스템관리만,
 //   그 외 카테고리는 click 시 '준비 중' 토스트).
-const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false });
+const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false, playground: false });
 const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
 const operationExpanded = ref({ attendance: true, leave: false, dispatch: false, order: false });
 const performanceExpanded = ref({ eval: true, meeting: false, config: false });
@@ -47,6 +47,9 @@ const ADMIN_PARENT = {
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
+  // ★ (2026-06-02, dspark): Playground 허브·테스트 페이지 → 시스템관리 > Playground 그룹
+  DevPlaygroundHub: 'playground',
+  DevGridPlayground: 'playground',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -306,6 +309,16 @@ const items = computed(() => {
           children: [
             { key: 'SETTINGS',   label: '테마·환경',  active: current === 'SETTINGS' },
             { key: 'COMPONENTS', label: '컴포넌트',   active: current === 'COMPONENTS' },
+          ],
+        },
+        // ★ (2026-06-02, dspark): Playground(dev) — 환경설정 바로 아래. 허브 + 개별 테스트.
+        {
+          key: 'playground',
+          label: 'Playground (dev)',
+          expanded: settingsExpanded.value.playground,
+          children: [
+            { key: 'DevPlaygroundHub', label: 'Playground 홈',  active: current === 'DevPlaygroundHub' },
+            { key: 'DevGridPlayground', label: 'Grid',          active: current === 'DevGridPlayground' },
           ],
         },
       ],

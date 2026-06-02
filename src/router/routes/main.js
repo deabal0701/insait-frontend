@@ -15,27 +15,20 @@ const routes = [
         meta: { requiresAuth: true, title: '대시보드' },
       },
       ...adminRoutes,
-      // ★ (2026-05-28, dspark): dev playground — LNB 노출 X, URL /dev/grid 직접 진입.
-      //   InDataTable + tui-grid 시연. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
+      // ★ (2026-06-02, dspark): Playground 허브 — dev 테스트 카탈로그. LNB 시스템관리 > Playground.
+      {
+        path: 'dev',
+        name: 'DevPlaygroundHub',
+        component: () => import('@/pages/dev/PlaygroundHub.vue'),
+        meta: { requiresAuth: true, title: 'Playground (dev)' },
+      },
+      // ★ (2026-06-02, dspark): dev playground — Grid 테스트(InDataTable self-managed · TST0002).
+      //   허브(/dev)에서 진입. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
       {
         path: 'dev/grid',
         name: 'DevGridPlayground',
         component: () => import('@/pages/dev/GridPlayground.vue'),
         meta: { requiresAuth: true, title: 'Grid Playground (dev)' },
-      },
-      {
-        path: 'dev/grid2',
-        name: 'DevGridPlayground2',
-        component: () => import('@/pages/dev/GridPlayground2.vue'),
-        meta: { requireAuth: true, title: 'Grid Playground(dev)'}
-
-      },
-      // ★ (2026-06-02, dspark): [옵션 1] controlled vs self-managed 모드 비교 + TST0002 실배선.
-      {
-        path: 'dev/grid3',
-        name: 'DevGridPlayground3',
-        component: () => import('@/pages/dev/GridPlayground3.vue'),
-        meta: { requiresAuth: true, title: 'Grid 모드 비교 (TST0002)' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],

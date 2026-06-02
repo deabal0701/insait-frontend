@@ -1,186 +1,150 @@
 <script setup>
-// ★ (2026-05-28, dspark): InDataTable + tui-grid 시연용 dev playground.
-//   운영 LNB 노출 X — URL /dev/grid 직접 진입.
-//   시연 영역: CRUD (행 추가/체크 삭제/저장) + format(Integer/Ymd) + frozenCount + Excel +
-//   dirty 추출 (extractDirtyForEnvelope) → envelope BODY 슬롯 형태 확인.
-// ★ (2026-06-01, dspark): extractDirtyForEnvelope 가 이제 sStatus + _seq 부여 (ROW_STATUS 폐기).
-// ★ (2026-06-02, dspark): [옵션 1 — 단일 창구] 실 entity 화면은 useEntityGrid 를 직접 import 하지
-//   않는다. InDataTable 에 service props 만 주면 조회·저장이 내부 처리된다 (IBSheet sheet 객체 패턴):
+// ★ (2026-06-02, dspark): InDataTable self-managed 모드 데모 — TST0002 실서비스.
+//   URL /dev/grid (Playground 허브 또는 LNB 시스템관리 > Playground > Grid).
+//   self-managed = retrieve/save serviceId 만 주면 InDataTable 이 조회·저장을 내부 처리.
+//   :data 불필요. gridB.retrieve(body) / gridB.save() 호출.
 //
-//     <InDataTable ref="grid" :columns="columns"
-//                  retrieve-service-id="ORM9999_01_R01"
-//                  save-service-id="INT_Y19_0001_01_S01"
-//                  slot-name="ME_INT0001_02"
-//                  :header="{ objectId: 'ORM9999' }"
-//                  auto-retrieve />
-//     // 조회: grid.value.retrieve({ ...검색조건 })   /  저장: grid.value.save()
-//     // grid.value.rows / grid.value.dirtyCount / grid.value.loading 도 노출.
-//
-//   ↓ 아래 데모는 서버 없이 로컬 데이터로 CRUD·format·Excel·dirty 추출만 보이는 controlled 모드.
+//   TST0002 계약 (SCENARIO-tst0002-multiquery/multisave):
+//     조회 = TST0002_00_R01  (검색 IN: ME_TST0002_01.keyword / 응답 OUT: ME_TST0002_02)
+//     저장 = TST0002_00_S01  (요청 IN: ME_TST0002_02 [R01.OUT 재사용] / 응답: ME_SAVE_RESULT)
+//     objectId = TST0002 · 테이블 TST_DEMO(demo_id PK auto-seq, reg_date auto sysdate)
+//   ※ columns(표 뼈대)는 직접 정의. 서비스ID 가 columns 를 만들어주지 않는다.
+//   ★ (2026-06-02): 케이스 A(controlled) 제거 — InDataTable 일반 사용법은 추후 별도 설명.
+//                   ElButton → InButton(공통 컴포넌트) 전환. 다양한 케이스는 추후 보완 예정.
 import { ref } from 'vue';
-import { ElButton, ElMessage } from 'element-plus';
+import { ElInput, ElSwitch } from 'element-plus';
+import InButton from '@/components/ui/InButton.vue';
 import InDataTable from '@/components/ui/InDataTable.vue';
+import { useToast } from '@/composables/useToast';
 
-const gridRef = ref(null);
-const fileRef = ref(null);
+// ★ (2026-06-02, dspark): ElMessage → InToast 기반 useToast 전환 (디자인시스템 정합).
+const toast = useToast();
 
-// 우클릭 컨텍스트 메뉴 항목 (#1)
-const contextMenuItems = [
-  { key: 'add-below', label: '아래에 행 추가' },
-  { key: 'delete-row', label: '이 행 삭제' },
-  { divider: true },
-  { key: 'export', label: 'Excel 내보내기' },
-];
-
+// columns — TST_DEMO 스키마. demo_id/reg_date 는 서버 자동생성이라 읽기전용. 컬럼을 지정하면 자동 매핑이 됨.
 const columns = [
-  { name: 'empNo', header: '사번', width: 90, sortable: true },
-  { name: 'name', header: '이름', editor: 'text', width: 110 },
-  {
-    name: 'dept', header: '부서', width: 110,
-    editor: {
-      type: 'select',
-      options: {
-        listItems: [
-          { text: '인사팀', value: 'HR' },
-          { text: '개발팀', value: 'DEV' },
-          { text: '회계팀', value: 'ACC' },
-        ],
-      },
-    },
-    formatter: ({ value }) => ({ HR: '인사팀', DEV: '개발팀', ACC: '회계팀' }[value] || value || ''),
-  },
-  { name: 'salary', header: '연봉', editor: 'text', format: 'Integer', align: 'right', width: 130 },
-  { name: 'hireDt', header: '입사일', editor: 'text', format: 'Ymd', width: 130 },
+  { name: 'demo_id', header: 'ID(PK)', width: 90, align: 'right' },
+  { name: 'demo_memo', header: '메모', editor: 'text', width: 220 },
+  { name: 'reg_date', header: '등록일', width: 170 },
+  { name: 'demo_name', header: '이름', editor: 'text', width: 160 },
+  { name: 'reg_user', header: '등록자', editor: 'text', width: 120 },
 ];
-
-const initialData = [
-  { empNo: 'E001', name: '김인사', dept: 'HR', salary: 52000000, hireDt: '20210315' },
-  { empNo: 'E002', name: '이개발', dept: 'DEV', salary: 71000000, hireDt: '20220801' },
-  { empNo: 'E003', name: '박회계', dept: 'ACC', salary: 48000000, hireDt: '20230110' },
-];
-const rows = ref([...initialData]);
-const lastSavePayload = ref(null);
-
 const options = {
-  rowHeaders: ['checkbox'],
-  columnOptions: { resizable: true, frozenCount: 1 },
-  bodyHeight: 320,
+  rowHeaders: ['rowNum', 'checkbox'],
+  columnOptions: { resizable: true },
+  bodyHeight: 220,
 };
 
-// ★ (2026-06-01, dspark): 저수준 getInstance() 대신 InDataTable 래퍼 메서드(#3) 사용.
-function addRow() {
-  gridRef.value?.addRow({ empNo: '', name: '', dept: 'DEV', salary: 0, hireDt: '' });
-}
-function removeChecked() {
-  const removed = gridRef.value?.removeCheckedRows() || [];
-  if (!removed.length) ElMessage.warning('체크된 행이 없습니다.');
-}
-function save() {
-  lastSavePayload.value = gridRef.value?.getDirty() || [];   // finishEditing + sStatus/_seq (#3)
-  ElMessage.success(`dirty rows ${lastSavePayload.value.length} 건`);
-}
-function reset() {
-  rows.value = [...initialData];
-  lastSavePayload.value = null;
-}
+/* ───────────── self-managed (TST0002 서비스로 내부 조회·저장) ───────────── */
+const gridB = ref(null);
+// TST0002 실서비스 기본값 (입력칸으로 노출 — 필요 시 다른 서비스로 바꿔 테스트 가능)
+const svc = ref({
+  retrieveServiceId: 'TST0002_00_R01',
+  saveServiceId: 'TST0002_00_S01',
+  slotName: 'ME_TST0002_02',     // 조회 응답 + 저장 요청 공통 슬롯 (CRUD 메시지 재사용)
+  objectId: 'TST0002',
+  autoRetrieve: false,
+});
+// 검색조건 body — 검증된 형태 { 슬롯: [record] } (ServiceTester:147 동일). keyword 빈값 = 전체.
+const searchBody = ref('{ "ME_TST0002_01": [ { "keyword": "" } ] }');
 
-// #1 결손기능 시연 — Excel 다운/업 + 인쇄
-function excelExport() {
-  gridRef.value?.exportExcel({ fileName: 'employees', sheetName: '직원' });
+async function bRetrieve() {
+  if (!svc.value.retrieveServiceId) { toast.warning('retrieveServiceId 를 입력하세요'); return; }
+  let body = {};
+  try { body = JSON.parse(searchBody.value || '{}'); }
+  catch (_) { toast.error('검색조건 JSON 파싱 실패'); return; }
+  try {
+    const rows = await gridB.value.retrieve(body);
+    toast.success(`조회 ${rows?.length || 0}행 (InDataTable 이 envelope 조립·POST·파싱·반영)`);
+  } catch (e) {
+    toast.error(`조회 실패: ${e?.message || e}`);
+  }
 }
-function excelImportClick() { fileRef.value?.click(); }
-async function onExcelFile(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const rows2 = await gridRef.value?.importExcel(file);
-  ElMessage.success(`Excel ${rows2?.length || 0}행 로드`);
-  e.target.value = '';
+async function bSave() {
+  if (!svc.value.saveServiceId) { toast.warning('saveServiceId 를 입력하세요'); return; }
+  try {
+    const r = await gridB.value.save();
+    if (r.skipped) toast.info('변경분 0건 — 저장 호출 생략');
+    else toast.success(`저장 ${r.dirty.length}건 전송 + 재조회 완료`);
+  } catch (e) {
+    toast.error(`저장 실패: ${e?.message || e}`);
+  }
 }
-function printIt() {
-  gridRef.value?.printGrid({ title: '직원 목록' });
+// 신규 INSERT: demo_id/reg_date 는 서버 자동생성 → 빈값. demo_name/demo_memo/reg_user 만 입력.
+function bAddRow() {
+  gridB.value?.addRow({ demo_id: '', demo_name: '신규', demo_memo: '', reg_date: '', reg_user: 'tester' });
 }
-
-// #1 컨텍스트 메뉴 액션
-function onContextAction({ key, rowKey }) {
-  const grid = gridRef.value?.getInstance();
-  if (key === 'add-below') gridRef.value?.addRow({ empNo: '', name: '', dept: 'DEV', salary: 0, hireDt: '' }, { at: (rowKey ?? -1) + 1 });
-  else if (key === 'delete-row' && rowKey != null && grid) grid.removeRow(rowKey);
-  else if (key === 'export') excelExport();
+// 체크 행 삭제 표시(sStatus='D'). DB 즉시 삭제 X — [저장] 시 서버가 진짜 DELETE.
+function bRemoveChecked() {
+  const removed = gridB.value?.removeCheckedRows() || [];
+  if (!removed.length) { toast.warning('체크된 행이 없습니다.'); return; }
+  toast.info(`${removed.length}행 삭제 표시 (sStatus='D') — 저장 시 서버 DELETE`);
 }
 </script>
 
 <template>
-  <div class="pg">
-    <h2 class="pg__title">InDataTable / tui-grid playground</h2>
-    <p class="pg__hint">
-      운영 메뉴 노출 X. dev 검증용 — CRUD · format(Integer/Ymd) · frozen · Excel · dirty 추출 시연.
+  <div class="pg3">
+    <h2 class="pg3__title">InDataTable self-managed 모드 — TST0002 (dev)</h2>
+    <p class="pg3__hint">
+      <code>retrieve/save serviceId</code> 만 주면 InDataTable 이 조회·저장을 내부 처리한다.
+      <code>:data</code> 불필요 — <code>gridB.retrieve(body)</code> / <code>gridB.save()</code> 호출.
     </p>
 
-    <div class="pg__toolbar">
-      <ElButton size="small" type="primary" @click="addRow">행 추가(선택 행 다음)</ElButton>
-      <ElButton size="small" @click="removeChecked">체크 삭제</ElButton>
-      <ElButton size="small" type="success" @click="save">저장 (dirty 추출)</ElButton>
-      <ElButton size="small" @click="reset">초기화</ElButton>
-      <ElButton size="small" @click="excelExport">Excel 내보내기</ElButton>
-      <ElButton size="small" @click="excelImportClick">Excel 불러오기</ElButton>
-      <ElButton size="small" @click="printIt">인쇄</ElButton>
-      <input ref="fileRef" type="file" accept=".xlsx,.xls" style="display:none" @change="onExcelFile" />
-    </div>
-    <p class="pg__hint">우클릭 → 컨텍스트 메뉴 (아래에 행 추가 / 삭제 / Excel).</p>
-
-    <InDataTable
-      ref="gridRef"
-      :columns="columns"
-      :data="rows"
-      :options="options"
-      :height="380"
-      :context-menu-items="contextMenuItems"
-      @context-action="onContextAction"
-    />
-
-    <div v-if="lastSavePayload" class="pg__payload">
-      <h3>envelope BODY 슬롯 형태 (sStatus + _seq — 백엔드 BusinessEntity 계약)</h3>
-      <pre>{{ JSON.stringify(lastSavePayload, null, 2) }}</pre>
-    </div>
+    <section class="case">
+      <h3 class="case__h">self-managed 모드 (서비스 props) · TST0002 실배선</h3>
+      <p class="case__desc">
+        아래 값은 TST0002 실서비스 — <b>[조회]</b> 누르면 백엔드를 호출해 TST_DEMO 를 그린다.
+        columns(표 뼈대)는 직접 정의하지만, 데이터·조회·저장은 InDataTable 이 알아서 처리한다.
+      </p>
+      <div class="case__form">
+        <label>retrieveServiceId <ElInput v-model="svc.retrieveServiceId" size="small" /></label>
+        <label>saveServiceId <ElInput v-model="svc.saveServiceId" size="small" /></label>
+        <label>slotName <ElInput v-model="svc.slotName" size="small" /></label>
+        <label>objectId(header) <ElInput v-model="svc.objectId" size="small" /></label>
+        <label class="case__wide">검색조건 body(JSON) <ElInput v-model="searchBody" size="small" /></label>
+        <label class="case__sw">auto-retrieve <ElSwitch v-model="svc.autoRetrieve" /></label>
+      </div>
+      <div class="case__bar">
+        <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="bRetrieve">조회 (retrieve)</InButton>
+        <InButton size="sm" variant="default" :left-icon-show="false" :right-icon-show="false" @click="bAddRow">행 추가(INSERT)</InButton>
+        <InButton size="sm" variant="default" :left-icon-show="false" :right-icon-show="false" @click="bRemoveChecked">체크 삭제(D)</InButton>
+        <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="bSave">저장 (save)</InButton>
+        <span class="case__tag">rows: {{ gridB?.rows?.length ?? 0 }} · dirty: {{ gridB?.dirtyCount ?? 0 }} · loading: {{ gridB?.loading ? 'Y' : 'N' }}</span>
+      </div>
+      <!-- :data 없음 — InDataTable 이 retrieve() 로 스스로 채움 -->
+      <InDataTable
+        ref="gridB"
+        :columns="columns"
+        :options="options"
+        :height="300"
+        :retrieve-service-id="svc.retrieveServiceId || undefined"
+        :save-service-id="svc.saveServiceId || undefined"
+        :slot-name="svc.slotName || undefined"
+        :header="svc.objectId ? { objectId: svc.objectId } : {}"
+        :auto-retrieve="svc.autoRetrieve"
+      />
+      <pre class="case__code">&lt;InDataTable :columns="columns"
+  retrieve-service-id="TST0002_00_R01"
+  save-service-id="TST0002_00_S01"
+  slot-name="ME_TST0002_02"
+  :header="{ objectId: 'TST0002' }" /&gt;   // data 불필요 — gridB.retrieve() / gridB.save()</pre>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.pg { padding: 16px; width: 100%; }
-.pg__title {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--in-text-accent);
-}
-.pg__hint {
-  margin: 0 0 16px;
-  color: var(--in-text-subtle);
-  font-size: 12px;
-}
-.pg__toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-.pg__payload {
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--in-surface-default, #f5f5f5);
-  border-radius: 6px;
-}
-.pg__payload h3 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--in-text-accent);
-}
-.pg__payload pre {
-  margin: 0;
-  font-size: 11px;
-  max-height: 280px;
-  overflow: auto;
-  color: var(--in-text-default);
-}
+.pg3 { padding: 16px; width: 100%; max-width: 980px; }
+.pg3__title { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--in-text-accent, #111); }
+.pg3__hint { margin: 0 0 16px; font-size: 12px; color: var(--in-text-subtle, #777); }
+.pg3__hint code { padding: 1px 5px; background: var(--in-surface-default, #f3f3f3); border-radius: 4px; font-size: 11px; }
+.case { margin-bottom: 28px; padding: 14px; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 8px; }
+.case__h { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--in-text-accent, #111); }
+.case__desc { margin: 0 0 12px; font-size: 12px; line-height: 1.6; color: var(--in-text-default, #565656); }
+.case__desc code { padding: 1px 5px; background: var(--in-surface-default, #f3f3f3); border-radius: 4px; font-size: 11px; }
+.case__bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.case__tag { margin-left: auto; font-size: 11px; color: var(--in-text-subtle, #888); }
+.case__form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin-bottom: 12px; }
+.case__form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--in-text-subtle, #777); }
+.case__wide { grid-column: 1 / -1; }
+.case__sw { flex-direction: row !important; align-items: center; gap: 8px; }
+.case__code { margin: 10px 0 0; padding: 10px; background: var(--in-surface-default, #f5f5f5); border-radius: 6px; font-size: 11px; line-height: 1.5; color: var(--in-text-default, #333); white-space: pre-wrap; }
 </style>
