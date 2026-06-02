@@ -42,6 +42,10 @@ const gridA = ref(null);
 function aAddRow() {
   gridA.value?.addRow({ demo_id: '', demo_name: '', demo_memo: '', reg_date: '', reg_user: '' });
 }
+function aRemoveChecked() {
+  const removed = gridA.value?.removeCheckedRows() || [];
+  if (!removed.length) ElMessage.warning('체크된 행이 없습니다.');
+}
 function aShowDirty() {
   const dirty = gridA.value?.getDirty() || [];   // controlled 모드는 dirty 를 직접 추출
   ElMessage.success(`[A] 변경분 ${dirty.length}건 (직접 추출 → 직접 저장 책임)`);
@@ -86,6 +90,12 @@ async function bSave() {
 function bAddRow() {
   gridB.value?.addRow({ demo_id: '', demo_name: '신규', demo_memo: '', reg_date: '', reg_user: 'tester' });
 }
+// 체크 행 삭제 표시(sStatus='D'). DB 즉시 삭제 X — [저장] 시 서버가 진짜 DELETE.
+function bRemoveChecked() {
+  const removed = gridB.value?.removeCheckedRows() || [];
+  if (!removed.length) { ElMessage.warning('체크된 행이 없습니다.'); return; }
+  ElMessage.info(`[B] ${removed.length}행 삭제 표시 (sStatus='D') — 저장 시 서버 DELETE`);
+}
 </script>
 
 <template>
@@ -105,6 +115,7 @@ function bAddRow() {
       </p>
       <div class="case__bar">
         <ElButton size="small" type="primary" @click="aAddRow">행 추가</ElButton>
+        <ElButton size="small" type="danger" plain @click="aRemoveChecked">체크 삭제</ElButton>
         <ElButton size="small" @click="aShowDirty">변경분 추출(직접 저장책임)</ElButton>
         <span class="case__tag">data: 로컬 {{ localRows.length }}행 (서버 안 거침)</span>
       </div>
@@ -131,6 +142,7 @@ function bAddRow() {
       <div class="case__bar">
         <ElButton size="small" type="success" @click="bRetrieve">조회 (retrieve)</ElButton>
         <ElButton size="small" @click="bAddRow">행 추가(INSERT)</ElButton>
+        <ElButton size="small" type="danger" plain @click="bRemoveChecked">체크 삭제(D)</ElButton>
         <ElButton size="small" type="warning" @click="bSave">저장 (save)</ElButton>
         <span class="case__tag">rows: {{ gridB?.rows?.length ?? 0 }} · dirty: {{ gridB?.dirtyCount ?? 0 }} · loading: {{ gridB?.loading ? 'Y' : 'N' }}</span>
       </div>
