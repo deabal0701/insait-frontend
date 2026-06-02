@@ -50,6 +50,7 @@ const ADMIN_PARENT = {
   // ★ (2026-06-02, dspark): Playground 허브·테스트 페이지 → 시스템관리 > Playground 그룹
   DevPlaygroundHub: 'playground',
   DevGridPlayground: 'playground',
+  DevGridGallery: 'playground',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -319,6 +320,7 @@ const items = computed(() => {
           children: [
             { key: 'DevPlaygroundHub', label: 'Playground 홈',  active: current === 'DevPlaygroundHub' },
             { key: 'DevGridPlayground', label: 'Grid',          active: current === 'DevGridPlayground' },
+            { key: 'DevGridGallery',    label: 'Grid 카탈로그',  active: current === 'DevGridGallery' },
           ],
         },
       ],

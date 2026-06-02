@@ -11,6 +11,7 @@ const toast = useToast();
 // ★ 새 playground 추가 시 여기에 1줄. routeName 은 router 의 name 과 일치해야 함.
 const PLAYGROUNDS = [
   { group: 'Grid', title: 'Grid (InDataTable)', desc: 'tui-grid self-managed · TST0002 조회/저장/삭제 (서비스 props)', routeName: 'DevGridPlayground', status: 'ready' },
+  { group: 'Grid', title: 'Grid 기능 카탈로그', desc: 'IBSheet 형태별 — 콤보·인셀버튼·마스터디테일·조건부스타일/헤더색', routeName: 'DevGridGallery', status: 'ready' },
   { group: 'Feedback', title: 'Toast / 알림', desc: 'InToast + useToast 명령형 알림 (예정)', routeName: '', status: 'todo' },
   { group: 'Chart', title: 'Chart', desc: '차트 컴포넌트 시연 (예정)', routeName: '', status: 'todo' },
   { group: 'Form', title: 'Form / Input', desc: 'InTextField · InSelect · InDatePicker 등 (예정)', routeName: '', status: 'todo' },

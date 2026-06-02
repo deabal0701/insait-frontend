@@ -29,6 +29,13 @@ const routes = [
         name: 'DevGridPlayground',
         component: () => import('@/pages/dev/GridPlayground.vue'),
         meta: { requiresAuth: true, title: 'Grid Playground (dev)' },
+      },
+      // ★ (2026-06-02, dspark): Grid 기능 카탈로그 — IBSheet 형태별 tui-grid 시연.
+      {
+        path: 'dev/grid-gallery',
+        name: 'DevGridGallery',
+        component: () => import('@/pages/dev/GridGallery.vue'),
+        meta: { requiresAuth: true, title: 'Grid 기능 카탈로그 (dev)' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
