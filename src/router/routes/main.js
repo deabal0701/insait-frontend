@@ -15,22 +15,10 @@ const routes = [
         meta: { requiresAuth: true, title: '대시보드' },
       },
       ...adminRoutes,
-      // ★ (2026-06-02, dspark): Playground 허브 — dev 테스트 카탈로그. LNB 시스템관리 > Playground.
-      {
-        path: 'dev',
-        name: 'DevPlaygroundHub',
-        component: () => import('@/pages/dev/PlaygroundHub.vue'),
-        meta: { requiresAuth: true, title: 'Playground (dev)' },
-      },
-      // ★ (2026-06-02, dspark): dev playground — Grid 테스트(InDataTable self-managed · TST0002).
-      //   허브(/dev)에서 진입. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
-      {
-        path: 'dev/grid',
-        name: 'DevGridPlayground',
-        component: () => import('@/pages/dev/GridPlayground.vue'),
-        meta: { requiresAuth: true, title: 'Grid Playground (dev)' },
-      },
-      // ★ (2026-06-02, dspark): Grid 기능 카탈로그 — IBSheet 형태별 tui-grid 시연.
+      // ★ (2026-06-02, dspark): Grid 기능 카탈로그 — dev 테스트(IBSheet 형태별 tui-grid + 실서비스 TST0002).
+      //   LNB 시스템관리 > Playground. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
+      //   ★ 별도 Playground 허브·Grid 페이지 폐지 → 카탈로그 단일화 (실서비스 그리드는 카탈로그 탭으로 통합).
+      { path: 'dev', redirect: { name: 'DevGridGallery' } },
       {
         path: 'dev/grid-gallery',
         name: 'DevGridGallery',

@@ -5,18 +5,65 @@
 //   editor/renderer 와 options 로 tui-grid 네이티브 기능을 호출. (AS-IS IBSheet Type 대응)
 //   탭으로 한 번에 1 케이스 표시. 새 형태 추가 = CASES 에 1줄 + 섹션.
 import { ref, computed } from 'vue';
+import { ElInput, ElSwitch } from 'element-plus';
+import InButton from '@/components/ui/InButton.vue';
 import InDataTable from '@/components/ui/InDataTable.vue';
 import { useToast } from '@/composables/useToast';
 
 const toast = useToast();
 
 const CASES = [
+  { key: 'service', title: '실서비스 (TST0002)', asis: '/serviceBroker.h5 envelope · self-managed 조회/저장/삭제' },
   { key: 'combo',  title: '콤보 셀',          asis: 'IBSheet Type:Combo (107) · h5:ComboBox (2,144)' },
   { key: 'button', title: '인셀 버튼',        asis: 'IBSheet Type:Html/Popup (42) · 셀 안 버튼·팝업' },
   { key: 'master', title: '마스터-디테일',     asis: '행 클릭 → 하위 그리드 변경 (row-click 746)' },
   { key: 'style',  title: '조건부 스타일·헤더색', asis: '값 따라 행 강조 + 컬럼 헤더 색상' },
 ];
-const active = ref('combo');
+const active = ref('service');
+
+/* ─────────────────────────── 케이스 0 — 실서비스 (TST0002 self-managed) ─────────────────────────── */
+//   GridPlayground 페이지를 카탈로그 네이티브 탭으로 이전 (콘텐츠 전용 — 페이지 껍데기 X).
+const svcGrid = ref(null);
+const svc = ref({
+  retrieveServiceId: 'TST0002_00_R01',
+  saveServiceId: 'TST0002_00_S01',
+  slotName: 'ME_TST0002_02',     // 조회 응답 + 저장 요청 공통 슬롯 (CRUD 메시지 재사용)
+  objectId: 'TST0002',
+  autoRetrieve: false,
+});
+const searchBody = ref('{ "ME_TST0002_01": [ { "keyword": "" } ] }');
+const serviceColumns = [
+  { name: 'demo_id', header: 'ID(PK)', width: 90, align: 'right' },
+  { name: 'demo_memo', header: '메모', editor: 'text', width: 220 },
+  { name: 'reg_date', header: '등록일', width: 170 },
+  { name: 'demo_name', header: '이름', editor: 'text', width: 160 },
+  { name: 'reg_user', header: '등록자', editor: 'text', width: 120 },
+];
+const serviceOptions = { rowHeaders: ['rowNum', 'checkbox'], columnOptions: { resizable: true }, bodyHeight: 220 };
+async function svcRetrieve() {
+  if (!svc.value.retrieveServiceId) { toast.warning('retrieveServiceId 를 입력하세요'); return; }
+  let body = {};
+  try { body = JSON.parse(searchBody.value || '{}'); }
+  catch (_) { toast.error('검색조건 JSON 파싱 실패'); return; }
+  try { const rows = await svcGrid.value.retrieve(body); toast.success(`조회 ${rows?.length || 0}행`); }
+  catch (e) { toast.error(`조회 실패: ${e?.message || e}`); }
+}
+async function svcSave() {
+  if (!svc.value.saveServiceId) { toast.warning('saveServiceId 를 입력하세요'); return; }
+  try {
+    const r = await svcGrid.value.save();
+    if (r.skipped) toast.info('변경분 0건 — 저장 호출 생략');
+    else toast.success(`저장 ${r.dirty.length}건 전송 + 재조회 완료`);
+  } catch (e) { toast.error(`저장 실패: ${e?.message || e}`); }
+}
+function svcAddRow() {
+  svcGrid.value?.addRow({ demo_id: '', demo_name: '신규', demo_memo: '', reg_date: '', reg_user: 'tester' });
+}
+function svcRemoveChecked() {
+  const removed = svcGrid.value?.removeCheckedRows() || [];
+  if (!removed.length) { toast.warning('체크된 행이 없습니다.'); return; }
+  toast.info(`${removed.length}행 삭제 표시 (sStatus='D') — 저장 시 서버 DELETE`);
+}
 
 /* ─────────────────────────── tui-grid 커스텀 렌더러 ─────────────────────────── */
 // 인셀 버튼 (CellRenderer). column.renderer.options = { label, variant, onClick(row, rowKey) }
@@ -186,6 +233,40 @@ const styleOptions = {
       AS-IS 대응: <b>{{ CASES.find((c) => c.key === active)?.asis }}</b>
     </p>
 
+    <!-- 케이스 0 — 실서비스 (TST0002 self-managed) -->
+    <section v-if="active === 'service'" class="gg__case">
+      <p class="gg__desc">
+        <code>retrieve/save serviceId</code> 만 주면 InDataTable 이 조회·저장을 내부 처리. <code>:data</code> 불필요 —
+        <code>svcGrid.retrieve(body)</code> / <code>svcGrid.save()</code>. [조회] → 백엔드 호출(TST_DEMO).
+      </p>
+      <div class="gg__form">
+        <label>retrieveServiceId <ElInput v-model="svc.retrieveServiceId" size="small" /></label>
+        <label>saveServiceId <ElInput v-model="svc.saveServiceId" size="small" /></label>
+        <label>slotName <ElInput v-model="svc.slotName" size="small" /></label>
+        <label>objectId(header) <ElInput v-model="svc.objectId" size="small" /></label>
+        <label class="gg__form-wide">검색조건 body(JSON) <ElInput v-model="searchBody" size="small" /></label>
+        <label class="gg__form-sw">auto-retrieve <ElSwitch v-model="svc.autoRetrieve" /></label>
+      </div>
+      <div class="gg__bar">
+        <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="svcRetrieve">조회</InButton>
+        <InButton size="sm" variant="default" :left-icon-show="false" :right-icon-show="false" @click="svcAddRow">행 추가(INSERT)</InButton>
+        <InButton size="sm" variant="default" :left-icon-show="false" :right-icon-show="false" @click="svcRemoveChecked">체크 삭제(D)</InButton>
+        <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="svcSave">저장</InButton>
+        <span class="gg__tag">rows: {{ svcGrid?.rows?.length ?? 0 }} · dirty: {{ svcGrid?.dirtyCount ?? 0 }} · loading: {{ svcGrid?.loading ? 'Y' : 'N' }}</span>
+      </div>
+      <InDataTable
+        ref="svcGrid"
+        :columns="serviceColumns"
+        :options="serviceOptions"
+        :height="300"
+        :retrieve-service-id="svc.retrieveServiceId || undefined"
+        :save-service-id="svc.saveServiceId || undefined"
+        :slot-name="svc.slotName || undefined"
+        :header="svc.objectId ? { objectId: svc.objectId } : {}"
+        :auto-retrieve="svc.autoRetrieve"
+      />
+    </section>
+
     <!-- 케이스 1 — 콤보 셀 -->
     <section v-if="active === 'combo'" class="gg__case">
       <p class="gg__desc">부서·직급 셀을 더블클릭하면 <b>콤보(select)</b>로 편집. <code>editor: { type: 'select', options: { listItems } }</code></p>
@@ -240,6 +321,14 @@ const styleOptions = {
 
 .gg__md { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .gg__md-h { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--in-text-accent, #111); }
+
+/* 실서비스 케이스 — 서비스 폼 + 액션바 */
+.gg__form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin-bottom: 12px; }
+.gg__form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--in-text-subtle, #777); }
+.gg__form-wide { grid-column: 1 / -1; }
+.gg__form-sw { flex-direction: row !important; align-items: center; gap: 8px; }
+.gg__bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.gg__tag { margin-left: auto; font-size: 11px; color: var(--in-text-subtle, #888); }
 
 /* 인셀 버튼 */
 :deep(.gg-cellbtn) {

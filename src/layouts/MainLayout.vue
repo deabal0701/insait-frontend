@@ -47,9 +47,7 @@ const ADMIN_PARENT = {
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
-  // ★ (2026-06-02, dspark): Playground 허브·테스트 페이지 → 시스템관리 > Playground 그룹
-  DevPlaygroundHub: 'playground',
-  DevGridPlayground: 'playground',
+  // ★ (2026-06-02, dspark): Grid 카탈로그 → 시스템관리 > Playground 그룹
   DevGridGallery: 'playground',
 };
 
@@ -312,15 +310,13 @@ const items = computed(() => {
             { key: 'COMPONENTS', label: '컴포넌트',   active: current === 'COMPONENTS' },
           ],
         },
-        // ★ (2026-06-02, dspark): Playground(dev) — 환경설정 바로 아래. 허브 + 개별 테스트.
+        // ★ (2026-06-02, dspark): Playground(dev) — 환경설정 바로 아래. Grid 카탈로그 단일.
         {
           key: 'playground',
           label: 'Playground (dev)',
           expanded: settingsExpanded.value.playground,
           children: [
-            { key: 'DevPlaygroundHub', label: 'Playground 홈',  active: current === 'DevPlaygroundHub' },
-            { key: 'DevGridPlayground', label: 'Grid',          active: current === 'DevGridPlayground' },
-            { key: 'DevGridGallery',    label: 'Grid 카탈로그',  active: current === 'DevGridGallery' },
+            { key: 'DevGridGallery', label: 'Grid 카탈로그', active: current === 'DevGridGallery' },
           ],
         },
       ],
