@@ -29,6 +29,13 @@ const routes = [
         component: () => import('@/pages/dev/GridPlayground2.vue'),
         meta: { requireAuth: true, title: 'Grid Playground(dev)'}
 
+      },
+      // ★ (2026-06-02, dspark): [옵션 1] controlled vs self-managed 모드 비교 + TST0002 실배선.
+      {
+        path: 'dev/grid3',
+        name: 'DevGridPlayground3',
+        component: () => import('@/pages/dev/GridPlayground3.vue'),
+        meta: { requiresAuth: true, title: 'Grid 모드 비교 (TST0002)' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
