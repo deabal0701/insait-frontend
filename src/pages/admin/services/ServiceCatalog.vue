@@ -91,9 +91,9 @@ async function openDetail(row) {
   detail.value = null;
   detailLoading.value = true;
   try {
-    // ★ (2026-06-03, dspark): expand 보강 — msgColumns (use_yn/use_enc_yn 가시화) + health (호환성 평가).
-    //   근거: command-scenarios 4건 (multiquery §3.1 / multisave §5 #1 / procedure §5.2 #13 / ela §5.2 #25).
-    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object', 'msgColumns', 'health'] });
+    // ★ (2026-06-03, dspark): expand 보강 — msgColumns/health/paramDiff/elaInfra.
+    //   근거: command-scenarios 4건 + ela §2.A.1 14건 인프라.
+    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object', 'msgColumns', 'health', 'paramDiff', 'elaInfra'] });
     drawerTab.value = 'def';
   } catch (e) {
     toast.error?.(e?.message || '상세 조회 실패');
@@ -106,7 +106,7 @@ function closeDetail() { selected.value = null; detail.value = null; }
 // ★ (2026-06-03, dspark): trapCount breakdown — 함정 카테고리별 분포 표시.
 //   command-scenarios 4건의 첫 함정 카테고리 5종.
 const trapBreakdown = computed(() => {
-  const out = { msgMissing: 0, queryMissing: 0, useYnN: 0, compatError: 0, compatWarn: 0 };
+  const out = { msgMissing: 0, queryMissing: 0, useYnN: 0, compatError: 0, compatWarn: 0, paramMismatch: 0, elaMissing: 0 };
   const d = detail.value;
   if (!d) return out;
   // 메시지 미등록 (자동 바인딩 함정)
@@ -134,6 +134,12 @@ const trapBreakdown = computed(() => {
       else if (r.severity === 'warn') out.compatWarn += 1;
     }
   }
+  // ★ (2026-06-03, dspark) #4: Procedure SQL bind name 미매칭
+  for (const f of d.funcMaps || []) {
+    if (f.queryRef?.paramDiff?.unmatched?.length) out.paramMismatch += f.queryRef.paramDiff.unmatched.length;
+  }
+  // ★ (2026-06-03, dspark) #5: ELA 14건 인프라 missing
+  if (d.elaInfra?.summary) out.elaMissing = d.elaInfra.summary.missingCount || 0;
   return out;
 });
 
@@ -155,6 +161,55 @@ function shortCmd(fqcn) {
   if (!fqcn) return '';
   return fqcn.split('.').pop();
 }
+
+// ★ (2026-06-03, dspark): 시나리오 정합 헬퍼.
+
+/** 3중 동명 (sv_def_nm == primary funcMap.func_nm). sql 매핑일 때만 의미. */
+const tripleNameStatus = computed(() => {
+  const d = detail.value;
+  if (!d?.def || !d.funcMaps?.length) return null;
+  const primary = d.funcMaps[0];
+  if ((primary.svMapTypeCd || '').toLowerCase() !== 'sql') return null;   // entity 면 EN_* 매핑이라 의미 없음
+  const same = (primary.funcNm || '').toUpperCase() === (d.def.svDefNm || '').toUpperCase();
+  return { same, funcNm: primary.funcNm };
+});
+
+/** ELA dispatch — cmd_class 가 ElaServiceCommand 면 envelope 실 serviceId 가 ELA0010_SAVE_0N 으로 변형. */
+const elaDispatch = computed(() => {
+  const d = detail.value;
+  if (!d?.def) return null;
+  const short = shortCmd(d.def.cmdClassNm);
+  if (short !== 'ElaServiceCommand') return null;
+  // SCENARIO-ela.md §5.2 #26: Submit/TempSave/Approve/Deny → ELA0010_SAVE_01..04
+  return {
+    note: '실제 envelope serviceId 가 ELA0010_SAVE_0N (1=Submit / 2=TempSave / 3=Approve / 4=Deny) 으로 sub-Command dispatch 됨',
+    ref: 'SCENARIO-ela.md §5.2 #26',
+  };
+});
+
+/** ELA 인프라 행 색 — critical missing 빨강 / important missing 노랑 / OK 없음 / unknown 없음. */
+function elaRowClass(it) {
+  if (it.exists === false) {
+    return it.severity === 'critical' ? 'svc-ela-row--critical-missing' : 'svc-ela-row--missing';
+  }
+  return '';
+}
+
+/** objectId NULL 의미 — 일반 Command 는 NULL 정상, ELA Command 는 NULL=등록 누락 의심. */
+const objectIdInterpretation = computed(() => {
+  const d = detail.value;
+  if (!d?.def) return null;
+  const isNull = !d.def.objectId;
+  const isEla = shortCmd(d.def.cmdClassNm) === 'ElaServiceCommand';
+  if (!isNull) return null;
+  return {
+    severity: isEla ? 'warn' : 'info',
+    message: isEla
+      ? 'ELA Command 인데 objectId NULL — OBJECT 메타 14건 인프라 등록 누락 의심'
+      : 'objectId NULL — 일반 Command 는 정상 (대부분 NULL, 매뉴얼 09 §6.1)',
+    ref: isEla ? 'SCENARIO-ela.md §5.2 #14' : '매뉴얼 09 §6.1',
+  };
+});
 
 onMounted(() => list.reload());
 </script>
@@ -271,6 +326,8 @@ onMounted(() => list.reload());
             <InTag v-if="trapBreakdown.msgMissing > 0"   :label="`메시지 미등록 ${trapBreakdown.msgMissing}건`"   variant="error" size="sm" />
             <InTag v-if="trapBreakdown.queryMissing > 0" :label="`SQL 미등록 ${trapBreakdown.queryMissing}건`"     variant="error" size="sm" />
             <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
+            <InTag v-if="trapBreakdown.paramMismatch > 0" :label="`SQL bind 미매칭 ${trapBreakdown.paramMismatch}건`" variant="error" size="sm" />
+            <InTag v-if="trapBreakdown.elaMissing > 0"   :label="`ELA 인프라 ${trapBreakdown.elaMissing}건`"        variant="error" size="sm" />
             <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="gotoTester(selected)">▶ 테스트</InButton>
             <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="copyJson(detail)">📋 JSON 복사</InButton>
           </div>
@@ -281,14 +338,60 @@ onMounted(() => list.reload());
             { name: 'attrs',    tabLabel: `메시지 슬롯 (${detail.attrs?.length || 0})` },
             { name: 'funcMaps', tabLabel: `함수 매핑 (${detail.funcMaps?.length || 0})` },
             { name: 'object',   tabLabel: '소속 오브젝트' },
+            // ★ (2026-06-03, dspark) #5: ELA Command 한정 인프라 탭
+            ...(detail.elaInfra ? [{ name: 'elaInfra', tabLabel: `ELA 인프라 (${detail.elaInfra.summary.missingCount > 0 ? detail.elaInfra.summary.okCount + '/' + (detail.elaInfra.summary.okCount + detail.elaInfra.summary.missingCount) : detail.elaInfra.items.length})` }] : []),
           ]" />
 
           <section v-if="drawerTab === 'def'" class="svc-section">
             <dl class="kv">
               <dt>서비스명</dt><dd>{{ detail.def.svDefNm }}</dd>
-              <dt>Command</dt><dd>{{ detail.def.cmdClassNm }}</dd>
+              <dt>Command</dt>
+              <dd>
+                <code>{{ shortCmd(detail.def.cmdClassNm) }}</code>
+                <span class="muted">— {{ detail.def.cmdClassNm }}</span>
+              </dd>
               <dt>tx / async / log</dt>
               <dd>{{ detail.def.txSupportYn }} / {{ detail.def.asyncYn }} / {{ detail.def.useLogYn }}</dd>
+              <dt>objectId</dt>
+              <dd>
+                <span v-if="detail.def.objectId"><code>{{ detail.def.objectId }}</code></span>
+                <span v-else class="muted">NULL</span>
+                <!-- ★ (2026-06-03, dspark) #8: objectId NULL 의미 분기. -->
+                <InTag
+                  v-if="objectIdInterpretation"
+                  class="svc-def-chip"
+                  :label="objectIdInterpretation.severity === 'warn' ? '등록 누락 의심' : '정상 (NULL 통상)'"
+                  :variant="objectIdInterpretation.severity === 'warn' ? 'warning' : 'success'"
+                  size="sm"
+                />
+                <InTooltip v-if="objectIdInterpretation" :text="`${objectIdInterpretation.message} (근거: ${objectIdInterpretation.ref})`">
+                  <span class="svc-def-help">ⓘ</span>
+                </InTooltip>
+              </dd>
+              <!-- ★ (2026-06-03, dspark) #10: 3중 동명 (sv_def_nm == func_nm) chip. sql 매핑일 때만. -->
+              <template v-if="tripleNameStatus">
+                <dt>3중 동명</dt>
+                <dd>
+                  <InTag
+                    :label="tripleNameStatus.same ? '정합' : '불일치'"
+                    :variant="tripleNameStatus.same ? 'success' : 'warning'"
+                    size="sm"
+                  />
+                  <span class="muted">func_nm = <code>{{ tripleNameStatus.funcNm }}</code></span>
+                  <InTooltip text="sv_def_nm = func_nm = query_name 이 일치해야 framework 자동 바인딩 정상 (multiquery §2). sql 매핑일 때만 의미.">
+                    <span class="svc-def-help">ⓘ</span>
+                  </InTooltip>
+                </dd>
+              </template>
+              <!-- ★ (2026-06-03, dspark) #7: ELA Command 의 sub-Command dispatch 안내. -->
+              <template v-if="elaDispatch">
+                <dt>실 dispatch</dt>
+                <dd>
+                  <InTag label="ELA sub-Command" variant="brand" size="sm" />
+                  <span class="muted">{{ elaDispatch.note }}</span>
+                  <span class="muted svc-def-ref">— {{ elaDispatch.ref }}</span>
+                </dd>
+              </template>
               <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
               <dt>변경</dt><dd>{{ detail.def.modUserId }} · {{ detail.def.modDate }}</dd>
             </dl>
@@ -368,17 +471,38 @@ onMounted(() => list.reload());
 
           <section v-else-if="drawerTab === 'funcMaps'" class="svc-section">
             <ul class="resource-list">
-              <li v-for="f in detail.funcMaps" :key="f.svMapId">
-                <HealthDot
-                  :tone="f.queryRef ? (f.queryRef.exists ? 'ok' : 'missing') : 'unknown'"
-                  :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''"
-                  size="sm"
-                />
-                <InTag :label="f.svMapTypeCd" size="sm" />
-                <code>{{ f.funcNm }}</code>
-                <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
-                <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>
+              <li v-for="f in detail.funcMaps" :key="f.svMapId" class="svc-attr-row">
+                <div class="svc-attr-row__head">
+                  <HealthDot
+                    :tone="f.queryRef ? (f.queryRef.exists ? 'ok' : 'missing') : 'unknown'"
+                    :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''"
+                    size="sm"
+                  />
+                  <InTag :label="f.svMapTypeCd" size="sm" />
+                  <code>{{ f.funcNm }}</code>
+                  <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
+                  <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>
+                  <!-- ★ (2026-06-03, dspark) #4: paramDiff 결과 — bind 미매칭 / orphan 컬럼 -->
+                  <InTag v-if="f.queryRef?.paramDiff?.unmatched?.length"
+                         :label="`bind 미매칭 ${f.queryRef.paramDiff.unmatched.length}건`"
+                         variant="error" size="sm" />
+                  <InTag v-else-if="f.queryRef?.paramDiff && f.queryRef.paramDiff.sqlBindNames?.length"
+                         label="bind 정합" variant="success" size="sm" />
+                </div>
                 <pre v-if="f.queryRef?.bodyPreview" class="body-preview">{{ f.queryRef.bodyPreview }}</pre>
+                <!-- paramDiff 상세 (Procedure 한정, expand=paramDiff 응답 시에만) -->
+                <div v-if="f.queryRef?.paramDiff" class="svc-param-diff">
+                  <div v-if="f.queryRef.paramDiff.unmatched?.length" class="svc-param-diff__row svc-param-diff__row--error">
+                    <strong>SQL bind 미매칭:</strong>
+                    <code v-for="n in f.queryRef.paramDiff.unmatched" :key="`u-${n}`">{{ n }}</code>
+                    <span class="muted">— SCENARIO-procedure.md §5.2 #8 (IN NULL 위험)</span>
+                  </div>
+                  <div v-if="f.queryRef.paramDiff.orphanColumns?.length" class="svc-param-diff__row svc-param-diff__row--info">
+                    <strong>orphan 컬럼:</strong>
+                    <code v-for="n in f.queryRef.paramDiff.orphanColumns" :key="`o-${n}`">{{ n }}</code>
+                    <span class="muted">— SQL 이 안 쓰는 메시지 컬럼 (정보성)</span>
+                  </div>
+                </div>
               </li>
             </ul>
           </section>
@@ -393,6 +517,45 @@ onMounted(() => list.reload());
               <dt>경로</dt><dd>{{ detail.objectRef.objectLink }}</dd>
               <dt>타입</dt><dd>{{ detail.objectRef.objectType }}</dd>
             </dl>
+          </section>
+
+          <!-- ★ (2026-06-03, dspark) #5: ELA 14건 인프라 checklist 탭 -->
+          <section v-else-if="drawerTab === 'elaInfra'" class="svc-section">
+            <div v-if="!detail.elaInfra" class="muted">ELA 인프라 정보 없음</div>
+            <div v-else>
+              <div class="svc-health-summary" :class="detail.elaInfra.summary.missingCount > 0 ? 'svc-health-summary--error' : 'svc-health-summary--ok'">
+                <strong>applCd</strong>:
+                <code v-if="detail.elaInfra.applCd">{{ detail.elaInfra.applCd }}</code>
+                <span v-else class="muted">미등록 (OBJECT 속성 appl_cd 없음 — 모든 평가 skip)</span>
+                <span class="muted svc-def-ref">
+                  · OK {{ detail.elaInfra.summary.okCount }}
+                  · 미등록 {{ detail.elaInfra.summary.missingCount }}
+                  · 자동평가 외 {{ detail.elaInfra.summary.unknownCount }}
+                </span>
+              </div>
+              <table class="svc-ela-table">
+                <thead>
+                  <tr><th>#</th><th>코드</th><th>라벨</th><th>테이블</th><th>등록</th><th>안내</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="it in detail.elaInfra.items" :key="it.seq" :class="elaRowClass(it)">
+                    <td class="muted">{{ it.seq }}</td>
+                    <td><code>{{ it.code }}</code></td>
+                    <td>{{ it.label }}</td>
+                    <td class="muted">{{ it.table }}</td>
+                    <td>
+                      <InTag v-if="it.exists === true"  label="OK"    variant="success" size="sm" />
+                      <InTag v-else-if="it.exists === false" label="미등록" variant="error" size="sm" />
+                      <InTag v-else label="—" variant="default" size="sm" />
+                    </td>
+                    <td class="svc-ela-hint">
+                      <span>{{ it.hint }}</span>
+                      <span class="muted svc-def-ref">— {{ it.ref }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       </InModal>
@@ -414,6 +577,11 @@ onMounted(() => list.reload());
 .muted { color: var(--in-text-subtle); }
 
 .svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+/* ★ (2026-06-03, dspark): def 탭 chip + tooltip 보조. */
+.svc-def-chip { margin-left: 8px; }
+.svc-def-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; color: var(--in-text-subtle); cursor: help; font-size: 11px; }
+.svc-def-ref  { font-size: var(--in-font-size-sm); margin-left: 4px; }
 
 /* ★ (2026-06-03, dspark): 진단 탭 + msg 컬럼 표. */
 .svc-health-summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; }
@@ -437,6 +605,20 @@ onMounted(() => list.reload());
 .svc-msg-columns td { padding: 4px 8px; border-top: 1px solid var(--in-border-default); }
 /* ★ (2026-06-03, dspark): use_yn=N 행 — dimming + subtle 노랑 (warning 톤). 빨강은 진단 탭의 ERROR 전용. */
 .svc-msg-columns__off td { opacity: 0.65; background: var(--in-surface-accent-warning, #fffbeb); }
+
+/* ★ (2026-06-03, dspark) #4: paramDiff 결과 표시. */
+.svc-param-diff { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: var(--in-font-size-sm); }
+.svc-param-diff__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-left: 3px solid var(--in-border-default); }
+.svc-param-diff__row--error { border-left-color: var(--in-text-info-error, #dc2626); background: var(--in-surface-accent-error, #fef2f2); }
+.svc-param-diff__row--info  { border-left-color: var(--in-text-subtle); background: var(--in-surface-state-default); }
+
+/* ★ (2026-06-03, dspark) #5: ELA 인프라 14건 표. */
+.svc-ela-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); margin-top: 12px; }
+.svc-ela-table th { text-align: left; padding: 6px 8px; background: var(--in-surface-state-default); color: var(--in-text-subtle); font-weight: var(--in-font-weight-medium); }
+.svc-ela-table td { padding: 6px 8px; border-top: 1px solid var(--in-border-default); vertical-align: top; }
+.svc-ela-row--critical-missing td { background: var(--in-surface-accent-error, #fef2f2); }
+.svc-ela-row--missing td { background: var(--in-surface-accent-warning, #fffbeb); }
+.svc-ela-hint { color: var(--in-text-default); }
 .svc-loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .svc-section { padding: 12px 4px; }
 
