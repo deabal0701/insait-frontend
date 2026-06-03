@@ -112,7 +112,7 @@ onMounted(() => list.reload());
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
-          input="OBJECT_NM prefix (예: AUT0030)"
+          input="OBJECT_NM prefix — 예: AUT0030 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
           @search="onSearch"
@@ -135,6 +135,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onParent"
         />
+        <InButton class="o-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
+        <InButton class="o-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
       </div>
     </template>
 
@@ -210,6 +212,7 @@ onMounted(() => list.reload());
 .o-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .o-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
 .o-filters > :deep(.in-sel) { flex: 0 0 200px; }
+.o-filters__search-btn, .o-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .link { font-family: var(--in-font-family-mono, ui-monospace); font-size: var(--in-font-size-sm); color: var(--in-text-default); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }

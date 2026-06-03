@@ -99,12 +99,12 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
-      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout (라벨 위, 콤보 아래). InSelect placeholder prop 명 = `input`. -->
+      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout + 명시 [조회]/[초기화] 버튼. -->
       <div class="q-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
-          input="SQL 이름 prefix (예: IST0050)"
+          input="SQL 이름 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
           @search="onSearch"
@@ -127,6 +127,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onUseYn"
         />
+        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
+        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
       </div>
     </template>
 
@@ -211,6 +213,7 @@ export function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
 .q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
 .q-filters > :deep(.in-sel) { flex: 0 0 200px; }
+.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .head { display: flex; gap: 8px; margin-bottom: 12px; }

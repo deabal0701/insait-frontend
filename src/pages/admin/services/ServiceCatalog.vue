@@ -145,12 +145,13 @@ onMounted(() => list.reload());
   >
     <template #filters>
       <!-- ★ (2026-06-03, dspark): 검색 + 콤보 3개 한 줄 배치 + layout=vertical (라벨 위, 콤보 아래).
-           InSelect placeholder prop 명은 `input` 이며 'placeholder' 는 무시됨 (디자인시스템 v2 정합). -->
+           InSelect placeholder prop 명은 `input` 이며 'placeholder' 는 무시됨 (디자인시스템 v2 정합).
+           ★ '조회' 버튼 명시 인접 배치 — InSearchField suffix 아이콘만으로는 시각 식별 약함 (사용자 피드백). -->
       <div class="svc-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
-          input="서비스명 prefix (예: IST0050)"
+          input="서비스명 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
           @search="onSearch"
@@ -182,6 +183,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onUseLog"
         />
+        <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
+        <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
       </div>
     </template>
 
@@ -310,6 +313,8 @@ onMounted(() => list.reload());
 .svc-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .svc-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
 .svc-filters > :deep(.in-sel) { flex: 0 0 160px; }
+.svc-filters__search-btn,
+.svc-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; margin-bottom: 0; }
 
 .svc-name { display: inline-flex; align-items: center; gap: 6px; }
 .svc-note-dot { color: var(--in-text-subtle); }

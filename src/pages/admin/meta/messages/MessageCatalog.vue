@@ -107,7 +107,7 @@ onMounted(() => list.reload());
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
-          input="메시지 ID prefix (예: MT_IST0050)"
+          input="메시지 ID prefix — 예: MT_IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
           @search="onSearch"
@@ -130,6 +130,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onParent"
         />
+        <InButton class="m-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
+        <InButton class="m-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
       </div>
     </template>
 
@@ -221,6 +223,7 @@ onMounted(() => list.reload());
 .m-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .m-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
 .m-filters > :deep(.in-sel) { flex: 0 0 200px; }
+.m-filters__search-btn, .m-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .head { display: flex; gap: 8px; margin-bottom: 12px; }
