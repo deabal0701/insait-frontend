@@ -24,7 +24,7 @@ const props = defineProps({
     required: true,
     // [{ value: string|number, label: string, disabled?: boolean }]
   },
-  label: { type: String, default: 'Label' },
+  label: { type: String, default: '' },         // ★ (2026-06-03, dspark): 'Label' default → '' (호출 측에서 명시한 경우만 표시)
   input: { type: String, default: '선택하지 않음' },          // Figma 'input' = placeholder
   showLabel: { type: Boolean, default: true },
   showRequired: { type: Boolean, default: false },
@@ -96,7 +96,7 @@ const statusMessage = computed(() => {
     :style="layout === 'horizontal' ? { '--in-sel-label-width': labelWidthValue } : undefined"
   >
     <div class="in-sel__row">
-      <div v-if="showLabel" class="in-sel__label">
+      <div v-if="showLabel && label" class="in-sel__label">
         <span class="in-sel__label-text">{{ label }}</span>
         <span v-if="showRequired" class="in-sel__req" aria-hidden="true">*</span>
       </div>

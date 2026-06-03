@@ -25,13 +25,17 @@ function buildListParams({ page, size, sort, ...filters } = {}) {
   const out = {};
   if (page != null) out.page = page;
   if (size != null) out.size = size;
-  // axios paramsSerializer 가 array → repeat key 자동 (브라우저/axios 기본)
+  // ★ (2026-06-03, dspark): axios 1.x default 는 'sort[]=A' (브라켓), 서버는 raw 'sort' 키만 인식.
+  //   paramsSerializer: { indexes: null } 로 repeat key (sort=A&sort=B) 직렬화 — list() 에서 옵션 부착.
   if (Array.isArray(sort) && sort.length) out.sort = sort;
   for (const [k, v] of Object.entries(filters)) {
     if (v !== null && v !== undefined && v !== '') out[k] = v;
   }
   return out;
 }
+
+// axios 1.x repeat-key 직렬화 (sort=A&sort=B). 브라켓([])회피.
+const REPEAT_KEY_SERIALIZER = { indexes: null };
 
 /** GET … {arg}={value} 형태로 ?expand=msg,query 같은 콤마 파라미터 부착. */
 function withExpand(params, expandList) {
@@ -43,7 +47,7 @@ function withExpand(params, expandList) {
 function makeDomain(basePath) {
   return {
     list(params = {}) {
-      return http.get(basePath, { params: buildListParams(params) });
+      return http.get(basePath, { params: buildListParams(params), paramsSerializer: REPEAT_KEY_SERIALIZER });
     },
     detail(key, { expand } = {}) {
       return http.get(`${basePath}/${encodeURIComponent(key)}`, {

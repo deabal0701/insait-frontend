@@ -118,12 +118,19 @@ export function usePagedList(options) {
 
   /** 정렬 — 컬럼 헤더 클릭 시 toggle (asc → desc → 제거). */
   function setSort(col, dir = null) {
+    // ★ (2026-06-03, dspark): splice 대신 새 배열 할당 — ref(array) 안의 splice 후 router.replace 시 동일 reference 로 인식되어 URL 동기화 누락되는 사례 회피
     if (dir === null) {
       // toggle: 현재 sort 의 col 항목 찾기
       const idx = sort.value.findIndex((s) => s.startsWith(`${col},`));
-      if (idx === -1) sort.value = [`${col},asc`, ...sort.value];
-      else if (sort.value[idx].endsWith(',asc')) sort.value.splice(idx, 1, `${col},desc`);
-      else sort.value.splice(idx, 1);
+      if (idx === -1) {
+        sort.value = [`${col},asc`, ...sort.value];
+      } else if (sort.value[idx].endsWith(',asc')) {
+        const next = [...sort.value];
+        next[idx] = `${col},desc`;
+        sort.value = next;
+      } else {
+        sort.value = sort.value.filter((_, i) => i !== idx);
+      }
     } else {
       sort.value = [`${col},${dir}`];
     }
