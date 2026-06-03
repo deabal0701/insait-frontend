@@ -124,7 +124,7 @@ onMounted(() => list.reload());
 
     <template #cell-objectNm="{ value }"><strong>{{ value }}</strong></template>
     <template #cell-objectType="{ value }">
-      <InTag size="sm" :type="value === 'view' ? 'info' : 'default'">{{ value }}</InTag>
+      <InTag :label="value" :variant="value === 'view' ? 'brand' : 'default'" size="sm" />
     </template>
     <template #cell-objectLink="{ value }">
       <code class="link">{{ value || '—' }}</code>
@@ -136,17 +136,17 @@ onMounted(() => list.reload());
         v-if="selected"
         :model-value="!!selected"
         :title="`오브젝트 상세 — ${selected.objectNm}`"
-        size="lg"
-        position="right"
+        type="detail"
+        :width="900"
         @update:model-value="(v) => { if (!v) closeDetail(); }"
       >
         <div v-if="detailLoading" class="loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="head"><InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton></div>
-          <InTabs v-model="drawerTab" :tabs="[
-            { name: 'def',        label: '정의' },
-            { name: 'attributes', label: `속성 (${detail.attributes?.length || 0})` },
-            { name: 'children',   label: `자식 (${detail.children?.length || 0})` },
+          <InTabs v-model="drawerTab" :items="[
+            { name: 'def',        tabLabel: '정의' },
+            { name: 'attributes', tabLabel: `속성 (${detail.attributes?.length || 0})` },
+            { name: 'children',   tabLabel: `자식 (${detail.children?.length || 0})` },
           ]" />
 
           <section v-if="drawerTab === 'def'" class="section">
@@ -164,7 +164,7 @@ onMounted(() => list.reload());
           <section v-else-if="drawerTab === 'attributes'" class="section">
             <ul class="resource-list">
               <li v-for="a in detail.attributes" :key="a.attributeId">
-                <InTag size="sm">{{ a.attributeTypeCd }}</InTag>
+                <InTag :label="a.attributeTypeCd" size="sm" />
                 <code>{{ a.attributeNm }}</code>
                 <span class="muted">= {{ a.attributeValue }}</span>
               </li>
@@ -176,7 +176,7 @@ onMounted(() => list.reload());
             <p class="muted">FRM_OBJECT_RELATION (PARENT_OBJ_ID = 본 오브젝트)</p>
             <ul class="resource-list">
               <li v-for="r in detail.children" :key="r.objectRelId">
-                <InTag size="sm">{{ r.relTypeCd }}</InTag>
+                <InTag :label="r.relTypeCd" size="sm" />
                 <code>{{ r.childObjectNm || `(id=${r.childObjId})` }}</code>
                 <span class="muted">seq: {{ r.seq }}</span>
               </li>

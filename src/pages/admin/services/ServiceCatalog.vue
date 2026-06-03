@@ -192,15 +192,15 @@ onMounted(() => list.reload());
     </template>
 
     <template #cell-txSupportYn="{ value }">
-      <InTag v-if="value === 'Y'" type="success" size="sm">Y</InTag>
+      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
       <span v-else class="muted">N</span>
     </template>
     <template #cell-asyncYn="{ value }">
-      <InTag v-if="value === 'Y'" type="warning" size="sm">Y</InTag>
+      <InTag v-if="value === 'Y'" label="Y" variant="warning" size="sm" />
       <span v-else class="muted">N</span>
     </template>
     <template #cell-useLogYn="{ value }">
-      <InTag v-if="value === 'Y'" type="info" size="sm">Y</InTag>
+      <InTag v-if="value === 'Y'" label="Y" variant="brand" size="sm" />
       <span v-else class="muted">N</span>
     </template>
 
@@ -212,26 +212,28 @@ onMounted(() => list.reload());
       <InModal
         v-if="selected"
         :model-value="!!selected"
+        type="detail"
         :title="`서비스 상세 — ${selected.svDefNm}`"
-        size="lg"
-        position="right"
+        :width="900"
         @update:model-value="(v) => { if (!v) closeDetail(); }"
       >
         <div v-if="detailLoading" class="svc-loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="svc-drawer-head">
-            <InTag :type="trapCount > 0 ? 'error' : 'success'" size="sm">
-              {{ trapCount > 0 ? `함정 ${trapCount}건` : '진단 OK' }}
-            </InTag>
+            <InTag
+              :label="trapCount > 0 ? `함정 ${trapCount}건` : '진단 OK'"
+              :variant="trapCount > 0 ? 'error' : 'success'"
+              size="sm"
+            />
             <InButton size="sm" variant="text" @click="gotoTester(selected)">▶ 테스트</InButton>
             <InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton>
           </div>
 
-          <InTabs v-model="drawerTab" :tabs="[
-            { name: 'def',      label: '정의' },
-            { name: 'attrs',    label: `메시지 슬롯 (${detail.attrs?.length || 0})` },
-            { name: 'funcMaps', label: `함수 매핑 (${detail.funcMaps?.length || 0})` },
-            { name: 'object',   label: '소속 오브젝트' },
+          <InTabs v-model="drawerTab" :items="[
+            { name: 'def',      tabLabel: '정의' },
+            { name: 'attrs',    tabLabel: `메시지 슬롯 (${detail.attrs?.length || 0})` },
+            { name: 'funcMaps', tabLabel: `함수 매핑 (${detail.funcMaps?.length || 0})` },
+            { name: 'object',   tabLabel: '소속 오브젝트' },
           ]" />
 
           <section v-if="drawerTab === 'def'" class="svc-section">
@@ -253,7 +255,7 @@ onMounted(() => list.reload());
                   :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''"
                   size="sm"
                 />
-                <InTag :type="a.svAttrType === 'IN_MSG' ? 'info' : 'warning'" size="sm">{{ a.svAttrType }}</InTag>
+                <InTag :label="a.svAttrType" :variant="a.svAttrType === 'IN_MSG' ? 'brand' : 'warning'" size="sm" />
                 <code>{{ a.svAttrNm }}</code>
                 <span class="muted">value_type:</span>
                 <code>{{ a.valueType }}</code>
@@ -270,7 +272,7 @@ onMounted(() => list.reload());
                   :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''"
                   size="sm"
                 />
-                <InTag size="sm">{{ f.svMapTypeCd }}</InTag>
+                <InTag :label="f.svMapTypeCd" size="sm" />
                 <code>{{ f.funcNm }}</code>
                 <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
                 <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>

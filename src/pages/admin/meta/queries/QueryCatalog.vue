@@ -130,7 +130,7 @@ onMounted(() => list.reload());
       <strong>{{ value }}</strong>
     </template>
     <template #cell-useYn="{ value }">
-      <InTag v-if="value === 'Y'" type="success" size="sm">Y</InTag>
+      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
       <span v-else class="muted">N</span>
     </template>
 
@@ -139,18 +139,18 @@ onMounted(() => list.reload());
         v-if="selected"
         :model-value="!!selected"
         :title="`SQL 상세 — ${selected.queryName}`"
-        size="lg"
-        position="right"
+        type="detail"
+        :width="900"
         @update:model-value="(v) => { if (!v) closeDetail(); }"
       >
         <div v-if="detailLoading" class="loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="head"><InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton></div>
-          <InTabs v-model="drawerTab" :tabs="[
-            { name: 'def',    label: '정의' },
-            { name: 'body',   label: 'SQL 본문' },
-            { name: 'params', label: `파라미터 (${detail.params?.length || 0})` },
-            { name: 'usages', label: `사용처 (${detail.usages?.length || 0})` },
+          <InTabs v-model="drawerTab" :items="[
+            { name: 'def',    tabLabel: '정의' },
+            { name: 'body',   tabLabel: 'SQL 본문' },
+            { name: 'params', tabLabel: `파라미터 (${detail.params?.length || 0})` },
+            { name: 'usages', tabLabel: `사용처 (${detail.usages?.length || 0})` },
           ]" />
 
           <section v-if="drawerTab === 'def'" class="section">
@@ -172,7 +172,7 @@ onMounted(() => list.reload());
           <section v-else-if="drawerTab === 'params'" class="section">
             <ul class="resource-list">
               <li v-for="p in detail.params" :key="p.queryParamId">
-                <InTag size="sm">{{ p.queryParamInoutType }}</InTag>
+                <InTag :label="p.queryParamInoutType" size="sm" />
                 <code>:{{ p.queryParamName }}</code>
                 <span class="muted">type: {{ p.queryParamType }}</span>
                 <span class="muted">seq: {{ p.queryParamSeq }}</span>
@@ -185,7 +185,7 @@ onMounted(() => list.reload());
             <p class="muted">이 SQL 을 호출하는 서비스 (FRM_SERVICE_FUNC_MAP 역방향)</p>
             <ul class="resource-list">
               <li v-for="u in detail.usages" :key="u.svDefId">
-                <InTag size="sm" type="info">{{ u.svMapTypeCd }}</InTag>
+                <InTag :label="u.svMapTypeCd" variant="brand" size="sm" />
                 <code>{{ u.svDefNm }}</code>
                 <span class="muted">{{ shortCmd(u.cmdClassNm) }}</span>
               </li>

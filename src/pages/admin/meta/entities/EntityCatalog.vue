@@ -112,7 +112,7 @@ onMounted(() => list.reload());
 
     <template #cell-entityNm="{ value }"><strong>{{ value }}</strong></template>
     <template #cell-logYn="{ value }">
-      <InTag v-if="value === 'Y'" type="success" size="sm">Y</InTag>
+      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
       <span v-else class="muted">N</span>
     </template>
 
@@ -121,17 +121,17 @@ onMounted(() => list.reload());
         v-if="selected"
         :model-value="!!selected"
         :title="`엔터티 상세 — ${selected.entityNm}`"
-        size="lg"
-        position="right"
+        type="detail"
+        :width="900"
         @update:model-value="(v) => { if (!v) closeDetail(); }"
       >
         <div v-if="detailLoading" class="loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="head"><InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton></div>
-          <InTabs v-model="drawerTab" :tabs="[
-            { name: 'columns', label: `컬럼 (${detail.columns?.length || 0})` },
-            { name: 'def',     label: '정의' },
-            { name: 'usages',  label: `사용처 (${detail.usages?.length || 0})` },
+          <InTabs v-model="drawerTab" :items="[
+            { name: 'columns', tabLabel: `컬럼 (${detail.columns?.length || 0})` },
+            { name: 'def',     tabLabel: '정의' },
+            { name: 'usages',  tabLabel: `사용처 (${detail.usages?.length || 0})` },
           ]" />
 
           <section v-if="drawerTab === 'def'" class="section">
@@ -147,13 +147,13 @@ onMounted(() => list.reload());
           <section v-else-if="drawerTab === 'columns'" class="section">
             <ul class="resource-list">
               <li v-for="c in detail.columns" :key="c.columnId" class="col-row">
-                <InTag v-if="c.keyYn === 'Y'" type="error" size="sm">PK</InTag>
+                <InTag v-if="c.keyYn === 'Y'" label="PK" variant="error" size="sm" />
                 <code>{{ c.columnNm }}</code>
                 <span class="muted">{{ c.displayNm || '' }}</span>
-                <InTag v-if="c.useAutoInsertYn === 'Y'" type="info" size="sm">+ins</InTag>
-                <InTag v-if="c.useAutoUpdateYn === 'Y'" type="warning" size="sm">+upd</InTag>
-                <InTag v-if="c.startDateColYn === 'Y'" size="sm">시작일</InTag>
-                <InTag v-if="c.endDateColYn === 'Y'" size="sm">종료일</InTag>
+                <InTag v-if="c.useAutoInsertYn === 'Y'" label="+ins" variant="brand" size="sm" />
+                <InTag v-if="c.useAutoUpdateYn === 'Y'" label="+upd" variant="warning" size="sm" />
+                <InTag v-if="c.startDateColYn === 'Y'" label="시작일" size="sm" />
+                <InTag v-if="c.endDateColYn === 'Y'" label="종료일" size="sm" />
                 <code v-if="c.autoInsertValue" class="auto-val">ins: {{ c.autoInsertValue }}</code>
                 <code v-if="c.autoUpdateValue" class="auto-val">upd: {{ c.autoUpdateValue }}</code>
                 <details v-if="c.mappings?.length" class="mappings">

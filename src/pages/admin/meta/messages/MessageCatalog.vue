@@ -119,7 +119,7 @@ onMounted(() => list.reload());
 
     <template #cell-msgDefId="{ value }"><strong>{{ value }}</strong></template>
     <template #cell-typeCd="{ value }">
-      <InTag size="sm" :type="value === 'MT' ? 'info' : value === 'ME' ? 'warning' : 'default'">{{ value }}</InTag>
+      <InTag :label="value" :variant="value === 'MT' ? 'brand' : value === 'ME' ? 'warning' : 'default'" size="sm" />
     </template>
     <template #cell-allowChildYn="{ value }">
       <span :class="value === 'Y' ? '' : 'muted'">{{ value || '—' }}</span>
@@ -131,18 +131,18 @@ onMounted(() => list.reload());
         v-if="selected"
         :model-value="!!selected"
         :title="`메시지 상세 — ${selected.msgDefId}`"
-        size="lg"
-        position="right"
+        type="detail"
+        :width="900"
         @update:model-value="(v) => { if (!v) closeDetail(); }"
       >
         <div v-if="detailLoading" class="loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="head"><InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton></div>
-          <InTabs v-model="drawerTab" :tabs="[
-            { name: 'columns',  label: `컬럼 (${detail.columns?.length || 0})` },
-            { name: 'def',      label: '정의' },
-            { name: 'children', label: `자식 (${detail.children?.length || 0})` },
-            { name: 'usages',   label: `사용처 (${detail.usages?.length || 0})` },
+          <InTabs v-model="drawerTab" :items="[
+            { name: 'columns',  tabLabel: `컬럼 (${detail.columns?.length || 0})` },
+            { name: 'def',      tabLabel: '정의' },
+            { name: 'children', tabLabel: `자식 (${detail.children?.length || 0})` },
+            { name: 'usages',   tabLabel: `사용처 (${detail.usages?.length || 0})` },
           ]" />
 
           <section v-if="drawerTab === 'def'" class="section">
@@ -161,12 +161,12 @@ onMounted(() => list.reload());
               <li v-for="c in detail.columns" :key="c.msgColDefOid" class="col-row">
                 <span class="seq">{{ c.orderSeq }}</span>
                 <code>{{ c.msgColDefId }}</code>
-                <InTag size="sm">{{ c.typeCd }}</InTag>
+                <InTag :label="c.typeCd" size="sm" />
                 <span v-if="c.mandatoryYn === 'Y'" class="req">필수</span>
-                <InTag v-if="c.useEncYn === 'Y'" type="warning" size="sm">암호화</InTag>
+                <InTag v-if="c.useEncYn === 'Y'" label="암호화" variant="warning" size="sm" />
                 <span class="muted">len: {{ c.minLength ?? '?' }}~{{ c.maxLength ?? '?' }}</span>
                 <span v-if="c.labelCd" class="muted">label: {{ c.labelCd }}</span>
-                <InTag v-if="c.useYn !== 'Y'" type="default" size="sm">미사용</InTag>
+                <InTag v-if="c.useYn !== 'Y'" label="미사용" variant="default" size="sm" />
               </li>
               <li v-if="!detail.columns?.length" class="muted">컬럼 없음</li>
             </ul>
@@ -187,7 +187,7 @@ onMounted(() => list.reload());
             <p class="muted">이 메시지를 사용하는 서비스</p>
             <ul class="resource-list">
               <li v-for="u in detail.usages" :key="u.svDefId + '-' + u.usage">
-                <InTag size="sm" type="info">{{ u.usage }}</InTag>
+                <InTag :label="u.usage" variant="brand" size="sm" />
                 <code>{{ u.svDefNm }}</code>
                 <span class="muted">{{ (u.cmdClassNm || '').split('.').pop() }}</span>
               </li>
