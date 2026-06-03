@@ -1,631 +1,346 @@
 <script setup>
 /**
- * ServiceCatalog — 서비스 카탈로그 페이지 (P5-B).
+ * ServiceCatalog — IST0050 서비스관리 (admin lane 카탈로그).
+ * ★ (2026-06-03, dspark): envelope listServices → adminApi.meta.services 격상.
+ *   v2 디자인시스템 정합 (InTable/InPagination/InSearchField/InChip + CatalogPage 추상).
  *
- * 책임:
- *  - FRM_SERVICE_DEF 운영 6,200+ 서비스 리스트 (IST0050_00_R01)
- *  - 필터: 도메인(3자 prefix) multi-select + Command 종류 + 매핑 + 검색어 + 사용여부
- *  - 상단 통계 칩: 총건수 · 도메인별 분포 · Command별 분포
- *  - 행 클릭 → 우측 슬라이드오버 상세 패널 (서비스 정의 + 메시지 binding + 함수 매핑)
- *  - 행 액션: [▶ 테스트] (P5-C 로 이동) · [📋 마법사로 복제] (P5-D 부가)
+ * 한 줄로:
+ *   FRM_SERVICE_DEF 6,210+ 조회·페이징·정렬·필터 + 행 클릭 상세 Drawer(확장 응답 1회).
  *
- * URL: /admin/ist0050 (기존 IST0050 placeholder 라우트 swap)
- *
- * 매뉴얼 근거:
- *  - 99 §5-2.10 — 검색 hint (영문 prefix vs 한글 substring)
- *  - 운영 통계: tables.csv 의 FRM_SERVICE_DEF 분포
+ * URL:  /admin/meta/services
+ * API:  GET /api/admin/meta/services       목록
+ *       GET /api/admin/meta/services/{nm}  상세 (?expand=msg,query,object)
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { listServices, getServiceDetail } from '@/services/metaApi';
 
-import InMetaStepHeader from '@/components/feature/meta/InMetaStepHeader.vue';
-import InMetaFilterBar from '@/components/feature/meta/InMetaFilterBar.vue';
-import InMetaStatsRow from '@/components/feature/meta/InMetaStatsRow.vue';
-import InMetaDetailDrawer from '@/components/feature/meta/InMetaDetailDrawer.vue';
-import InMetaResourceBadge from '@/components/feature/meta/InMetaResourceBadge.vue';
-import InMetaCodeBlock from '@/components/feature/meta/InMetaCodeBlock.vue';
+import { adminApi } from '@/services/adminApi';
+import { usePagedList } from '@/composables/usePagedList';
+import { useToast } from '@/composables/useToast';
 
+import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import HealthDot from '@/components/feature/admin/HealthDot.vue';
+
+import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
-import InTextField from '@/components/ui/InTextField.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InIcon from '@/components/ui/InIcon.vue';
-
-import { META_DOMAINS } from '@/constants/metaDomains';
-import { META_CMD_TYPES } from '@/utils/metaNaming';
+import InTag from '@/components/ui/InTag.vue';
+import InModal from '@/components/ui/InModal.vue';
+import InTabs from '@/components/ui/InTabs.vue';
+import InTooltip from '@/components/ui/InTooltip.vue';
 
 const router = useRouter();
+const toast = useToast();
 
-// ─── 데이터 ──────────────────────────────────────────────────────────────────
-const rows = ref([]);
-const totalCount = ref(0);
-const loading = ref(false);
-const loadError = ref(null);
-const lastLoadAt = ref(null);
-
-// ─── 필터 상태 ───────────────────────────────────────────────────────────────
-const filter = ref({
-  keyword: '',
-  domain: '',         // 3자 prefix 단일 (multi 는 client 측 추가 필터)
-  cmdType: '',        // R/S/P/E
-  useYn: '',          // Y/N/'' (전체)
+// ─── 목록 ───────────────────────────────────────────────────────────────
+const list = usePagedList({
+  fetcher: adminApi.meta.services.list,
+  initialSize: 50,
+  initialFilter: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
+  defaultSort: ['sv_def_nm,asc'],
+  syncUrl: true,
 });
 
-// ─── 옵션 ────────────────────────────────────────────────────────────────────
-const domainOptions = computed(() => [
-  { value: '', label: '전체 도메인' },
-  ...META_DOMAINS.map((d) => ({ value: d.code, label: `${d.code} — ${d.label}` })),
-]);
-const cmdOptions = computed(() => [
+function onSearch(v) { list.setFilter({ q: v }); }
+function onCmdClass(v) { list.setFilter({ cmdClass: v }, { debounce: false }); }
+function onTx(v) { list.setFilter({ txSupportYn: v }, { debounce: false }); }
+function onUseLog(v) { list.setFilter({ useLogYn: v }, { debounce: false }); }
+
+const cmdOptions = [
   { value: '', label: '전체 Command' },
-  ...META_CMD_TYPES.map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` })),
-]);
-const useYnOptions = [
-  { value: '',  label: '전체 (사용/미사용)' },
-  { value: 'Y', label: '사용 (Y)' },
-  { value: 'N', label: '미사용 (N)' },
+  { value: 'MultiQuery', label: 'MultiQuery (조회)' },
+  { value: 'MultiSave',  label: 'MultiSave (저장)' },
+  { value: 'Procedure',  label: 'Procedure (PL/SQL)' },
+  { value: 'ElaService', label: 'ElaService (전자결재)' },
+];
+const ynOptions = [
+  { value: '',  label: '전체' },
+  { value: 'Y', label: 'Y' },
+  { value: 'N', label: 'N' },
 ];
 
-// ─── 클라이언트 측 필터링 (도메인 prefix / cmdType) ────────────────────────
-const filteredRows = computed(() => {
-  let out = rows.value;
-  if (filter.value.domain) {
-    const prefix = filter.value.domain;
-    out = out.filter((r) => String(r.sv_def_nm || r.SV_DEF_NM || '').startsWith(prefix));
-  }
-  if (filter.value.cmdType) {
-    const cmd = filter.value.cmdType;
-    out = out.filter((r) => {
-      const nm = String(r.sv_def_nm || r.SV_DEF_NM || '');
-      // suffix 패턴: _R01 / _S01 / _P01 / _E01
-      return new RegExp(`_${cmd}\\d+$`).test(nm);
-    });
-  }
+const activeFilters = computed(() => {
+  const f = list.filter.value;
+  const out = [];
+  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
+  if (f.cmdClass) out.push({ key: 'cmdClass', label: `Cmd: ${f.cmdClass}` });
+  if (f.txSupportYn) out.push({ key: 'txSupportYn', label: `tx: ${f.txSupportYn}` });
+  if (f.useLogYn) out.push({ key: 'useLogYn', label: `log: ${f.useLogYn}` });
   return out;
 });
+function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
 
-// ─── 통계 ───────────────────────────────────────────────────────────────────
-const stats = computed(() => {
-  const total = filteredRows.value.length;
-  const cmdDist = { R: 0, S: 0, P: 0, E: 0, etc: 0 };
-  const domainSet = new Set();
-  for (const r of filteredRows.value) {
-    const nm = String(r.sv_def_nm || r.SV_DEF_NM || '');
-    const m = nm.match(/_([RSPE])\d+$/);
-    if (m) cmdDist[m[1]] += 1;
-    else cmdDist.etc += 1;
-    if (nm.length >= 3) domainSet.add(nm.slice(0, 3));
-  }
-  return [
-    { label: '총 서비스', value: total.toLocaleString(), tone: 'brand' },
-    { label: '도메인', value: domainSet.size, tone: 'default' },
-    { label: '조회 R', value: cmdDist.R, tone: 'default' },
-    { label: '저장 S', value: cmdDist.S, tone: 'success' },
-    { label: '프로시저 P', value: cmdDist.P, tone: 'default' },
-    { label: '결재 E', value: cmdDist.E, tone: 'warning' },
-  ];
-});
+const columns = [
+  { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
+  { field: 'cmdClassNm', label: 'Command',     sortable: true, sortKey: 'cmd_class_nm' },
+  { field: 'txSupportYn',label: 'TX',          sortable: true, sortKey: 'tx_support_yn', align: 'center', width: 50 },
+  { field: 'asyncYn',    label: 'Async',       sortable: true, sortKey: 'async_yn',     align: 'center', width: 60 },
+  { field: 'useLogYn',   label: 'Log',         sortable: true, sortKey: 'use_log_yn',   align: 'center', width: 50 },
+  { field: 'modDate',    label: '변경일',      sortable: true, sortKey: 'mod_date', width: 160 },
+  { field: 'note',       label: '비고' },
+];
 
-// ─── 로딩 ───────────────────────────────────────────────────────────────────
-async function loadServices() {
-  loading.value = true;
-  loadError.value = null;
+// ─── 상세 Drawer ─────────────────────────────────────────────────────────
+const selected = ref(null);
+const detail = ref(null);
+const detailLoading = ref(false);
+const drawerTab = ref('def');
+
+async function openDetail(row) {
+  selected.value = row;
+  detail.value = null;
+  detailLoading.value = true;
   try {
-    const { ok, rows: r, totalCount: tc } = await listServices({
-      keyword: filter.value.keyword,
-      useYn: filter.value.useYn,
-      pageSize: 500, // P5-B: 500 행까지 일괄 로드 (도메인/cmd 클라이언트 필터링)
-    });
-    if (!ok) {
-      loadError.value = '서버 응답 실패 — 백엔드 연결 또는 권한 확인';
-      rows.value = [];
-      totalCount.value = 0;
-    } else {
-      rows.value = r;
-      totalCount.value = tc;
-      lastLoadAt.value = new Date().toISOString();
-    }
+    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object'] });
+    drawerTab.value = 'def';
   } catch (e) {
-    loadError.value = e?.message || '네트워크 오류';
-    rows.value = [];
-    totalCount.value = 0;
+    toast.error?.(e?.message || '상세 조회 실패');
   } finally {
-    loading.value = false;
+    detailLoading.value = false;
   }
 }
+function closeDetail() { selected.value = null; detail.value = null; }
 
-onMounted(loadServices);
-
-function onResetFilter() {
-  filter.value = { keyword: '', domain: '', cmdType: '', useYn: '' };
-}
-
-// ─── 행 액션 ────────────────────────────────────────────────────────────────
-const drawerOpen = ref(false);
-const detail = ref({ row: null, def: null, msgBindings: [], funcMap: [], loading: false, error: null });
-
-async function onRowClick(row) {
-  const svName = row.sv_def_nm || row.SV_DEF_NM;
-  if (!svName) return;
-  drawerOpen.value = true;
-  detail.value = { row, def: null, msgBindings: [], funcMap: [], loading: true, error: null };
-  try {
-    const result = await getServiceDetail(svName);
-    detail.value = {
-      row,
-      def: result.def || row,
-      msgBindings: result.msgBindings || [],
-      funcMap: result.funcMap || [],
-      loading: false,
-      error: result.ok ? null : '상세 조회 실패 — 백엔드 미연결 또는 권한',
-    };
-  } catch (e) {
-    detail.value = { ...detail.value, loading: false, error: e?.message || '오류' };
+const trapCount = computed(() => {
+  if (!detail.value) return 0;
+  let n = 0;
+  for (const a of detail.value.attrs || []) if (a.msgRef && a.msgRef.exists === false) n += 1;
+  for (const f of detail.value.funcMaps || []) {
+    if (f.queryRef && f.queryRef.exists === false) n += 1;
+    if (f.reqMsgRef && f.reqMsgRef.exists === false) n += 1;
+    if (f.resMsgRef && f.resMsgRef.exists === false) n += 1;
   }
-}
-
-function onTest(row) {
-  const svName = row.sv_def_nm || row.SV_DEF_NM;
-  if (!svName) return;
-  // P5-C 테스터 페이지 (아직 미구현). 임시 alert.
-  router.push({ name: 'SERVICE_TESTER', params: { serviceId: svName } }).catch(() => {
-    // 라우트 미정 시
-    if (typeof window !== 'undefined') {
-      window.alert(`서비스 테스터 (P5-C 예정): ${svName}`);
-    }
-  });
-}
-
-function onCloneToWizard(row) {
-  const svName = row.sv_def_nm || row.SV_DEF_NM;
-  if (typeof window !== 'undefined') {
-    window.alert(`마법사로 복제 (P5-D 예정): ${svName}\n현 자원의 7-char prefix 를 새 화면 ID 로 자동 채워 마법사 진입`);
-  }
-}
-
-// ─── 표시 helper ────────────────────────────────────────────────────────────
-function extractDomain(svName) {
-  const nm = String(svName || '');
-  return nm.length >= 3 ? nm.slice(0, 3) : '—';
-}
-function extractCmdSuffix(svName) {
-  const m = String(svName || '').match(/_([RSPE])\d+$/);
-  return m ? m[1] : '?';
-}
-function cmdLabel(suffix) {
-  const info = META_CMD_TYPES.find((c) => c.code === suffix);
-  return info?.label || '—';
-}
-
-const detailJson = computed(() => {
-  if (!detail.value.def) return '';
-  return JSON.stringify(detail.value.def, null, 2);
+  return n;
 });
+
+function gotoTester(row) {
+  router.push({ name: 'ServiceTester', query: { serviceId: row.svDefNm } });
+}
+function copyJson(obj) {
+  navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
+  toast.success?.('JSON 복사됨');
+}
+
+function shortCmd(fqcn) {
+  if (!fqcn) return '';
+  return fqcn.split('.').pop();
+}
+
+onMounted(() => list.reload());
 </script>
 
 <template>
-  <div class="svc-cat">
-    <InMetaStepHeader
-      title="서비스 카탈로그"
-      :code="totalCount ? `총 ${totalCount.toLocaleString()} 건` : ''"
-      subtitle="운영 FRM_SERVICE_DEF 의 모든 서비스 한 화면에서 조회 · 필터 · 테스트 · 마법사 복제 진입점."
-    />
-
-    <!-- ─── 통계 ─── -->
-    <InMetaStatsRow :stats="stats" />
-
-    <!-- ─── 필터 바 ─── -->
-    <InMetaFilterBar sticky>
-      <div class="svc-cat__filter-field">
-        <InTextField
-          v-model="filter.keyword"
-          label="검색어 (서비스명 / 화면 ID)"
-          input="예: AUT0030 또는 인사"
-          layout="vertical"
-          size="md"
-          show-label
-          @keyup.enter="loadServices"
+  <CatalogPage
+    title="서비스관리"
+    :subtitle="`FRM_SERVICE_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
+    :list="list"
+    :columns="columns"
+    row-key="svDefNm"
+    :active-filters="activeFilters"
+    :selected-row="selected"
+    @row-click="openDetail"
+    @filter-remove="removeFilter"
+    @retry="list.reload()"
+  >
+    <template #filters>
+      <div class="svc-filters">
+        <InSearchField
+          :model-value="list.filter.value.q"
+          label="검색"
+          input="서비스명 prefix (예: IST0050)"
+          :label-width="60"
+          @update:model-value="onSearch"
+          @search="onSearch"
         />
+        <div class="svc-filters__row">
+          <InSelect
+            :model-value="list.filter.value.cmdClass"
+            :options="cmdOptions"
+            placeholder="Command"
+            size="sm"
+            @update:model-value="onCmdClass"
+          />
+          <InSelect
+            :model-value="list.filter.value.txSupportYn"
+            :options="ynOptions"
+            placeholder="TX"
+            size="sm"
+            @update:model-value="onTx"
+          />
+          <InSelect
+            :model-value="list.filter.value.useLogYn"
+            :options="ynOptions"
+            placeholder="Log"
+            size="sm"
+            @update:model-value="onUseLog"
+          />
+        </div>
       </div>
-      <div class="svc-cat__filter-field">
-        <InSelect
-          v-model="filter.domain"
-          :options="domainOptions"
-          label="도메인 (3자)"
-          layout="vertical"
-          size="md"
-          filterable
-        />
-      </div>
-      <div class="svc-cat__filter-field">
-        <InSelect
-          v-model="filter.cmdType"
-          :options="cmdOptions"
-          label="Command 종류"
-          layout="vertical"
-          size="md"
-        />
-      </div>
-      <div class="svc-cat__filter-field">
-        <InSelect
-          v-model="filter.useYn"
-          :options="useYnOptions"
-          label="사용여부"
-          layout="vertical"
-          size="md"
-        />
-      </div>
+    </template>
 
-      <template #actions>
-        <InButton
-          variant="default"
-          size="sm"
-          :left-icon-show="false"
-          :right-icon-show="false"
-          @click="onResetFilter"
-        >
-          초기화
-        </InButton>
-        <InButton
-          variant="primary"
-          size="sm"
-          :left-icon-show="false"
-          :right-icon-show="false"
-          :disabled="loading"
-          @click="loadServices"
-        >
-          {{ loading ? '조회 중…' : '조회' }}
-        </InButton>
-      </template>
-    </InMetaFilterBar>
+    <template #cell-svDefNm="{ value, row }">
+      <span class="svc-name">
+        <strong>{{ value }}</strong>
+        <InTooltip v-if="row.note" :text="row.note">
+          <span class="svc-note-dot">·</span>
+        </InTooltip>
+      </span>
+    </template>
 
-    <!-- ─── 로딩/에러/빈상태 ─── -->
-    <div v-if="loadError" class="svc-cat__error">
-      <InIcon name="status-warning" :size="14" />
-      <span>{{ loadError }}</span>
-      <span class="svc-cat__error-hint">— 백엔드 미연결 환경에서는 빈 리스트. <code>IST0050_00_R01</code> 서비스 응답 확인.</span>
-    </div>
-    <div v-else-if="loading" class="svc-cat__empty">조회 중…</div>
-    <div v-else-if="filteredRows.length === 0" class="svc-cat__empty">
-      <InIcon name="info" :size="14" />
-      <span>조건에 맞는 서비스가 없습니다. 필터를 조정하세요.</span>
-    </div>
+    <template #cell-cmdClassNm="{ value }">
+      <span class="svc-cmd">{{ shortCmd(value) }}</span>
+    </template>
 
-    <!-- ─── 리스트 ─── -->
-    <div v-else class="svc-cat__list-wrap">
-      <table class="svc-cat__table">
-        <thead>
-          <tr>
-            <th style="width: 24%;">서비스명</th>
-            <th style="width: 9%;">도메인</th>
-            <th style="width: 10%;">Command</th>
-            <th style="width: 22%;">CMD Class</th>
-            <th style="width: 14%;">매핑 / func_nm</th>
-            <th style="width: 7%;">사용</th>
-            <th style="width: 14%;" class="svc-cat__th-actions">액션</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(r, i) in filteredRows" :key="r.sv_def_oid || r.SV_DEF_OID || i" class="svc-cat__row" @click="onRowClick(r)">
-            <td class="svc-cat__col-name">
-              <code>{{ r.sv_def_nm || r.SV_DEF_NM }}</code>
-            </td>
-            <td>
-              <span class="svc-cat__chip">{{ extractDomain(r.sv_def_nm || r.SV_DEF_NM) }}</span>
-            </td>
-            <td>
-              <span class="svc-cat__chip svc-cat__chip--cmd" :class="`svc-cat__chip--cmd-${extractCmdSuffix(r.sv_def_nm || r.SV_DEF_NM)}`">
-                {{ extractCmdSuffix(r.sv_def_nm || r.SV_DEF_NM) }} · {{ cmdLabel(extractCmdSuffix(r.sv_def_nm || r.SV_DEF_NM)) }}
-              </span>
-            </td>
-            <td class="svc-cat__col-class"><code>{{ r.cmd_class_nm || r.CMD_CLASS_NM || '—' }}</code></td>
-            <td class="svc-cat__col-map">
-              <code>{{ r.func_nm || r.FUNC_NM || '—' }}</code>
-              <span class="svc-cat__col-map-type">{{ r.sv_map_type_cd || r.SV_MAP_TYPE_CD || '—' }}</span>
-            </td>
-            <td>
-              <span v-if="(r.use_yn || r.USE_YN) === 'Y'" class="svc-cat__chip svc-cat__chip--use">사용</span>
-              <span v-else class="svc-cat__chip svc-cat__chip--unuse">미사용</span>
-            </td>
-            <td class="svc-cat__col-actions">
-              <button type="button" class="svc-cat__act-btn" title="테스트" @click.stop="onTest(r)">
-                <!-- ★ (2026-05-31, dspark): arrow-right(여백 0, 박스 꽉 찬 굵은 꺾쇠) → chevron-right
-                     (24×24 내부 여백 보유 → 작은 꺾쇠). content-copy(복제) 와 시각 무게 정합. -->
-                <InIcon name="chevron-right" :size="12" /> 테스트
-              </button>
-              <button type="button" class="svc-cat__act-btn" title="마법사로 복제" @click.stop="onCloneToWizard(r)">
-                <InIcon name="content-copy" :size="12" /> 복제
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <template #cell-txSupportYn="{ value }">
+      <InTag v-if="value === 'Y'" type="success" size="sm">Y</InTag>
+      <span v-else class="muted">N</span>
+    </template>
+    <template #cell-asyncYn="{ value }">
+      <InTag v-if="value === 'Y'" type="warning" size="sm">Y</InTag>
+      <span v-else class="muted">N</span>
+    </template>
+    <template #cell-useLogYn="{ value }">
+      <InTag v-if="value === 'Y'" type="info" size="sm">Y</InTag>
+      <span v-else class="muted">N</span>
+    </template>
 
-      <p class="svc-cat__list-footer">
-        총 <strong>{{ filteredRows.length.toLocaleString() }}</strong>개 표시 · 전체 <strong>{{ totalCount.toLocaleString() }}</strong>개
-        <span v-if="lastLoadAt"> · 마지막 조회: {{ new Date(lastLoadAt).toLocaleString() }}</span>
-      </p>
-    </div>
+    <template #cell-modDate="{ value }">
+      <span class="muted">{{ (value || '').slice(0, 10) }}</span>
+    </template>
 
-    <!-- ─── 상세 드로어 ─── -->
-    <InMetaDetailDrawer v-model:open="drawerOpen" :title="detail.row ? (detail.row.sv_def_nm || detail.row.SV_DEF_NM || '상세') : '상세'" width="480px">
-      <template v-if="detail.row">
-        <section class="svc-cat__detail-section">
-          <h4>기본</h4>
-          <dl class="svc-cat__detail-dl">
-            <dt>서비스명</dt><dd><code>{{ detail.row.sv_def_nm || detail.row.SV_DEF_NM }}</code></dd>
-            <dt>도메인</dt><dd>{{ extractDomain(detail.row.sv_def_nm || detail.row.SV_DEF_NM) }}</dd>
-            <dt>Command 종류</dt><dd>{{ extractCmdSuffix(detail.row.sv_def_nm || detail.row.SV_DEF_NM) }} · {{ cmdLabel(extractCmdSuffix(detail.row.sv_def_nm || detail.row.SV_DEF_NM)) }}</dd>
-            <dt>CMD Class</dt><dd><code>{{ detail.row.cmd_class_nm || detail.row.CMD_CLASS_NM || '—' }}</code></dd>
-            <dt>매핑 종류</dt><dd><code>{{ detail.row.sv_map_type_cd || detail.row.SV_MAP_TYPE_CD || '—' }}</code></dd>
-            <dt>func_nm</dt><dd><code>{{ detail.row.func_nm || detail.row.FUNC_NM || '—' }}</code></dd>
-            <dt>사용여부</dt><dd>{{ detail.row.use_yn || detail.row.USE_YN || '—' }}</dd>
-          </dl>
-        </section>
+    <template #drawer>
+      <InModal
+        v-if="selected"
+        :model-value="!!selected"
+        :title="`서비스 상세 — ${selected.svDefNm}`"
+        size="lg"
+        position="right"
+        @update:model-value="(v) => { if (!v) closeDetail(); }"
+      >
+        <div v-if="detailLoading" class="svc-loading">상세 조회 중…</div>
+        <div v-else-if="detail">
+          <div class="svc-drawer-head">
+            <InTag :type="trapCount > 0 ? 'error' : 'success'" size="sm">
+              {{ trapCount > 0 ? `함정 ${trapCount}건` : '진단 OK' }}
+            </InTag>
+            <InButton size="sm" variant="text" @click="gotoTester(selected)">▶ 테스트</InButton>
+            <InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton>
+          </div>
 
-        <section v-if="detail.msgBindings.length" class="svc-cat__detail-section">
-          <h4>메시지 binding ({{ detail.msgBindings.length }})</h4>
-          <ul class="svc-cat__detail-list">
-            <li v-for="(b, i) in detail.msgBindings" :key="i">
-              <InMetaResourceBadge
-                :kind="i === 0 ? 'MSG_IN' : 'MSG_OUT'"
-                :resource-id="b.sv_attr_nm || b.value_type || b.SV_ATTR_NM || '—'"
-                status="saved"
-              />
-            </li>
-          </ul>
-        </section>
+          <InTabs v-model="drawerTab" :tabs="[
+            { name: 'def',      label: '정의' },
+            { name: 'attrs',    label: `메시지 슬롯 (${detail.attrs?.length || 0})` },
+            { name: 'funcMaps', label: `함수 매핑 (${detail.funcMaps?.length || 0})` },
+            { name: 'object',   label: '소속 오브젝트' },
+          ]" />
 
-        <section v-if="detail.funcMap.length" class="svc-cat__detail-section">
-          <h4>함수 매핑 ({{ detail.funcMap.length }})</h4>
-          <ul class="svc-cat__detail-list">
-            <li v-for="(f, i) in detail.funcMap" :key="i">
-              <code>{{ f.func_nm || f.FUNC_NM }}</code>
-              <span class="svc-cat__detail-hint">· {{ f.sv_map_type_cd || f.SV_MAP_TYPE_CD }}</span>
-            </li>
-          </ul>
-        </section>
+          <section v-if="drawerTab === 'def'" class="svc-section">
+            <dl class="kv">
+              <dt>서비스명</dt><dd>{{ detail.def.svDefNm }}</dd>
+              <dt>Command</dt><dd>{{ detail.def.cmdClassNm }}</dd>
+              <dt>tx / async / log</dt>
+              <dd>{{ detail.def.txSupportYn }} / {{ detail.def.asyncYn }} / {{ detail.def.useLogYn }}</dd>
+              <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
+              <dt>변경</dt><dd>{{ detail.def.modUserId }} · {{ detail.def.modDate }}</dd>
+            </dl>
+          </section>
 
-        <section class="svc-cat__detail-section">
-          <h4>raw JSON</h4>
-          <InMetaCodeBlock :code="detailJson" lang="json" max-height="240px" />
-        </section>
+          <section v-else-if="drawerTab === 'attrs'" class="svc-section">
+            <ul class="resource-list">
+              <li v-for="a in detail.attrs" :key="a.svAttrId">
+                <HealthDot
+                  :tone="a.msgRef ? (a.msgRef.exists ? 'ok' : 'missing') : 'unknown'"
+                  :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''"
+                  size="sm"
+                />
+                <InTag :type="a.svAttrType === 'IN_MSG' ? 'info' : 'warning'" size="sm">{{ a.svAttrType }}</InTag>
+                <code>{{ a.svAttrNm }}</code>
+                <span class="muted">value_type:</span>
+                <code>{{ a.valueType }}</code>
+                <span v-if="a.msgRef?.msgDefNm" class="muted">— {{ a.msgRef.msgDefNm }} ({{ a.msgRef.columnCount }}col)</span>
+              </li>
+            </ul>
+          </section>
 
-        <p v-if="detail.error" class="svc-cat__detail-error">
-          <InIcon name="status-warning" :size="12" /> {{ detail.error }}
-        </p>
-      </template>
+          <section v-else-if="drawerTab === 'funcMaps'" class="svc-section">
+            <ul class="resource-list">
+              <li v-for="f in detail.funcMaps" :key="f.svMapId">
+                <HealthDot
+                  :tone="f.queryRef ? (f.queryRef.exists ? 'ok' : 'missing') : 'unknown'"
+                  :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''"
+                  size="sm"
+                />
+                <InTag size="sm">{{ f.svMapTypeCd }}</InTag>
+                <code>{{ f.funcNm }}</code>
+                <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
+                <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>
+                <pre v-if="f.queryRef?.bodyPreview" class="body-preview">{{ f.queryRef.bodyPreview }}</pre>
+              </li>
+            </ul>
+          </section>
 
-      <template #footer>
-        <InButton
-          variant="default"
-          size="sm"
-          :left-icon-show="false"
-          :right-icon-show="false"
-          @click="onCloneToWizard(detail.row)"
-        >
-          마법사로 복제
-        </InButton>
-        <InButton
-          variant="primary"
-          size="sm"
-          :left-icon-show="false"
-          :right-icon-show="false"
-          @click="onTest(detail.row)"
-        >
-          <!-- ★ (2026-05-31, dspark): unicode ▶ → InIcon chevron-right (테이블 행 액션과 아이콘 일관성). -->
-          <InIcon name="chevron-right" :size="12" /> 테스트
-        </InButton>
-      </template>
-    </InMetaDetailDrawer>
-  </div>
+          <section v-else-if="drawerTab === 'object'" class="svc-section">
+            <p v-if="!detail.def.objectId" class="muted">objectId 없음 (대부분 NULL — 매뉴얼 09 §6.1).</p>
+            <p v-else-if="!detail.objectRef" class="muted">조회 불가</p>
+            <dl v-else class="kv">
+              <dt>OBJECT_ID</dt><dd>{{ detail.objectRef.objectId }}</dd>
+              <dt>OBJECT_NM</dt><dd>{{ detail.objectRef.objectNm }}</dd>
+              <dt>한글명</dt><dd>{{ detail.objectRef.objectDisplayNm }}</dd>
+              <dt>경로</dt><dd>{{ detail.objectRef.objectLink }}</dd>
+              <dt>타입</dt><dd>{{ detail.objectRef.objectType }}</dd>
+            </dl>
+          </section>
+        </div>
+      </InModal>
+    </template>
+  </CatalogPage>
 </template>
 
 <style scoped>
-.svc-cat {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  font-family: var(--in-font-family-body);
-}
+.svc-filters { display: flex; flex-direction: column; gap: 12px; }
+.svc-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
 
-.svc-cat__filter-field { flex: 1 1 200px; min-width: 0; }
+.svc-name { display: inline-flex; align-items: center; gap: 6px; }
+.svc-note-dot { color: var(--in-text-subtle); }
+.svc-cmd { color: var(--in-text-accent); }
+.muted { color: var(--in-text-subtle); }
 
-/* === Error / Empty === */
-.svc-cat__error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--in-surface-warning, #fffbeb);
-  border: 1px solid var(--in-text-warning);
-  border-radius: var(--in-radius-xs);
-  font-size: var(--in-font-size-sm);
-  color: var(--in-text-warning);
-}
-.svc-cat__error-hint { color: var(--in-text-default); font-size: var(--in-font-size-xs); }
-.svc-cat__error-hint code { font-family: 'Consolas', monospace; }
+.svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.svc-loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
+.svc-section { padding: 12px 4px; }
 
-.svc-cat__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 40px 16px;
-  background: var(--in-surface-default, #fafafa);
-  border: 1px dashed var(--in-border-default);
-  border-radius: var(--in-radius-sm);
-  font-size: var(--in-font-size-sm);
-  color: var(--in-text-subtle);
-}
-
-/* === Table === */
-.svc-cat__list-wrap {
-  background: var(--in-surface-overlay, #ffffff);
-  border: 1px solid var(--in-border-default);
-  border-radius: var(--in-radius-sm);
-  overflow: hidden;
-}
-.svc-cat__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--in-font-size-sm);
-}
-.svc-cat__table thead th {
-  text-align: left;
-  padding: 10px 12px;
-  background: var(--in-surface-default, #fafafa);
-  border-bottom: 1px solid var(--in-border-default);
-  font-weight: var(--in-font-weight-medium);
-  color: var(--in-text-subtle);
-  font-size: var(--in-font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-.svc-cat__th-actions { text-align: right; }
-.svc-cat__row {
-  cursor: pointer;
-  transition: background 80ms ease;
-}
-.svc-cat__row:hover {
-  background: var(--in-bg-accent-subtle, var(--in-brand-50, #e1f5fc));
-}
-.svc-cat__row td {
-  /* ★ (2026-05-31, dspark): 8px → 5px 행 높이 콤팩트화 (리스트 사이즈 축소 요청). */
-  padding: 5px 12px;
-  border-bottom: 1px solid var(--in-border-default);
-  vertical-align: middle;
-}
-.svc-cat__row:last-child td { border-bottom: none; }
-
-.svc-cat__col-name code {
-  font-family: 'Consolas', 'Menlo', monospace;
-  color: var(--in-text-accent);
-  font-weight: var(--in-font-weight-medium);
-  /* ★ (2026-05-31, dspark): 서비스명 폰트 sm → xs (리스트 사이즈 축소 요청). */
-  font-size: var(--in-font-size-xs);
-}
-.svc-cat__col-class code,
-.svc-cat__col-map code {
-  font-family: 'Consolas', monospace;
-  color: var(--in-text-default);
-  font-size: var(--in-font-size-xs);
-}
-.svc-cat__col-map { display: flex; flex-direction: column; gap: 2px; }
-.svc-cat__col-map-type {
-  font-size: 10px;
-  color: var(--in-text-subtle);
-  font-family: 'Consolas', monospace;
-  text-transform: uppercase;
-}
-
-.svc-cat__chip {
-  display: inline-flex;
-  align-items: center;
-  /* ★ (2026-05-31, dspark): 좁은 칸(사용 등)에서 "미사용" 두 줄 줄바꿈 방지. */
-  white-space: nowrap;
-  padding: 2px 8px;
-  border-radius: var(--in-radius-full);
-  background: var(--in-surface-default, #fafafa);
-  border: 1px solid var(--in-border-default);
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-subtle);
-  font-family: 'Consolas', monospace;
-}
-.svc-cat__chip--cmd {
-  font-family: var(--in-font-family-body);
-}
-.svc-cat__chip--cmd-R { background: var(--in-bg-accent-subtle, var(--in-brand-50, #e1f5fc)); border-color: var(--in-brand); color: var(--in-brand); }
-.svc-cat__chip--cmd-S { background: var(--in-surface-success, #e4faf0); border-color: var(--in-text-success); color: var(--in-text-success); }
-.svc-cat__chip--cmd-P { background: var(--in-surface-default, #fafafa); border-color: var(--in-border-default); color: var(--in-text-default); }
-.svc-cat__chip--cmd-E { background: var(--in-surface-warning, #fffbeb); border-color: var(--in-text-warning); color: var(--in-text-warning); }
-
-.svc-cat__chip--use { background: var(--in-surface-success, #e4faf0); border-color: var(--in-text-success); color: var(--in-text-success); }
-.svc-cat__chip--unuse { background: var(--in-surface-default, #fafafa); border-color: var(--in-border-default); color: var(--in-text-subtler); }
-
-.svc-cat__col-actions { text-align: right; white-space: nowrap; }
-.svc-cat__act-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  margin-left: 4px;
-  border: 1px solid var(--in-border-default);
-  border-radius: var(--in-radius-xs);
-  background: var(--in-surface-overlay, #ffffff);
-  color: var(--in-text-default);
-  font-size: var(--in-font-size-xs);
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-.svc-cat__act-btn:hover {
-  border-color: var(--in-brand);
-  color: var(--in-brand);
-}
-
-.svc-cat__list-footer {
-  margin: 0;
-  padding: 8px 14px;
-  background: var(--in-surface-default, #fafafa);
-  border-top: 1px solid var(--in-border-default);
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-subtle);
-}
-.svc-cat__list-footer strong { color: var(--in-text-accent); font-weight: var(--in-font-weight-medium); }
-
-/* === Detail drawer === */
-.svc-cat__detail-section { display: flex; flex-direction: column; gap: 6px; }
-.svc-cat__detail-section h4 {
-  margin: 0;
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-subtle);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  font-weight: var(--in-font-weight-medium);
-}
-.svc-cat__detail-dl {
+.kv {
   display: grid;
   grid-template-columns: 110px 1fr;
-  gap: 4px 10px;
+  gap: 8px 12px;
   margin: 0;
 }
-.svc-cat__detail-dl dt {
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-subtle);
+.kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
+.kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
+
+.resource-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.resource-list li {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 10px;
+  background: var(--in-bg-default);
+  border-radius: var(--in-radius-xs);
 }
-.svc-cat__detail-dl dd {
-  margin: 0;
+.resource-list code {
+  font-family: var(--in-font-family-mono, ui-monospace);
   font-size: var(--in-font-size-sm);
   color: var(--in-text-default);
 }
-.svc-cat__detail-dl code {
-  font-family: 'Consolas', monospace;
+.body-preview {
+  flex-basis: 100%;
+  margin: 6px 0 0;
+  padding: 8px;
+  background: var(--in-bg-white);
+  border: 1px solid var(--in-border-default);
+  border-radius: var(--in-radius-xxs);
+  font-family: var(--in-font-family-mono, ui-monospace);
+  font-size: 11px;
+  line-height: 16px;
   color: var(--in-text-accent);
-}
-.svc-cat__detail-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.svc-cat__detail-list code {
-  font-family: 'Consolas', monospace;
-  color: var(--in-text-accent);
-}
-.svc-cat__detail-hint {
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-subtle);
-  margin-left: 4px;
-}
-.svc-cat__detail-error {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--in-font-size-xs);
-  color: var(--in-text-warning);
+  overflow-x: auto;
 }
 </style>

@@ -26,13 +26,12 @@ import { ICON_REGISTRY } from '@/assets/icons/registry.js';
  *   actions — CTA 버튼 영역
  */
 
-const TYPES = ['no-data', 'no-search', 'no-permission', 'error', 'first-time'];
-
+// ★ (2026-06-03, dspark): inline literal — defineProps hoist 규칙 정합.
 const props = defineProps({
   type: {
     type: String,
     default: 'no-data',
-    validator: (v) => TYPES.includes(v),
+    validator: (v) => ['no-data', 'no-search', 'no-permission', 'error', 'first-time'].includes(v),
   },
   icon: { type: String, default: '' },
   title: { type: String, default: '' },

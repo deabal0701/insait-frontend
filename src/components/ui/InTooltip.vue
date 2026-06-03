@@ -23,20 +23,19 @@ import StatusErrorIcon from '@/assets/icons/status-error.svg';
  *   </InTooltip>
  */
 
-const DIRECTIONS = ['none', 'up', 'down', 'left', 'right'];
-const STYLES = ['default', 'minimal'];
-
+// ★ (2026-06-03, dspark): Vue SFC `<script setup>` 의 defineProps() 는 hoist 되므로
+//   외부 const(DIRECTIONS/STYLES) 참조 금지. inline literal 로 변경.
 const props = defineProps({
   text: { type: String, default: 'Tooltip text' },
   direction: {
     type: String,
     default: 'down',
-    validator: (v) => DIRECTIONS.includes(v),
+    validator: (v) => ['none', 'up', 'down', 'left', 'right'].includes(v),
   },
   styleVariant: {
     type: String,
     default: 'default',
-    validator: (v) => STYLES.includes(v),
+    validator: (v) => ['default', 'minimal'].includes(v),
   },
   showIcon: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
