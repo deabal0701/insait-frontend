@@ -271,8 +271,8 @@ onMounted(() => list.reload());
             <InTag v-if="trapBreakdown.msgMissing > 0"   :label="`메시지 미등록 ${trapBreakdown.msgMissing}건`"   variant="error" size="sm" />
             <InTag v-if="trapBreakdown.queryMissing > 0" :label="`SQL 미등록 ${trapBreakdown.queryMissing}건`"     variant="error" size="sm" />
             <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
-            <InButton size="sm" variant="text" @click="gotoTester(selected)">▶ 테스트</InButton>
-            <InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton>
+            <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="gotoTester(selected)">▶ 테스트</InButton>
+            <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="copyJson(detail)">📋 JSON 복사</InButton>
           </div>
 
           <InTabs v-model="drawerTab" :items="[
@@ -354,7 +354,8 @@ onMounted(() => list.reload());
                         <InTag v-else label="N" variant="error" size="sm" />
                       </td>
                       <td>
-                        <InTag v-if="c.useEncYn === 'Y'" label="ENC" variant="warning" size="sm" />
+                        <!-- ★ (2026-06-03, dspark): ENC 는 정보성 (ARIA 자동 암복호 정상 동작). brand 톤. -->
+                        <InTag v-if="c.useEncYn === 'Y'" label="ENC" variant="brand" size="sm" />
                         <span v-else class="muted">—</span>
                       </td>
                       <td class="muted">{{ c.valueType || '—' }}</td>
@@ -434,7 +435,8 @@ onMounted(() => list.reload());
 .svc-msg-columns { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); margin-top: 4px; }
 .svc-msg-columns th { text-align: left; padding: 4px 8px; background: var(--in-surface-state-default); font-weight: var(--in-font-weight-medium); color: var(--in-text-subtle); }
 .svc-msg-columns td { padding: 4px 8px; border-top: 1px solid var(--in-border-default); }
-.svc-msg-columns__off td { opacity: 0.55; background: var(--in-surface-accent-error, #fef2f2); }
+/* ★ (2026-06-03, dspark): use_yn=N 행 — dimming + subtle 노랑 (warning 톤). 빨강은 진단 탭의 ERROR 전용. */
+.svc-msg-columns__off td { opacity: 0.65; background: var(--in-surface-accent-warning, #fffbeb); }
 .svc-loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .svc-section { padding: 12px 4px; }
 
