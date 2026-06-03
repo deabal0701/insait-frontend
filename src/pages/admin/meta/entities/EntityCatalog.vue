@@ -96,17 +96,25 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
+      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="e-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
           input="테이블명 prefix (예: PHM_)"
-          :label-width="60"
+          layout="vertical"
           @update:model-value="onSearch"
+          @search="onSearch"
         />
-        <div class="e-filters__row">
-          <InSelect :model-value="list.filter.value.logYn" :options="ynOptions" placeholder="Log" size="sm" @update:model-value="onLog" />
-        </div>
+        <InSelect
+          :model-value="list.filter.value.logYn"
+          :options="ynOptions"
+          label="Log"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onLog"
+        />
       </div>
     </template>
 
@@ -185,8 +193,10 @@ onMounted(() => list.reload());
 </template>
 
 <style scoped>
-.e-filters { display: flex; flex-direction: column; gap: 12px; }
-.e-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
+/* ★ (2026-06-03, dspark): 검색 + 콤보 한 줄 배치. */
+.e-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.e-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
+.e-filters > :deep(.in-sel) { flex: 0 0 200px; }
 .muted { color: var(--in-text-subtle); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .head { display: flex; gap: 8px; margin-bottom: 12px; }

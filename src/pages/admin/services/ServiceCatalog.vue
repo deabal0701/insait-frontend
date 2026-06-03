@@ -143,38 +143,44 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
+      <!-- ★ (2026-06-03, dspark): 검색 + 콤보 3개 한 줄 배치 + layout=vertical (라벨 위, 콤보 아래).
+           InSelect placeholder prop 명은 `input` 이며 'placeholder' 는 무시됨 (디자인시스템 v2 정합). -->
       <div class="svc-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
           input="서비스명 prefix (예: IST0050)"
-          :label-width="60"
+          layout="vertical"
           @update:model-value="onSearch"
           @search="onSearch"
         />
-        <div class="svc-filters__row">
-          <InSelect
-            :model-value="list.filter.value.cmdClass"
-            :options="cmdOptions"
-            placeholder="Command"
-            size="sm"
-            @update:model-value="onCmdClass"
-          />
-          <InSelect
-            :model-value="list.filter.value.txSupportYn"
-            :options="ynOptions"
-            placeholder="TX"
-            size="sm"
-            @update:model-value="onTx"
-          />
-          <InSelect
-            :model-value="list.filter.value.useLogYn"
-            :options="ynOptions"
-            placeholder="Log"
-            size="sm"
-            @update:model-value="onUseLog"
-          />
-        </div>
+        <InSelect
+          :model-value="list.filter.value.cmdClass"
+          :options="cmdOptions"
+          label="Command"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onCmdClass"
+        />
+        <InSelect
+          :model-value="list.filter.value.txSupportYn"
+          :options="ynOptions"
+          label="TX"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onTx"
+        />
+        <InSelect
+          :model-value="list.filter.value.useLogYn"
+          :options="ynOptions"
+          label="Log"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onUseLog"
+        />
       </div>
     </template>
 
@@ -299,8 +305,10 @@ onMounted(() => list.reload());
 </template>
 
 <style scoped>
-.svc-filters { display: flex; flex-direction: column; gap: 12px; }
-.svc-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
+/* ★ (2026-06-03, dspark): 한 줄 배치 — 검색 textbox 가 grow, 콤보 3개는 고정 폭. */
+.svc-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.svc-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
+.svc-filters > :deep(.in-sel) { flex: 0 0 160px; }
 
 .svc-name { display: inline-flex; align-items: center; gap: 6px; }
 .svc-note-dot { color: var(--in-text-subtle); }

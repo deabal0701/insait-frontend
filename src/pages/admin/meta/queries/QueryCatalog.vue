@@ -99,30 +99,34 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
+      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout (라벨 위, 콤보 아래). InSelect placeholder prop 명 = `input`. -->
       <div class="q-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
           input="SQL 이름 prefix (예: IST0050)"
-          :label-width="60"
+          layout="vertical"
           @update:model-value="onSearch"
+          @search="onSearch"
         />
-        <div class="q-filters__row">
-          <InSelect
-            :model-value="list.filter.value.dataSource"
-            :options="[{value:'',label:'전체 DS'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
-            placeholder="DataSource"
-            size="sm"
-            @update:model-value="onDs"
-          />
-          <InSelect
-            :model-value="list.filter.value.useYn"
-            :options="ynOptions"
-            placeholder="Use"
-            size="sm"
-            @update:model-value="onUseYn"
-          />
-        </div>
+        <InSelect
+          :model-value="list.filter.value.dataSource"
+          :options="[{value:'',label:'전체 DS'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
+          label="DataSource"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onDs"
+        />
+        <InSelect
+          :model-value="list.filter.value.useYn"
+          :options="ynOptions"
+          label="Use"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onUseYn"
+        />
       </div>
     </template>
 
@@ -203,8 +207,10 @@ export function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
 </script>
 
 <style scoped>
-.q-filters { display: flex; flex-direction: column; gap: 12px; }
-.q-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
+/* ★ (2026-06-03, dspark): 검색 + 콤보 한 줄 배치. */
+.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
+.q-filters > :deep(.in-sel) { flex: 0 0 200px; }
 .muted { color: var(--in-text-subtle); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .head { display: flex; gap: 8px; margin-bottom: 12px; }

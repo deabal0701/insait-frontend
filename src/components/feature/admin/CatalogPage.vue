@@ -261,6 +261,9 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
 .catalog-page__stats { display: flex; gap: 12px; flex-wrap: wrap; }
 
 .catalog-page__filters { padding: 16px; }
+/* ★ (2026-06-03, dspark): InSelect 가 label 없이 placeholder 만 표시될 때 width 멸실 회피용 fallback.
+   각 카탈로그가 flex 기반 폭을 직접 부여하는 게 우선이며, 본 규칙은 단순히 최소 폭 보장. */
+.catalog-page__filters :deep(.in-sel) { min-width: 120px; }
 
 .catalog-page__chips {
   display: flex;

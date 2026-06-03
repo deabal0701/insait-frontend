@@ -65,4 +65,7 @@ function onChange(v) {
   color: var(--in-text-subtle);
 }
 .in-pss--disabled { opacity: 0.6; }
+/* ★ (2026-06-03, dspark): InSelect 가 label 없이 placeholder 만 노출되는 경우 width 가 콘텐츠 폭만큼만
+   잡혀 24px 까지 좁아짐. PageSize 표시용 컴팩트 폭 96px 지정. */
+.in-pss :deep(.in-sel) { min-width: 96px; }
 </style>

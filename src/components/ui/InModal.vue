@@ -287,4 +287,26 @@ onBeforeUnmount(() => {
 .in-modal-fade-leave-to {
   opacity: 0;
 }
+
+/* ★ (2026-06-03, dspark): type="detail" 은 우측 슬라이드 Drawer 시각 — overlay 우측 정렬 + 풀 height + slide-in transition.
+   detail 모달이 일반 중앙 팝업이 아니라 IBSheet 운영 시기의 상세 패널 UX 정합. */
+.in-modal__overlay:has(.in-modal--detail) { justify-content: flex-end; align-items: stretch; }
+.in-modal--detail {
+  max-height: none;
+  height: 100vh;
+  border-radius: 0;
+  box-shadow: var(--in-shadow-elev-3);
+}
+.in-modal-fade-enter-active:has(.in-modal--detail),
+.in-modal-fade-leave-active:has(.in-modal--detail) {
+  transition: opacity 200ms ease;
+}
+.in-modal-fade-enter-active:has(.in-modal--detail) .in-modal--detail,
+.in-modal-fade-leave-active:has(.in-modal--detail) .in-modal--detail {
+  transition: transform 220ms cubic-bezier(.2,.7,.2,1);
+}
+.in-modal-fade-enter-from:has(.in-modal--detail) .in-modal--detail,
+.in-modal-fade-leave-to:has(.in-modal--detail) .in-modal--detail {
+  transform: translateX(100%);
+}
 </style>

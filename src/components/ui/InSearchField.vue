@@ -76,9 +76,18 @@ const message = computed(() => props.message || props.helper);
           @keyup.enter="onEnter"
         >
           <template #suffix>
-            <span class="in-sf__icon" aria-hidden="true">
-              <img :src="SearchIcon" alt="" />
-            </span>
+            <!-- ★ (2026-06-03, dspark): 검색 아이콘 클릭 시에도 검색 발화 (Enter 와 동일 emit). -->
+            <button
+              type="button"
+              class="in-sf__icon-btn"
+              :disabled="disabled"
+              :aria-label="'검색'"
+              @click="onEnter({ target: { value: modelValue } })"
+            >
+              <span class="in-sf__icon" aria-hidden="true">
+                <img :src="SearchIcon" alt="" />
+              </span>
+            </button>
           </template>
         </el-input>
       </div>
@@ -135,6 +144,14 @@ const message = computed(() => props.message || props.helper);
 .in-sf :deep(.el-input__wrapper:focus-within) { border-bottom-color: var(--in-border-brand); }
 .in-sf__icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
 .in-sf__icon img { width: 100%; height: 100%; display: block; }
+/* ★ (2026-06-03, dspark): 검색 아이콘 클릭 버튼 — background 없이 hover 시 opacity 변화. */
+.in-sf__icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; padding: 0; margin: 0;
+  cursor: pointer; line-height: 0; color: inherit;
+}
+.in-sf__icon-btn:hover:not(:disabled) { opacity: 0.7; }
+.in-sf__icon-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .in-sf--c-white :deep(.el-input__wrapper) { background: var(--in-surface-white); }
 .in-sf--disabled :deep(.el-input__wrapper) {
   background: var(--in-bg-state-disabled);

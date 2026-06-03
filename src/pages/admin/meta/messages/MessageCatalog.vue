@@ -102,18 +102,34 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
+      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="m-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
           input="메시지 ID prefix (예: MT_IST0050)"
-          :label-width="60"
+          layout="vertical"
           @update:model-value="onSearch"
+          @search="onSearch"
         />
-        <div class="m-filters__row">
-          <InSelect :model-value="list.filter.value.typeCd" :options="typeOptions" placeholder="Type" size="sm" @update:model-value="onType" />
-          <InSelect :model-value="list.filter.value.hasParent" :options="parentOptions" placeholder="부모" size="sm" @update:model-value="onParent" />
-        </div>
+        <InSelect
+          :model-value="list.filter.value.typeCd"
+          :options="typeOptions"
+          label="Type"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onType"
+        />
+        <InSelect
+          :model-value="list.filter.value.hasParent"
+          :options="parentOptions"
+          label="부모"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onParent"
+        />
       </div>
     </template>
 
@@ -201,8 +217,10 @@ onMounted(() => list.reload());
 </template>
 
 <style scoped>
-.m-filters { display: flex; flex-direction: column; gap: 12px; }
-.m-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
+/* ★ (2026-06-03, dspark): 검색 + 콤보 한 줄 배치. */
+.m-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.m-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
+.m-filters > :deep(.in-sel) { flex: 0 0 200px; }
 .muted { color: var(--in-text-subtle); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .head { display: flex; gap: 8px; margin-bottom: 12px; }

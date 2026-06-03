@@ -107,18 +107,34 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #filters>
+      <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="o-filters">
         <InSearchField
           :model-value="list.filter.value.q"
           label="검색"
           input="OBJECT_NM prefix (예: AUT0030)"
-          :label-width="60"
+          layout="vertical"
           @update:model-value="onSearch"
+          @search="onSearch"
         />
-        <div class="o-filters__row">
-          <InSelect :model-value="list.filter.value.objectType" :options="typeOptions" placeholder="Type" size="sm" @update:model-value="onType" />
-          <InSelect :model-value="list.filter.value.hasParent" :options="parentOptions" placeholder="부모" size="sm" @update:model-value="onParent" />
-        </div>
+        <InSelect
+          :model-value="list.filter.value.objectType"
+          :options="typeOptions"
+          label="Type"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onType"
+        />
+        <InSelect
+          :model-value="list.filter.value.hasParent"
+          :options="parentOptions"
+          label="부모"
+          input="전체"
+          layout="vertical"
+          size="sm"
+          @update:model-value="onParent"
+        />
       </div>
     </template>
 
@@ -190,8 +206,10 @@ onMounted(() => list.reload());
 </template>
 
 <style scoped>
-.o-filters { display: flex; flex-direction: column; gap: 12px; }
-.o-filters__row { display: flex; gap: 12px; flex-wrap: wrap; }
+/* ★ (2026-06-03, dspark): 검색 + 콤보 한 줄 배치. */
+.o-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.o-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
+.o-filters > :deep(.in-sel) { flex: 0 0 200px; }
 .muted { color: var(--in-text-subtle); }
 .link { font-family: var(--in-font-family-mono, ui-monospace); font-size: var(--in-font-size-sm); color: var(--in-text-default); }
 .loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
