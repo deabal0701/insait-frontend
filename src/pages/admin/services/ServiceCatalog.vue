@@ -91,7 +91,9 @@ async function openDetail(row) {
   detail.value = null;
   detailLoading.value = true;
   try {
-    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object'] });
+    // ★ (2026-06-03, dspark): expand 보강 — msgColumns (use_yn/use_enc_yn 가시화) + health (호환성 평가).
+    //   근거: command-scenarios 4건 (multiquery §3.1 / multisave §5 #1 / procedure §5.2 #13 / ela §5.2 #25).
+    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object', 'msgColumns', 'health'] });
     drawerTab.value = 'def';
   } catch (e) {
     toast.error?.(e?.message || '상세 조회 실패');
@@ -101,16 +103,43 @@ async function openDetail(row) {
 }
 function closeDetail() { selected.value = null; detail.value = null; }
 
-const trapCount = computed(() => {
-  if (!detail.value) return 0;
-  let n = 0;
-  for (const a of detail.value.attrs || []) if (a.msgRef && a.msgRef.exists === false) n += 1;
-  for (const f of detail.value.funcMaps || []) {
-    if (f.queryRef && f.queryRef.exists === false) n += 1;
-    if (f.reqMsgRef && f.reqMsgRef.exists === false) n += 1;
-    if (f.resMsgRef && f.resMsgRef.exists === false) n += 1;
+// ★ (2026-06-03, dspark): trapCount breakdown — 함정 카테고리별 분포 표시.
+//   command-scenarios 4건의 첫 함정 카테고리 5종.
+const trapBreakdown = computed(() => {
+  const out = { msgMissing: 0, queryMissing: 0, useYnN: 0, compatError: 0, compatWarn: 0 };
+  const d = detail.value;
+  if (!d) return out;
+  // 메시지 미등록 (자동 바인딩 함정)
+  for (const a of d.attrs || []) if (a.msgRef && a.msgRef.exists === false) out.msgMissing += 1;
+  for (const f of d.funcMaps || []) {
+    if (f.queryRef && f.queryRef.exists === false) out.queryMissing += 1;
+    if (f.reqMsgRef && f.reqMsgRef.exists === false) out.msgMissing += 1;
+    if (f.resMsgRef && f.resMsgRef.exists === false) out.msgMissing += 1;
   }
-  return n;
+  // 메시지 컬럼 use_yn=N (procedure §5.2 #13, ela §5.2 #1)
+  for (const a of d.attrs || []) {
+    if (a.msgRef?.columns) {
+      for (const c of a.msgRef.columns) if (c.useYn !== 'Y') out.useYnN += 1;
+    }
+  }
+  for (const f of d.funcMaps || []) {
+    for (const ref of [f.reqMsgRef, f.resMsgRef]) {
+      if (ref?.columns) for (const c of ref.columns) if (c.useYn !== 'Y') out.useYnN += 1;
+    }
+  }
+  // 호환성 평가 (sv_map_type × cmd_class)
+  if (d.compatibility?.reasons) {
+    for (const r of d.compatibility.reasons) {
+      if (r.severity === 'error') out.compatError += 1;
+      else if (r.severity === 'warn') out.compatWarn += 1;
+    }
+  }
+  return out;
+});
+
+const trapCount = computed(() => {
+  const b = trapBreakdown.value;
+  return b.msgMissing + b.queryMissing + b.useYnN + b.compatError + b.compatWarn;
 });
 
 function gotoTester(row) {
@@ -230,17 +259,25 @@ onMounted(() => list.reload());
         <div v-if="detailLoading" class="svc-loading">상세 조회 중…</div>
         <div v-else-if="detail">
           <div class="svc-drawer-head">
+            <!-- ★ (2026-06-03, dspark): 단일 trapCount → 호환성 + 카테고리 breakdown 으로 격상. -->
             <InTag
-              :label="trapCount > 0 ? `함정 ${trapCount}건` : '진단 OK'"
-              :variant="trapCount > 0 ? 'error' : 'success'"
+              v-if="detail.compatibility"
+              :label="detail.compatibility.level === 'ok' ? '진단 OK' : detail.compatibility.level === 'error' ? '운영 위험' : '주의'"
+              :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'"
               size="sm"
             />
+            <InTag v-if="trapBreakdown.compatError > 0"  :label="`호환성 ${trapBreakdown.compatError}건`" variant="error"   size="sm" />
+            <InTag v-if="trapBreakdown.compatWarn > 0"   :label="`주의 ${trapBreakdown.compatWarn}건`"   variant="warning" size="sm" />
+            <InTag v-if="trapBreakdown.msgMissing > 0"   :label="`메시지 미등록 ${trapBreakdown.msgMissing}건`"   variant="error" size="sm" />
+            <InTag v-if="trapBreakdown.queryMissing > 0" :label="`SQL 미등록 ${trapBreakdown.queryMissing}건`"     variant="error" size="sm" />
+            <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
             <InButton size="sm" variant="text" @click="gotoTester(selected)">▶ 테스트</InButton>
             <InButton size="sm" variant="text" @click="copyJson(detail)">📋 JSON 복사</InButton>
           </div>
 
           <InTabs v-model="drawerTab" :items="[
             { name: 'def',      tabLabel: '정의' },
+            { name: 'health',   tabLabel: `진단 ${detail.compatibility?.reasons?.length ? `(${detail.compatibility.reasons.length})` : ''}` },
             { name: 'attrs',    tabLabel: `메시지 슬롯 (${detail.attrs?.length || 0})` },
             { name: 'funcMaps', tabLabel: `함수 매핑 (${detail.funcMaps?.length || 0})` },
             { name: 'object',   tabLabel: '소속 오브젝트' },
@@ -257,19 +294,73 @@ onMounted(() => list.reload());
             </dl>
           </section>
 
-          <section v-else-if="drawerTab === 'attrs'" class="svc-section">
-            <ul class="resource-list">
-              <li v-for="a in detail.attrs" :key="a.svAttrId">
-                <HealthDot
-                  :tone="a.msgRef ? (a.msgRef.exists ? 'ok' : 'missing') : 'unknown'"
-                  :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''"
+          <!-- ★ (2026-06-03, dspark): 진단 탭 신설 — compatibility.reasons 가 운영자에게 보이는 1차 정보. -->
+          <section v-else-if="drawerTab === 'health'" class="svc-section">
+            <div v-if="!detail.compatibility" class="muted">진단 정보 없음 (expand=health 미적용)</div>
+            <div v-else>
+              <div class="svc-health-summary" :class="`svc-health-summary--${detail.compatibility.level}`">
+                <strong>전체 등급</strong>:
+                <InTag
+                  :label="detail.compatibility.level === 'ok' ? 'OK' : detail.compatibility.level === 'error' ? 'ERROR' : 'WARN'"
+                  :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'"
                   size="sm"
                 />
-                <InTag :label="a.svAttrType" :variant="a.svAttrType === 'IN_MSG' ? 'brand' : 'warning'" size="sm" />
-                <code>{{ a.svAttrNm }}</code>
-                <span class="muted">value_type:</span>
-                <code>{{ a.valueType }}</code>
-                <span v-if="a.msgRef?.msgDefNm" class="muted">— {{ a.msgRef.msgDefNm }} ({{ a.msgRef.columnCount }}col)</span>
+                <span class="muted">{{ detail.compatibility.reasons.length }}건 사유</span>
+              </div>
+              <ul v-if="detail.compatibility.reasons.length" class="svc-reasons">
+                <li v-for="(r, i) in detail.compatibility.reasons" :key="i" :class="`svc-reason--${r.severity}`">
+                  <InTag :label="r.severity === 'error' ? 'ERROR' : 'WARN'" :variant="r.severity === 'error' ? 'error' : 'warning'" size="sm" />
+                  <code class="svc-reason__code">{{ r.code }}</code>
+                  <span class="svc-reason__msg">{{ r.message }}</span>
+                  <span class="muted svc-reason__ref">— {{ r.ref }}</span>
+                </li>
+              </ul>
+              <p v-else class="muted">모든 검증 통과.</p>
+              <p class="muted svc-health-note">
+                근거: AS-IS 매뉴얼 <code>01-asis/manuals/01-meta-management/dev-tools/command-scenarios/</code> 4건 (multiquery·multisave·procedure·ela).
+              </p>
+            </div>
+          </section>
+
+          <section v-else-if="drawerTab === 'attrs'" class="svc-section">
+            <!-- ★ (2026-06-03, dspark): 메시지 슬롯 → 메시지 + 컬럼 (use_yn/use_enc_yn) 가시화.
+                 근거: SCENARIO-procedure.md §5.2 #13 (use_yn=N → IN NULL) + SCENARIO-multiquery.md §3.1 자동 바인딩. -->
+            <ul class="resource-list">
+              <li v-for="a in detail.attrs" :key="a.svAttrId" class="svc-attr-row">
+                <div class="svc-attr-row__head">
+                  <HealthDot
+                    :tone="a.msgRef ? (a.msgRef.exists ? 'ok' : 'missing') : 'unknown'"
+                    :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''"
+                    size="sm"
+                  />
+                  <InTag :label="a.svAttrType" :variant="a.svAttrType === 'IN_MSG' ? 'brand' : 'warning'" size="sm" />
+                  <code>{{ a.svAttrNm }}</code>
+                  <span class="muted">value_type:</span>
+                  <code>{{ a.valueType }}</code>
+                  <span v-if="a.msgRef?.msgDefNm" class="muted">— {{ a.msgRef.msgDefNm }} ({{ a.msgRef.columnCount }}col · {{ a.msgRef.typeCd }})</span>
+                </div>
+                <table v-if="a.msgRef?.columns?.length" class="svc-msg-columns">
+                  <thead>
+                    <tr><th>#</th><th>COL_ID</th><th>한글명</th><th>타입</th><th>USE</th><th>ENC</th><th>VALUE_TYPE</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="c in a.msgRef.columns" :key="c.seqNo" :class="{ 'svc-msg-columns__off': c.useYn !== 'Y' }">
+                      <td class="muted">{{ c.seqNo }}</td>
+                      <td><code>{{ c.colId }}</code></td>
+                      <td>{{ c.colNm }}</td>
+                      <td class="muted">{{ c.dataType }}</td>
+                      <td>
+                        <InTag v-if="c.useYn === 'Y'" label="Y" variant="success" size="sm" />
+                        <InTag v-else label="N" variant="error" size="sm" />
+                      </td>
+                      <td>
+                        <InTag v-if="c.useEncYn === 'Y'" label="ENC" variant="warning" size="sm" />
+                        <span v-else class="muted">—</span>
+                      </td>
+                      <td class="muted">{{ c.valueType || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </li>
             </ul>
           </section>
@@ -321,7 +412,29 @@ onMounted(() => list.reload());
 .svc-cmd { color: var(--in-text-accent); }
 .muted { color: var(--in-text-subtle); }
 
-.svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+/* ★ (2026-06-03, dspark): 진단 탭 + msg 컬럼 표. */
+.svc-health-summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; }
+.svc-health-summary--ok    { background: var(--in-surface-accent-success, #f0f9ff); }
+.svc-health-summary--warn  { background: var(--in-surface-accent-warning, #fffbeb); }
+.svc-health-summary--error { background: var(--in-surface-accent-error,   #fef2f2); }
+.svc-reasons { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.svc-reasons li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-left: 3px solid var(--in-border-default); }
+.svc-reason--error { border-left-color: var(--in-text-info-error, #dc2626); }
+.svc-reason--warn  { border-left-color: var(--in-text-warning, #d97706); }
+.svc-reason__code { font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+.svc-reason__msg { flex: 1 1 auto; }
+.svc-reason__ref { font-size: var(--in-font-size-sm); }
+.svc-health-note { font-size: var(--in-font-size-sm); margin-top: 16px; }
+
+.svc-attr-row { padding: 8px 0; border-bottom: 1px solid var(--in-border-default); }
+.svc-attr-row:last-child { border-bottom: none; }
+.svc-attr-row__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.svc-msg-columns { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); margin-top: 4px; }
+.svc-msg-columns th { text-align: left; padding: 4px 8px; background: var(--in-surface-state-default); font-weight: var(--in-font-weight-medium); color: var(--in-text-subtle); }
+.svc-msg-columns td { padding: 4px 8px; border-top: 1px solid var(--in-border-default); }
+.svc-msg-columns__off td { opacity: 0.55; background: var(--in-surface-accent-error, #fef2f2); }
 .svc-loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .svc-section { padding: 12px 4px; }
 
