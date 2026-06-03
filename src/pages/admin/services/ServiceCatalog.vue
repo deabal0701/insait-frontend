@@ -114,7 +114,8 @@ const trapCount = computed(() => {
 });
 
 function gotoTester(row) {
-  router.push({ name: 'ServiceTester', query: { serviceId: row.svDefNm } });
+  // ★ (2026-06-03, dspark): 라우트 이름 + param 정합 — router/routes/admin.js 의 `SERVICE_TESTER` (path param) 사용.
+  router.push({ name: 'SERVICE_TESTER', params: { serviceId: row.svDefNm } });
 }
 function copyJson(obj) {
   navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
