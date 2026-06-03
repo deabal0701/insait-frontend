@@ -43,7 +43,7 @@ const bentoExpanded = ref({ all: true });
 const ADMIN_PARENT = {
   META_HUB: 'meta', META_NEW: 'meta',
   CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
-  AUT0030: 'auth', AUT0040: 'auth', AUT0050: 'auth',
+  AUT0030: 'meta', AUT0040: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
@@ -274,13 +274,17 @@ const items = computed(() => {
           label: '메타관리',
           expanded: settingsExpanded.value.meta,
           children: [
+            // ★ (2026-06-03, dspark): 메타관리 LNB 순서 — TO-BE 04-admin-lane/README.md §2 의
+            //   빌드 워크플로우 정합 + 사용자 명시 순서 (서비스→오브젝트→SQL→메시지→엔터티).
+            //   AUT prefix(AUT0030)는 OBJECT_ID 잔재이며 AS-IS frm_menu SD_OBJ = SYS_DEV 그룹.
             { key: 'META_HUB', label: '메타관리 홈',       active: current === 'META_HUB' },
             { key: 'META_NEW', label: '+ 신규 화면 등록',  active: current === 'META_NEW' },
-            { key: 'CCD0020',  label: '공통코드',         active: current === 'CCD0020' },
             { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
+            { key: 'AUT0030',  label: '오브젝트 관리',    active: current === 'AUT0030' },
+            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
             { key: 'IST0030',  label: '메시지 관리',      active: current === 'IST0030' },
             { key: 'IST0020',  label: '엔터티 관리',      active: current === 'IST0020' },
-            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
+            { key: 'CCD0020',  label: '공통코드',         active: current === 'CCD0020' },
           ],
         },
         {
@@ -288,9 +292,8 @@ const items = computed(() => {
           label: '권한관리',
           expanded: settingsExpanded.value.auth,
           children: [
-            { key: 'AUT0030', label: '오브젝트 관리', active: current === 'AUT0030' },
-            { key: 'AUT0040', label: '권한 관리',    active: current === 'AUT0040' },
-            { key: 'AUT0050', label: '메뉴 관리',    active: current === 'AUT0050' },
+            { key: 'AUT0040', label: '권한 관리', active: current === 'AUT0040' },
+            { key: 'AUT0050', label: '메뉴 관리', active: current === 'AUT0050' },
           ],
         },
         {
