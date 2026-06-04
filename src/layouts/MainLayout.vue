@@ -11,6 +11,8 @@ import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
 import InLNB from '@/components/ui/InLNB.vue';
+import InButton from '@/components/ui/InButton.vue';
+import InIcon from '@/components/ui/InIcon.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -371,6 +373,17 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
 
 const displayName = computed(() => auth.loginId || auth.empId || 'user');
 const currentTitle = computed(() => route.meta?.title || '');
+
+// ★ (2026-06-04, dspark): banner 좌측 [<] 버튼 — route.meta.backTo (라우트명) 시 표시.
+//   클릭: router.back() 우선 + meta.backTo push fallback (직접 URL 진입 시).
+const backTo = computed(() => route.meta?.backTo || null);
+function onBackClick() {
+  if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+    router.back();
+  } else if (backTo.value) {
+    router.push({ name: backTo.value });
+  }
+}
 </script>
 
 <template>
@@ -402,6 +415,18 @@ const currentTitle = computed(() => route.meta?.title || '');
 
     <div class="main-layout__main">
       <header class="main-layout__header">
+        <!-- ★ (2026-06-04, dspark): banner 좌측 [<] 원형 버튼 — route.meta.backTo 있을 때만 표시.
+             InButton only-icon 의 filter 가 chevron path fill (#666666) 과 이중 적용되어 안 보임.
+             일반 button + InIcon 직접 사용 — filter 충돌 회피. -->
+        <button
+          v-if="backTo"
+          type="button"
+          class="main-layout__back-btn"
+          aria-label="뒤로 가기"
+          @click="onBackClick"
+        >
+          <InIcon name="chevron-left" :size="18" />
+        </button>
         <div class="main-layout__crumb">{{ currentTitle }}</div>
         <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
           <span class="main-layout__user">
@@ -502,6 +527,39 @@ const currentTitle = computed(() => route.meta?.title || '');
   font-size: 14px;
   font-weight: 500;
   color: var(--in-text-accent, #010101);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+/* ★ (2026-06-04, dspark): banner 좌측 [<] 원형 버튼 — route.meta.backTo 시 표시.
+   일반 button + InIcon — InButton only-icon 의 filter 충돌 회피.
+   chevron-left.svg path fill #666666 → 자연스러운 회색, hover 시 brand. */
+.main-layout__back-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--in-border-default, #d0d5dd);
+  background: var(--in-surface-default, #fff);
+  color: var(--in-text-default, #565656);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.main-layout__back-btn:hover {
+  background: var(--in-bg-accent-subtle, #e1f5fc);
+  border-color: var(--in-brand, #0090e7);
+  box-shadow: 0 1px 3px rgba(0, 144, 231, 0.18);
+}
+.main-layout__back-btn:focus-visible {
+  outline: 2px solid var(--in-brand, #0090e7);
+  outline-offset: 2px;
+}
+.main-layout__back-btn :deep(.in-icon) {
+  display: inline-flex;
 }
 .main-layout__user {
   display: inline-flex;
