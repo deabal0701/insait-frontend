@@ -388,10 +388,10 @@ function formatCell(v) {
 
 <template>
   <div class="svc-tst">
-    <!-- ★ (2026-06-04, dspark): 페이지 내 [<] 제거 — MainLayout banner 의 [<] 이 단일 진입점.
-         route.meta.backTo='META_SERVICES' 가 banner [<] 활성화 트리거.
-         InMetaStepHeader 의 title 도 banner ('서비스 테스터') 와 중복 → serviceId 만 표시. -->
-    <InMetaStepHeader
+    <!-- ★ (2026-06-04, dspark): 페이지 본문 헤더 — 좌측 InMetaStepHeader + 우측 끝 [< 뒤로] 버튼.
+         사용자 피드백: "헤더에는 메뉴뎁스같은 것이 있어야 한다. 뒤로 액션은 본문 헤더 우측에." -->
+    <div class="svc-tst__page-header">
+      <InMetaStepHeader
         :title="serviceId || '신규 호출'"
         :code="cmdInfo?.label || ''"
         subtitle="임의 서비스 즉석 호출. 메타 lookup → REQ 폼 자동 생성 → envelope 송신 → 응답 분석."
@@ -402,7 +402,19 @@ function formatCell(v) {
           · Command 종류: <strong>{{ cmdInfo.label }}</strong> ({{ cmdInfo.command }})
         </span>
       </template>
-    </InMetaStepHeader>
+      </InMetaStepHeader>
+      <InButton
+        class="svc-tst__page-back"
+        variant="default"
+        size="md"
+        :left-icon-show="true"
+        :right-icon-show="false"
+        @click="goToCatalog"
+      >
+        <template #prefix><InIcon name="chevron-left" :size="14" /></template>
+        뒤로
+      </InButton>
+    </div>
 
     <!-- ─── 서비스 ID 입력 ─── -->
     <InMetaStepSection step-no="1" title="서비스 ID">
@@ -668,7 +680,15 @@ function formatCell(v) {
   font-family: var(--in-font-family-body);
 }
 
-/* ★ (2026-06-04, dspark): 페이지 내 [<] 버튼 제거. MainLayout banner 좌측 [<] (route.meta.backTo) 가 단일 진입점. */
+/* ★ (2026-06-04, dspark): 페이지 본문 헤더 — 좌측 InMetaStepHeader + 우측 끝 [< 뒤로]. */
+.svc-tst__page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.svc-tst__page-header > :first-child { flex: 1 1 auto; min-width: 0; }
+.svc-tst__page-back { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; }
 
 /* === ID input row === */
 .svc-tst__id-row {

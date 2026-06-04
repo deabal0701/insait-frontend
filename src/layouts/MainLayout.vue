@@ -415,21 +415,10 @@ function onBackClick() {
 
     <div class="main-layout__main">
       <header class="main-layout__header">
-        <!-- ★ (2026-06-04, dspark): banner 좌측 [<] 원형 버튼 — route.meta.backTo 있을 때만 표시.
-             InButton only-icon 의 filter 가 chevron path fill (#666666) 과 이중 적용되어 안 보임.
-             일반 button + InIcon 직접 사용 — filter 충돌 회피. -->
-        <button
-          v-if="backTo"
-          type="button"
-          class="main-layout__back-btn"
-          aria-label="뒤로 가기"
-          @click="onBackClick"
-        >
-          <InIcon name="chevron-left" :size="18" />
-        </button>
-        <!-- ★ (2026-06-04, dspark): detail 페이지 (backTo 있음) 일 때 crumb 숨김.
-             페이지 본문이 이미 자체 헤더(serviceId/도메인) 를 갖고 있어 banner 중복. -->
-        <div v-if="!backTo" class="main-layout__crumb">{{ currentTitle }}</div>
+        <!-- ★ (2026-06-04, dspark): banner = 메뉴 뎁스(향후 breadcrumb) 영역.
+             [<] 액션은 페이지 본문 헤더 우측으로 이전 (사용자 피드백 — 헤더에는 헤더에 있을 것).
+             현재는 route.meta.title 표시. 추후 breadcrumb 격상은 별도 카드. -->
+        <div class="main-layout__crumb">{{ currentTitle }}</div>
         <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
           <span class="main-layout__user">
             <span class="main-layout__user-avatar">{{ (displayName[0] || '?').toUpperCase() }}</span>
