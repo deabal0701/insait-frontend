@@ -338,11 +338,13 @@ onMounted(() => list.reload());
       <span class="muted">{{ (value || '').slice(0, 10) }}</span>
     </template>
 
-    <!-- ★ (2026-06-04, dspark): row 액션 — 84f83ea 정합. arrow-right (테스트) + content-copy (JSON 복사). -->
+    <!-- ★ (2026-06-04, dspark): row 액션 — 84f83ea 정합. chevron-right (작은 ">", 테스트) + content-copy (JSON).
+         사용자 피드백: "큰 > 가 아니라 작은 '>' 였다" — registry chevron-right 가 정확한 작은 꺽쇠 (Material, 여백 보유).
+         "세로로 두개가 나온다" → svc-row-actions CSS 에 display:flex + gap. -->
     <template #cell-actions="{ row }">
       <span class="svc-row-actions" @click.stop>
         <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="gotoTester(row)">
-          <template #prefix><InIcon name="arrow-right" :size="14" /></template>
+          <template #prefix><InIcon name="chevron-right" :size="14" /></template>
           테스트
         </InButton>
         <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="copyRowEnvelope(row)">
@@ -623,6 +625,10 @@ onMounted(() => list.reload());
 
 .svc-name { display: inline-flex; align-items: center; gap: 6px; }
 .svc-note-dot { color: var(--in-text-subtle); }
+
+/* ★ (2026-06-04, dspark): row 액션 — 가로 한 줄 배치. */
+.svc-row-actions { display: inline-flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap; white-space: nowrap; }
+.svc-row-actions :deep(.in-btn) { padding: 2px 6px; }
 .svc-cmd { color: var(--in-text-accent); }
 .muted { color: var(--in-text-subtle); }
 
