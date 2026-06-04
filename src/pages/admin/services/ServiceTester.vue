@@ -147,14 +147,30 @@ const envelopeMode = ref('form');  // 'form' | 'json'
 const rawEnvelopeText = ref('');
 const rawEnvelopeError = ref('');
 
+// ★ (2026-06-04, dspark): Command suffix 별 sStatus 기본값 자동 결정.
+//   R/P/E = 'R' (의미 없음 placeholder), S = 사용자 선택 (I/U/D, 기본 'I').
+//   h5 framework BusinessEntity.saveItem (line 293/392) 가 'I'/'U'/'D' equalsIgnoreCase 로 분기.
+//   ★ AS-IS 매뉴얼 §3.1 표기 'C' 는 IBSheet UI 명칭 — framework key 는 'I'. 'C' 보내면 silent skip.
+const SSTATUS_OPTIONS = [
+  { value: 'I', label: 'I — INSERT (신규)' },
+  { value: 'U', label: 'U — UPDATE (수정)' },
+  { value: 'D', label: 'D — DELETE (삭제)' },
+];
+const reqStatus = ref('I');  // S Command 용 사용자 선택 (I/U/D)
+
+function defaultSStatus() {
+  return cmdSuffix.value === 'S' ? reqStatus.value : 'R';
+}
+
 function buildBodyFromForm() {
+  const sStatus = defaultSStatus();
   if (!meta.value.msgInId) {
-    return { ME_TST_01: [{ _seq: 1, sStatus: 'R', sDelete: '', ...reqValues.value }] };
+    return { ME_TST_01: [{ _seq: 1, sStatus, sDelete: '', ...reqValues.value }] };
   }
   // 메시지 ID 의 ME_ 변환 — MT_TST0001_01 → ME_TST0001_01
   const instance = String(meta.value.msgInId).replace(/^MT_/, 'ME_');
   return {
-    [instance]: [{ _seq: 1, sStatus: 'R', sDelete: '', ...reqValues.value }],
+    [instance]: [{ _seq: 1, sStatus, sDelete: '', ...reqValues.value }],
   };
 }
 
@@ -430,6 +446,16 @@ function formatCell(v) {
 
       <!-- 폼 모드 -->
       <div v-if="envelopeMode === 'form'">
+        <!-- ★ (2026-06-04, dspark): S Command 한정 sStatus 선택 (C/U/D). 그 외 Command 는 'R' 자동. -->
+        <div v-if="cmdSuffix === 'S'" class="svc-tst__sstatus-row">
+          <label class="svc-tst__label">
+            sStatus <span class="svc-tst__req-mark">*</span>
+            <span class="svc-tst__field-hint"><code>MultiSaveCommand</code> 행 상태 (C=INSERT / U=UPDATE / D=DELETE)</span>
+          </label>
+          <select v-model="reqStatus" class="svc-tst__input">
+            <option v-for="o in SSTATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </div>
         <div v-if="meta.inColumns.length === 0" class="svc-tst__empty">
           IN 메시지 컬럼 메타가 없습니다. JSON 모드로 직접 편집하세요.
         </div>
