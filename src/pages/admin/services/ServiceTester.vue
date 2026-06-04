@@ -525,10 +525,16 @@ function formatCell(v) {
     <!-- ─── 응답 ─── -->
     <InMetaStepSection v-if="result?.response" step-no="4" title="응답">
       <template #hint>
-        HEADER + BODY 슬롯별 표시
+        수신 전문 (envelope 전체) + HEADER + BODY 슬롯별 표시
       </template>
 
       <div class="svc-tst__resp-grid">
+        <!-- ★ (2026-06-04, dspark): 수신 전문 전체 (envelope HEADER + BODY 통째) 최상단에 표시.
+             AS-IS JSP success_response.jsp 가 보낸 raw 본문 그대로 확인 가능. -->
+        <section>
+          <h5 class="svc-tst__sub-h">수신 전문 (envelope 전체)</h5>
+          <InMetaCodeBlock :code="JSON.stringify(result.response, null, 2)" lang="json" max-height="320px" />
+        </section>
         <section>
           <h5 class="svc-tst__sub-h">HEADER</h5>
           <InMetaCodeBlock :code="JSON.stringify(result.response.HEADER || {}, null, 2)" lang="json" max-height="180px" />
@@ -551,7 +557,7 @@ function formatCell(v) {
               </tbody>
             </table>
             <p v-if="s.rows.length > 50" class="svc-tst__rows-note">
-              상위 50행 표시 (전체 {{ s.rows.length }}행). 전체 JSON 은 raw 패널 참조.
+              상위 50행 표시 (전체 {{ s.rows.length }}행). 전체 JSON 은 수신 전문 영역 참조.
             </p>
           </div>
         </section>
