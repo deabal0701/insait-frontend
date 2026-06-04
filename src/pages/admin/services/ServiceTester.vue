@@ -367,8 +367,15 @@ watch(() => route.params.serviceId, (v) => {
   }
 });
 
+// ★ (2026-06-04, dspark): 돌아가기 — history back 우선 + 카탈로그 fallback.
+//   사용자 피드백: "돌아갈 방법이 없다". 직접 URL 진입(새 탭/북마크) 시도 history 없음
+//   → router.push 로 LNB 정합 META_SERVICES (/admin/meta/services) 라우트.
 function goToCatalog() {
-  router.push({ name: 'IST0050' });
+  if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+    router.back();
+  } else {
+    router.push({ name: 'META_SERVICES' });
+  }
 }
 
 function formatCell(v) {
@@ -400,8 +407,10 @@ function formatCell(v) {
         ID 입력 후 [메타 조회] → 컬럼 자동 추출 + REQ 폼 생성
       </template>
       <template #actions>
-        <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="goToCatalog">
-          ← 카탈로그
+        <!-- ★ (2026-06-04, dspark): 시각 강화 — text → default variant + chevron-left 아이콘 prefix. -->
+        <InButton variant="default" size="sm" :left-icon-show="true" :right-icon-show="false" @click="goToCatalog">
+          <template #prefix><InIcon name="chevron-left" :size="14" /></template>
+          서비스 카탈로그로
         </InButton>
       </template>
 
