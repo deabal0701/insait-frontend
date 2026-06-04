@@ -388,6 +388,15 @@ function formatCell(v) {
 
 <template>
   <div class="svc-tst">
+    <!-- ★ (2026-06-04, dspark): 페이지 최상단 명시 [뒤로] nav — 사용자 피드백 "돌아갈 방법이 없다".
+         메인 헤더 위에 별도 영역으로 진입 즉시 시각 식별 가능. -->
+    <nav class="svc-tst__nav" aria-label="페이지 이동">
+      <InButton variant="default" size="md" :left-icon-show="true" :right-icon-show="false" @click="goToCatalog">
+        <template #prefix><InIcon name="chevron-left" :size="16" /></template>
+        뒤로 (서비스 카탈로그)
+      </InButton>
+    </nav>
+
     <InMetaStepHeader
       title="서비스 테스터"
       :code="serviceId"
@@ -406,13 +415,8 @@ function formatCell(v) {
       <template #hint>
         ID 입력 후 [메타 조회] → 컬럼 자동 추출 + REQ 폼 생성
       </template>
-      <template #actions>
-        <!-- ★ (2026-06-04, dspark): 시각 강화 — text → default variant + chevron-left 아이콘 prefix. -->
-        <InButton variant="default" size="sm" :left-icon-show="true" :right-icon-show="false" @click="goToCatalog">
-          <template #prefix><InIcon name="chevron-left" :size="14" /></template>
-          서비스 카탈로그로
-        </InButton>
-      </template>
+      <!-- ★ (2026-06-04, dspark): Step 1 #actions 의 중복 [서비스 카탈로그로] 제거.
+           페이지 최상단 nav 의 [뒤로] 가 단일 진입점. -->
 
       <div class="svc-tst__id-row">
         <InTextField
@@ -668,6 +672,14 @@ function formatCell(v) {
   flex-direction: column;
   gap: 14px;
   font-family: var(--in-font-family-body);
+}
+
+/* ★ (2026-06-04, dspark): 페이지 최상단 nav — 좌측 정렬 + 명확한 시각 강도. */
+.svc-tst__nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 4px;
 }
 
 /* === ID input row === */
