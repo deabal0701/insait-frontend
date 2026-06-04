@@ -7,6 +7,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
+import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
@@ -28,15 +29,13 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-// ★ (2026-06-04, dspark): 자동조회 해제 — staged 에만 보관, [조회] 클릭 시 fetch.
-const staged = ref({ q: '', historyTypeCd: '', logYn: '', unitCd: '' });
+// ★ (2026-06-04, dspark): useCatalogFilter composable 사용.
+const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+  list,
+  initial: { q: '', historyTypeCd: '', logYn: '', unitCd: '' },
+});
 function onSearch(v) { staged.value.q = v; }
 function onLog(v) { staged.value.logYn = v; }
-function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
-function resetFilter() {
-  staged.value = { q: '', historyTypeCd: '', logYn: '', unitCd: '' };
-  list.resetFilter();
-}
 
 const ynOptions = [
   { value: '',  label: '전체' },
@@ -53,10 +52,7 @@ const activeFilters = computed(() => {
   if (f.unitCd) out.push({ key: 'unitCd', label: `unit: ${f.unitCd}` });
   return out;
 });
-function removeFilter(key) {
-  staged.value[key] = '';
-  list.setFilter({ [key]: '' }, { debounce: false });
-}
+// removeFilter 는 useCatalogFilter 가 제공
 
 const columns = [
   { field: 'entityNm',    label: '테이블명',  sortable: true, sortKey: 'entity_nm', width: 220 },

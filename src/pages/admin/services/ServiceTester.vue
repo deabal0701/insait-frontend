@@ -35,6 +35,8 @@ import InMetaErrorCard from '@/components/feature/meta/InMetaErrorCard.vue';
 import InMetaResourceBadge from '@/components/feature/meta/InMetaResourceBadge.vue';
 
 import InTextField from '@/components/ui/InTextField.vue';
+import InSelect from '@/components/ui/InSelect.vue';
+import InCheckbox from '@/components/ui/InCheckbox.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InIcon from '@/components/ui/InIcon.vue';
 
@@ -464,15 +466,18 @@ function formatCell(v) {
 
       <!-- 폼 모드 -->
       <div v-if="envelopeMode === 'form'">
-        <!-- ★ (2026-06-04, dspark): S Command 한정 sStatus 선택 (C/U/D). 그 외 Command 는 'R' 자동. -->
+        <!-- ★ (2026-06-04, dspark): S Command 한정 sStatus 선택 (I/U/D). InSelect 디자인 시스템 정합. -->
         <div v-if="cmdSuffix === 'S'" class="svc-tst__sstatus-row">
-          <label class="svc-tst__label">
-            sStatus <span class="svc-tst__req-mark">*</span>
-            <span class="svc-tst__field-hint"><code>MultiSaveCommand</code> 행 상태 (C=INSERT / U=UPDATE / D=DELETE)</span>
-          </label>
-          <select v-model="reqStatus" class="svc-tst__input">
-            <option v-for="o in SSTATUS_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
+          <InSelect
+            :model-value="reqStatus"
+            :options="SSTATUS_OPTIONS"
+            label="sStatus"
+            input="선택"
+            layout="vertical"
+            size="sm"
+            @update:model-value="(v) => reqStatus = v"
+          />
+          <span class="svc-tst__field-hint"><code>MultiSaveCommand</code> 행 상태 (I=INSERT / U=UPDATE / D=DELETE)</span>
         </div>
         <div v-if="meta.inColumns.length === 0" class="svc-tst__empty">
           IN 메시지 컬럼 메타가 없습니다. JSON 모드로 직접 편집하세요.
@@ -545,11 +550,10 @@ function formatCell(v) {
           {{ calling ? '호출 중…' : `▶ 호출 (${cmdInfo?.label || '?'})` }}
         </InButton>
 
-        <label v-if="cmdSuffix === 'S'" class="svc-tst__dry-toggle">
-          <input v-model="dryRun" type="checkbox" />
-          <span>dry-run (트랜잭션 ROLLBACK 의도)</span>
+        <span v-if="cmdSuffix === 'S'" class="svc-tst__dry-toggle">
+          <InCheckbox :model-value="dryRun" label="dry-run (트랜잭션 ROLLBACK 의도)" size="sm" @update:model-value="(v) => dryRun = v" />
           <span class="svc-tst__dry-hint">※ 현재 클라이언트 표시만. 백엔드 지원 후 envelope HEADER 에 반영 예정.</span>
-        </label>
+        </span>
 
         <span v-if="result" class="svc-tst__result-meta">
           <InIcon :name="result.ok ? 'check-circle' : 'status-error'" :size="14" />
@@ -619,7 +623,7 @@ function formatCell(v) {
         최근 {{ history.length }}건 (최대 20) · localStorage persist
       </template>
       <template #actions>
-        <button type="button" class="svc-tst__mode-btn" @click="clearHistory">전체 삭제</button>
+        <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="clearHistory">전체 삭제</InButton>
       </template>
 
       <ul class="svc-tst__history">
@@ -627,7 +631,7 @@ function formatCell(v) {
           <InIcon :name="h.ok ? 'check-circle' : 'status-error'" :size="12" />
           <code class="svc-tst__history-id">{{ h.serviceName }}</code>
           <span class="svc-tst__history-meta">{{ new Date(h.at).toLocaleTimeString() }} · {{ h.ms }}ms</span>
-          <button type="button" class="svc-tst__mode-btn" @click="loadHistory(h)">불러오기</button>
+          <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="loadHistory(h)">불러오기</InButton>
         </li>
       </ul>
     </InMetaStepSection>
@@ -635,13 +639,13 @@ function formatCell(v) {
     <!-- ─── 즐겨찾기 ─── -->
     <InMetaStepSection v-if="favorites.length > 0 || savingFav" step-no="i" title="즐겨찾기" tone="muted">
       <template #actions>
-        <button v-if="!savingFav" type="button" class="svc-tst__mode-btn" :disabled="!serviceId" @click="savingFav = true">
+        <InButton v-if="!savingFav" variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" :disabled="!serviceId" @click="savingFav = true">
           현재 입력 저장
-        </button>
+        </InButton>
       </template>
 
       <div v-if="savingFav" class="svc-tst__fav-save">
-        <input v-model="favName" class="svc-tst__input" placeholder="프리셋 이름" />
+        <InTextField :model-value="favName" input="프리셋 이름" size="sm" @update:model-value="(v) => favName = v" />
         <InButton variant="primary" size="sm" :left-icon-show="false" :right-icon-show="false" @click="onSaveFavorite">저장</InButton>
         <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="savingFav = false">취소</InButton>
       </div>
@@ -651,8 +655,8 @@ function formatCell(v) {
           <InIcon name="bookmark" :size="12" />
           <span class="svc-tst__history-id">{{ f.name }}</span>
           <code class="svc-tst__history-meta">{{ f.serviceId }}</code>
-          <button type="button" class="svc-tst__mode-btn" @click="loadFavorite(f)">불러오기</button>
-          <button type="button" class="svc-tst__mode-btn" @click="removeFavorite(f.id)">삭제</button>
+          <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="loadFavorite(f)">불러오기</InButton>
+          <InButton variant="text" size="sm" :left-icon-show="false" :right-icon-show="false" @click="removeFavorite(f.id)">삭제</InButton>
         </li>
       </ul>
     </InMetaStepSection>

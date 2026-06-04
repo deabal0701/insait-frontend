@@ -1,0 +1,49 @@
+/**
+ * useCatalogFilter — 5 admin 카탈로그 (Service/Message/Query/Entity/Object) 공통 staged filter.
+ *
+ * ★ (2026-06-04, dspark): 검색 자동조회 해제 정책 (f4a2a6f) — [조회] 버튼 명시 클릭 시에만 fetch.
+ *   staged 에만 사용자 입력 보관 → applyFilter() 가 list 에 push.
+ *   사용자 피드백: "검색명령 등 입력시에 자동조회 되지 않도록".
+ *
+ * 패턴 (5 카탈로그 공통):
+ *   1) staged ref — 사용자 입력 즉시 반영 (fetch X)
+ *   2) applyFilter() — [조회] 클릭 또는 Enter 시 list.setFilter
+ *   3) resetFilter() — [초기화] 클릭 시 staged + list 동시 reset
+ *   4) removeFilter(key) — chip 제거 시 staged + list 동기 reset
+ *
+ * Usage:
+ *   const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+ *     list,
+ *     initial: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
+ *   });
+ *   <InSearchField :model-value="staged.q" @update:model-value="v => staged.q = v" @search="applyFilter" />
+ *   <InButton @click="applyFilter">조회</InButton>
+ *   <InButton @click="resetFilter">초기화</InButton>
+ *
+ * @param {object} opts
+ * @param {object} opts.list - usePagedList 인스턴스
+ * @param {object} opts.initial - 필터 초기값 (모든 키 포함 필수, list.initialFilter 와 동일 구조)
+ * @returns {{ staged, applyFilter, resetFilter, removeFilter }}
+ */
+import { ref } from 'vue';
+
+export function useCatalogFilter({ list, initial }) {
+  const blank = () => ({ ...initial });
+  const staged = ref(blank());
+
+  function applyFilter() {
+    list.setFilter({ ...staged.value }, { debounce: false });
+  }
+
+  function resetFilter() {
+    staged.value = blank();
+    list.resetFilter();
+  }
+
+  function removeFilter(key) {
+    staged.value[key] = '';
+    list.setFilter({ [key]: '' }, { debounce: false });
+  }
+
+  return { staged, applyFilter, resetFilter, removeFilter };
+}

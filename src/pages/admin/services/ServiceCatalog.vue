@@ -17,6 +17,7 @@ import { useRouter } from 'vue-router';
 import { adminApi } from '@/services/adminApi';
 import { buildEnvelope } from '@/services/envelope';
 import { usePagedList } from '@/composables/usePagedList';
+import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
@@ -43,19 +44,15 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-// ★ (2026-06-04, dspark): 입력 즉시 조회 동작 제거 — [조회] 버튼 명시 클릭 시에만 fetch.
-//   staged 필터에만 사용자 입력 보관 → applyFilter() 가 list 에 push.
-//   사용자 피드백: "검색명령 등 입력시에 자동조회 되지 않도록".
-const staged = ref({ q: '', cmdClass: '', txSupportYn: '', useLogYn: '' });
+// ★ (2026-06-04, dspark): useCatalogFilter composable — 5 카탈로그 공통 staged filter.
+const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+  list,
+  initial: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
+});
 function onSearch(v) { staged.value.q = v; }
 function onCmdClass(v) { staged.value.cmdClass = v; }
 function onTx(v) { staged.value.txSupportYn = v; }
 function onUseLog(v) { staged.value.useLogYn = v; }
-function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
-function resetFilter() {
-  staged.value = { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' };
-  list.resetFilter();
-}
 
 const cmdOptions = [
   { value: '', label: '전체 Command' },
@@ -79,10 +76,7 @@ const activeFilters = computed(() => {
   if (f.useLogYn) out.push({ key: 'useLogYn', label: `log: ${f.useLogYn}` });
   return out;
 });
-function removeFilter(key) {
-  staged.value[key] = '';
-  list.setFilter({ [key]: '' }, { debounce: false });
-}
+// removeFilter 는 useCatalogFilter 가 제공 (chip 제거 시 staged + list 동기 reset)
 
 const columns = [
   { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
