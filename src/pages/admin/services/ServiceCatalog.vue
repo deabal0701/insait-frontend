@@ -15,6 +15,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { adminApi } from '@/services/adminApi';
+import { buildEnvelope } from '@/services/envelope';
 import { usePagedList } from '@/composables/usePagedList';
 import { useToast } from '@/composables/useToast';
 
@@ -28,6 +29,7 @@ import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 import InTabs from '@/components/ui/InTabs.vue';
 import InTooltip from '@/components/ui/InTooltip.vue';
+import InIcon from '@/components/ui/InIcon.vue';
 
 const router = useRouter();
 const toast = useToast();
@@ -90,6 +92,8 @@ const columns = [
   { field: 'useLogYn',   label: 'Log',         sortable: true, sortKey: 'use_log_yn',   align: 'center', width: 50 },
   { field: 'modDate',    label: '변경일',      sortable: true, sortKey: 'mod_date', width: 160 },
   { field: 'note',       label: '비고' },
+  // ★ (2026-06-04, dspark): row 액션 컬럼 복원 (84f83ea 정합) — 테스트(arrow-right) + JSON 복사(content-copy).
+  { field: 'actions',    label: '액션', align: 'center', width: 150 },
 ];
 
 // ─── 상세 Drawer ─────────────────────────────────────────────────────────
@@ -167,6 +171,26 @@ function gotoTester(row) {
 function copyJson(obj) {
   navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
   toast.success?.('JSON 복사됨');
+}
+
+// ★ (2026-06-04, dspark): row 액션 — envelope template 빌드 후 클립보드 복사 (84f83ea 정합).
+//   메타 fetch 1회 → attrs[IN_MSG].msgRef.columns 기반 envelope 본문 자동 채움.
+async function copyRowEnvelope(row) {
+  if (!row?.svDefNm) return;
+  try {
+    const d = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'msgColumns'] });
+    const attrs = Array.isArray(d?.attrs) ? d.attrs : [];
+    const inAttr = attrs.find((a) => a.svAttrType === 'IN_MSG');
+    const slot = (inAttr?.valueType || '').replace(/^MT_/, 'ME_') || 'ME_REQ';
+    const cols = inAttr?.msgRef?.columns || [];
+    const rowTpl = { _seq: 1, sStatus: 'R', sDelete: '' };
+    for (const c of cols) rowTpl[c.colId] = '';
+    const envelope = buildEnvelope(row.svDefNm, { [slot]: [rowTpl] });
+    await navigator.clipboard.writeText(JSON.stringify(envelope, null, 2));
+    toast.success?.(`envelope JSON 복사됨 — ${row.svDefNm}`);
+  } catch (e) {
+    toast.error?.(e?.message || 'JSON 복사 실패');
+  }
 }
 
 function shortCmd(fqcn) {
@@ -312,6 +336,20 @@ onMounted(() => list.reload());
 
     <template #cell-modDate="{ value }">
       <span class="muted">{{ (value || '').slice(0, 10) }}</span>
+    </template>
+
+    <!-- ★ (2026-06-04, dspark): row 액션 — 84f83ea 정합. arrow-right (테스트) + content-copy (JSON 복사). -->
+    <template #cell-actions="{ row }">
+      <span class="svc-row-actions" @click.stop>
+        <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="gotoTester(row)">
+          <template #prefix><InIcon name="arrow-right" :size="14" /></template>
+          테스트
+        </InButton>
+        <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="copyRowEnvelope(row)">
+          <template #prefix><InIcon name="content-copy" :size="14" /></template>
+          JSON
+        </InButton>
+      </span>
     </template>
 
     <template #drawer>
