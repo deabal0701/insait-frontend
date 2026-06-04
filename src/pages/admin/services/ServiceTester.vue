@@ -239,13 +239,25 @@ async function onCall() {
       const cat = classifyMetaError(response);
       errorGuide = { category: cat, ...getMetaErrorGuide(cat) };
     } else if (cmdSuffix.value === 'S') {
-      // Save 시나리오 — silent no-op 추가 검증
-      const oid = extractInsertedOid(response, 'ME_SAVE_RESULT', 'object_id');
-      if (oid == null) {
+      // ★ (2026-06-04, dspark): Save 시나리오 silent no-op 검증을 rStatus 우선으로 격상.
+      //   h5 framework BusinessEntity 가 INSERT/UPDATE/DELETE 성공 시 응답 row 의
+      //   rStatus 컬럼에 'OK' 박음. 'object_id' 휴리스틱은 MT_SAVE_RESULT 가 DB FRM_MSG_DEF
+      //   미등록 환경에서 false positive 다수 발생. rStatus 가 진짜 시그널.
+      //   1순위: rStatus='OK' → 성공. 2순위: *_id 필드 비어있지 않으면 성공.
+      //   둘 다 실패 시 silent no-op 의심 (실 환경에서는 R 재조회로 확정 권장).
+      const rows = response?.BODY?.ME_SAVE_RESULT;
+      const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+      const rStatus = firstRow?.rStatus;
+      const oidLike = firstRow ? (
+        firstRow.object_id || firstRow.OID || firstRow.oid ||
+        Object.entries(firstRow).find(([k, v]) => /_id$/i.test(k) && v != null && String(v).trim() !== '')?.[1]
+      ) : null;
+      const isOk = rStatus === 'OK' || (oidLike != null && String(oidLike).trim() !== '');
+      if (!isOk && rStatus !== 'OK') {
         errorGuide = {
           category: 'SILENT_NOOP',
           title: 'Silent no-op 가능성',
-          hint: '응답 SUCCESS 였으나 OID 가 발급되지 않았습니다. Entity 매핑 누락 의심 (99 §5.8).',
+          hint: '응답 SUCCESS 였으나 rStatus="OK" 시그널이 없습니다. Entity 매핑 또는 sStatus 값 확인 (99 §5.8). R 재조회로 실제 DB 변경 여부 확정 권장.',
         };
       }
     }
