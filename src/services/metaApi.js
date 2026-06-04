@@ -320,27 +320,38 @@ export async function getMessageColumns(msgDefId) {
 /**
  * IST0050 서비스 상세 — 메시지 binding + 함수 매핑 포함.
  *
+ * ★ (2026-06-04, dspark): envelope `IST0050_00_R02` 호출 → admin direct REST 로 교체.
+ *   - 정책: 메타 조회는 admin REST OK / 비즈니스 테스트 호출만 envelope.
+ *   - 이전 envelope 패턴은 alpha 환경에서 메시지 슬롯 매핑이 NPE 유발.
+ *   - admin REST 한 번 호출로 def + attrs(IN_MSG/OUT_MSG + msgRef.columns) + funcMaps
+ *     모두 받아옴 → getMessageColumns 별도 호출 불필요.
+ *   - 반환 shape 은 기존 호출자(ServiceTester) 호환을 위해 msgBindings 유지하되
+ *     attrs 를 그대로 노출. ServiceTester 의 fetchMeta() 가 attrs 기반으로 정리됨.
+ *
  * @param {string} serviceName  FRM_SERVICE_DEF.sv_def_nm
- * @returns {Promise<{ ok, def, msgBindings, funcMap, response }>}
+ * @returns {Promise<{ ok, def, attrs, funcMaps, msgBindings, funcMap, response }>}
  */
 export async function getServiceDetail(serviceName) {
-  const body = {
-    ME_IST0050_01: [{
-      _seq: 1, sStatus: 'R', sDelete: '',
-      sv_def_nm: serviceName,
-      company_cd: '01',
-    }],
-  };
-  const { ok, response } = await callMetaService(
-    META_SERVICES.SERVICE_DETAIL,
-    body,
-    { actionType: 'retrieve', suppressError: true },
-  );
-  const rows = response?.BODY?.ME_IST0050_02 || [];
-  const def = rows[0] || null;
-  const msgBindings = response?.BODY?.ME_IST0050_04 || response?.BODY?.ME_IST0050_05 || [];
-  const funcMap = response?.BODY?.ME_IST0050_06 || response?.BODY?.ME_IST0050_07 || [];
-  return { ok, def, msgBindings, funcMap, response };
+  try {
+    const response = await http.get(
+      `/api/admin/meta/services/${encodeURIComponent(serviceName)}`,
+      { params: { expand: 'msg,query,object,msgColumns' } },
+    );
+    const data = response?.data ?? response;
+    const def = data?.def || null;
+    const attrs = Array.isArray(data?.attrs) ? data.attrs : [];
+    const funcMaps = Array.isArray(data?.funcMaps) ? data.funcMaps : [];
+    // 레거시 호환 shape: msgBindings(sv_attr_nm/value_type) + funcMap(첫 행)
+    const msgBindings = attrs.map((a) => ({
+      sv_attr_nm: a.svAttrNm,
+      sv_attr_type: a.svAttrType,
+      value_type: a.valueType,
+    }));
+    const funcMap = funcMaps[0] || null;
+    return { ok: !!def, def, attrs, funcMaps, msgBindings, funcMap, response: data };
+  } catch (e) {
+    return { ok: false, def: null, attrs: [], funcMaps: [], msgBindings: [], funcMap: null, response: null, error: e };
+  }
 }
 
 /**

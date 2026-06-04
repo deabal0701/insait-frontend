@@ -70,33 +70,26 @@ async function fetchMeta() {
   if (!serviceId.value) return;
   meta.value = { ...meta.value, loading: true, error: null };
   try {
-    // 1) 서비스 detail
+    // ★ (2026-06-04, dspark): admin REST 단일 호출로 def + attrs(msgRef.columns) 모두 확보.
+    //   - 이전: envelope IST0050_00_R02 + IST0030_00_R01 두 차례 호출 (alpha 환경 NPE).
+    //   - 신규: GET /api/admin/meta/services/{name}?expand=msg,msgColumns 1회.
+    //   - getMessageColumns 별도 호출 제거 — attrs[i].msgRef.columns 가 이미 채워짐.
+    //   - 정책: 메타 조회 = admin REST OK. ▶ 호출만 envelope (onCall 그대로).
     const svc = await getServiceDetail(serviceId.value);
     if (!svc.ok && !svc.def) {
       meta.value = { ...meta.value, loading: false, error: '서비스 메타 조회 실패 — 백엔드 미연결 또는 권한.', serviceDef: null };
       return;
     }
-    const def = svc.def || { sv_def_nm: serviceId.value };
-    const bindings = svc.msgBindings || [];
-    // 2) 메시지 ID 추출 — bindings 의 sv_attr_nm 가 ME_<>_01 형식. 그에 매핑된 value_type 이 MT_<>_01
-    let msgInId = '';
-    let msgOutId = '';
-    for (const b of bindings) {
-      const attr = String(b.sv_attr_nm || b.SV_ATTR_NM || '');
-      const vt = String(b.value_type || b.VALUE_TYPE || '');
-      if (attr.endsWith('_01') && vt.startsWith('MT_')) msgInId = vt;
-      if (attr.endsWith('_02') && vt.startsWith('MT_')) msgOutId = vt;
-    }
-    // 추정 보강: 7-char prefix 컨벤션
-    const prefix7 = String(serviceId.value).slice(0, 7);
-    if (!msgInId && /^[A-Z]{3}\d{4}$/.test(prefix7)) msgInId = `MT_${prefix7}_01`;
-    if (!msgOutId && /^[A-Z]{3}\d{4}$/.test(prefix7)) msgOutId = `MT_${prefix7}_02`;
+    const def = svc.def || { svDefNm: serviceId.value };
+    const attrs = svc.attrs || [];
 
-    // 3) 컬럼 fetch
-    const [inMeta, outMeta] = await Promise.all([
-      msgInId ? getMessageColumns(msgInId) : Promise.resolve({ ok: false, columns: [] }),
-      msgOutId ? getMessageColumns(msgOutId) : Promise.resolve({ ok: false, columns: [] }),
-    ]);
+    // attrs 에서 IN_MSG / OUT_MSG 분리 + msgRef.columns 즉시 추출
+    const inAttr = attrs.find((a) => a.svAttrType === 'IN_MSG');
+    const outAttr = attrs.find((a) => a.svAttrType === 'OUT_MSG');
+    const msgInId = inAttr?.valueType || '';
+    const msgOutId = outAttr?.valueType || '';
+    const inColumnsRaw = inAttr?.msgRef?.columns || [];
+    const outColumnsRaw = outAttr?.msgRef?.columns || [];
 
     meta.value = {
       loading: false,
@@ -104,8 +97,8 @@ async function fetchMeta() {
       serviceDef: def,
       msgInId,
       msgOutId,
-      inColumns: normalizeCols(inMeta.columns),
-      outColumns: normalizeCols(outMeta.columns),
+      inColumns: normalizeColsFromAdminRest(inColumnsRaw),
+      outColumns: normalizeColsFromAdminRest(outColumnsRaw),
     };
 
     // form 초기화 — 가져온 컬럼 기반
@@ -123,6 +116,18 @@ function normalizeCols(rows) {
     maxLength: c.max_length || c.MAX_LENGTH || null,
     mandYn: c.mand_yn || c.MAND_YN || 'N',
     useEncYn: c.use_enc_yn || c.USE_ENC_YN || 'N',
+  }));
+}
+
+// ★ (2026-06-04, dspark): admin REST 응답 컬럼 (camelCase: colId/dataType/useYn/useEncYn) 정규화.
+function normalizeColsFromAdminRest(rows) {
+  return (rows || []).map((c) => ({
+    id: c.colId,
+    name: c.colNm || c.colId,
+    typeCd: c.dataType || 'string',
+    maxLength: c.maxLength || null,
+    mandYn: c.useYn || 'N',
+    useEncYn: c.useEncYn || 'N',
   }));
 }
 
