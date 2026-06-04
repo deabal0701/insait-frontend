@@ -28,9 +28,16 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-function onSearch(v) { list.setFilter({ q: v }); }
-function onType(v) { list.setFilter({ typeCd: v }, { debounce: false }); }
-function onParent(v) { list.setFilter({ hasParent: v }, { debounce: false }); }
+// ★ (2026-06-04, dspark): 자동조회 해제 — staged 에만 보관, [조회] 클릭 시 fetch.
+const staged = ref({ q: '', typeCd: '', allowChildYn: '', hasParent: '' });
+function onSearch(v) { staged.value.q = v; }
+function onType(v) { staged.value.typeCd = v; }
+function onParent(v) { staged.value.hasParent = v; }
+function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
+function resetFilter() {
+  staged.value = { q: '', typeCd: '', allowChildYn: '', hasParent: '' };
+  list.resetFilter();
+}
 
 const typeOptions = [
   { value: '',        label: '전체 type' },
@@ -52,7 +59,10 @@ const activeFilters = computed(() => {
   if (f.hasParent) out.push({ key: 'hasParent', label: `parent: ${f.hasParent}` });
   return out;
 });
-function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
+function removeFilter(key) {
+  staged.value[key] = '';
+  list.setFilter({ [key]: '' }, { debounce: false });
+}
 
 const columns = [
   { field: 'msgDefId',     label: '메시지 ID', sortable: true, sortKey: 'msg_def_id', width: 220 },
@@ -105,15 +115,15 @@ onMounted(() => list.reload());
       <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="m-filters">
         <InSearchField
-          :model-value="list.filter.value.q"
+          :model-value="staged.q"
           label="검색"
           input="메시지 ID prefix — 예: MT_IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
-          @search="onSearch"
+          @search="applyFilter"
         />
         <InSelect
-          :model-value="list.filter.value.typeCd"
+          :model-value="staged.typeCd"
           :options="typeOptions"
           label="Type"
           input="전체"
@@ -122,7 +132,7 @@ onMounted(() => list.reload());
           @update:model-value="onType"
         />
         <InSelect
-          :model-value="list.filter.value.hasParent"
+          :model-value="staged.hasParent"
           :options="parentOptions"
           label="부모"
           input="전체"
@@ -130,8 +140,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onParent"
         />
-        <InButton class="m-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
-        <InButton class="m-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
+        <InButton class="m-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
+        <InButton class="m-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
     </template>
 

@@ -28,8 +28,15 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-function onSearch(v) { list.setFilter({ q: v }); }
-function onLog(v) { list.setFilter({ logYn: v }, { debounce: false }); }
+// ★ (2026-06-04, dspark): 자동조회 해제 — staged 에만 보관, [조회] 클릭 시 fetch.
+const staged = ref({ q: '', historyTypeCd: '', logYn: '', unitCd: '' });
+function onSearch(v) { staged.value.q = v; }
+function onLog(v) { staged.value.logYn = v; }
+function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
+function resetFilter() {
+  staged.value = { q: '', historyTypeCd: '', logYn: '', unitCd: '' };
+  list.resetFilter();
+}
 
 const ynOptions = [
   { value: '',  label: '전체' },
@@ -46,7 +53,10 @@ const activeFilters = computed(() => {
   if (f.unitCd) out.push({ key: 'unitCd', label: `unit: ${f.unitCd}` });
   return out;
 });
-function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
+function removeFilter(key) {
+  staged.value[key] = '';
+  list.setFilter({ [key]: '' }, { debounce: false });
+}
 
 const columns = [
   { field: 'entityNm',    label: '테이블명',  sortable: true, sortKey: 'entity_nm', width: 220 },
@@ -99,15 +109,15 @@ onMounted(() => list.reload());
       <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="e-filters">
         <InSearchField
-          :model-value="list.filter.value.q"
+          :model-value="staged.q"
           label="검색"
           input="테이블명 prefix — 예: PHM_ (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
-          @search="onSearch"
+          @search="applyFilter"
         />
         <InSelect
-          :model-value="list.filter.value.logYn"
+          :model-value="staged.logYn"
           :options="ynOptions"
           label="Log"
           input="전체"
@@ -115,8 +125,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onLog"
         />
-        <InButton class="e-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
-        <InButton class="e-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
+        <InButton class="e-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
+        <InButton class="e-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
     </template>
 

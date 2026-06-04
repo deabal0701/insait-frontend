@@ -41,10 +41,19 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-function onSearch(v) { list.setFilter({ q: v }); }
-function onCmdClass(v) { list.setFilter({ cmdClass: v }, { debounce: false }); }
-function onTx(v) { list.setFilter({ txSupportYn: v }, { debounce: false }); }
-function onUseLog(v) { list.setFilter({ useLogYn: v }, { debounce: false }); }
+// ★ (2026-06-04, dspark): 입력 즉시 조회 동작 제거 — [조회] 버튼 명시 클릭 시에만 fetch.
+//   staged 필터에만 사용자 입력 보관 → applyFilter() 가 list 에 push.
+//   사용자 피드백: "검색명령 등 입력시에 자동조회 되지 않도록".
+const staged = ref({ q: '', cmdClass: '', txSupportYn: '', useLogYn: '' });
+function onSearch(v) { staged.value.q = v; }
+function onCmdClass(v) { staged.value.cmdClass = v; }
+function onTx(v) { staged.value.txSupportYn = v; }
+function onUseLog(v) { staged.value.useLogYn = v; }
+function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
+function resetFilter() {
+  staged.value = { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' };
+  list.resetFilter();
+}
 
 const cmdOptions = [
   { value: '', label: '전체 Command' },
@@ -68,7 +77,10 @@ const activeFilters = computed(() => {
   if (f.useLogYn) out.push({ key: 'useLogYn', label: `log: ${f.useLogYn}` });
   return out;
 });
-function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
+function removeFilter(key) {
+  staged.value[key] = '';
+  list.setFilter({ [key]: '' }, { debounce: false });
+}
 
 const columns = [
   { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
@@ -233,15 +245,15 @@ onMounted(() => list.reload());
            ★ '조회' 버튼 명시 인접 배치 — InSearchField suffix 아이콘만으로는 시각 식별 약함 (사용자 피드백). -->
       <div class="svc-filters">
         <InSearchField
-          :model-value="list.filter.value.q"
+          :model-value="staged.q"
           label="검색"
           input="서비스명 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
-          @search="onSearch"
+          @search="applyFilter"
         />
         <InSelect
-          :model-value="list.filter.value.cmdClass"
+          :model-value="staged.cmdClass"
           :options="cmdOptions"
           label="Command"
           input="전체"
@@ -250,7 +262,7 @@ onMounted(() => list.reload());
           @update:model-value="onCmdClass"
         />
         <InSelect
-          :model-value="list.filter.value.txSupportYn"
+          :model-value="staged.txSupportYn"
           :options="ynOptions"
           label="TX"
           input="전체"
@@ -259,7 +271,7 @@ onMounted(() => list.reload());
           @update:model-value="onTx"
         />
         <InSelect
-          :model-value="list.filter.value.useLogYn"
+          :model-value="staged.useLogYn"
           :options="ynOptions"
           label="Log"
           input="전체"
@@ -267,8 +279,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onUseLog"
         />
-        <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
-        <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
+        <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
+        <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
     </template>
 

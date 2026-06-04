@@ -28,9 +28,16 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-function onSearch(v) { list.setFilter({ q: v }); }
-function onType(v) { list.setFilter({ objectType: v }, { debounce: false }); }
-function onParent(v) { list.setFilter({ hasParent: v }, { debounce: false }); }
+// ★ (2026-06-04, dspark): 자동조회 해제 — staged 에만 보관, [조회] 클릭 시 fetch.
+const staged = ref({ q: '', objectType: '', status: '', companyCd: '', hasParent: '' });
+function onSearch(v) { staged.value.q = v; }
+function onType(v) { staged.value.objectType = v; }
+function onParent(v) { staged.value.hasParent = v; }
+function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
+function resetFilter() {
+  staged.value = { q: '', objectType: '', status: '', companyCd: '', hasParent: '' };
+  list.resetFilter();
+}
 
 // AUT0030 OBJECT_TYPE 실측 값 (런타임 검증에서 'view' 확인)
 const typeOptions = [
@@ -55,7 +62,10 @@ const activeFilters = computed(() => {
   if (f.status) out.push({ key: 'status', label: `status: ${f.status}` });
   return out;
 });
-function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
+function removeFilter(key) {
+  staged.value[key] = '';
+  list.setFilter({ [key]: '' }, { debounce: false });
+}
 
 const columns = [
   { field: 'objectNm',        label: 'OBJECT_NM',  sortable: true, sortKey: 'object_nm', width: 220 },
@@ -110,15 +120,15 @@ onMounted(() => list.reload());
       <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout. -->
       <div class="o-filters">
         <InSearchField
-          :model-value="list.filter.value.q"
+          :model-value="staged.q"
           label="검색"
           input="OBJECT_NM prefix — 예: AUT0030 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
-          @search="onSearch"
+          @search="applyFilter"
         />
         <InSelect
-          :model-value="list.filter.value.objectType"
+          :model-value="staged.objectType"
           :options="typeOptions"
           label="Type"
           input="전체"
@@ -127,7 +137,7 @@ onMounted(() => list.reload());
           @update:model-value="onType"
         />
         <InSelect
-          :model-value="list.filter.value.hasParent"
+          :model-value="staged.hasParent"
           :options="parentOptions"
           label="부모"
           input="전체"
@@ -135,8 +145,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onParent"
         />
-        <InButton class="o-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
-        <InButton class="o-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
+        <InButton class="o-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
+        <InButton class="o-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
     </template>
 

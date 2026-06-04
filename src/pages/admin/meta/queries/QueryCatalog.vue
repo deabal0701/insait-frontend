@@ -29,9 +29,16 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-function onSearch(v) { list.setFilter({ q: v }); }
-function onDs(v) { list.setFilter({ dataSource: v }, { debounce: false }); }
-function onUseYn(v) { list.setFilter({ useYn: v }, { debounce: false }); }
+// ★ (2026-06-04, dspark): 자동조회 해제 — staged 에만 보관, [조회] 클릭 시 fetch.
+const staged = ref({ q: '', dataSource: '', useYn: '', status: '' });
+function onSearch(v) { staged.value.q = v; }
+function onDs(v) { staged.value.dataSource = v; }
+function onUseYn(v) { staged.value.useYn = v; }
+function applyFilter() { list.setFilter({ ...staged.value }, { debounce: false }); }
+function resetFilter() {
+  staged.value = { q: '', dataSource: '', useYn: '', status: '' };
+  list.resetFilter();
+}
 
 const ynOptions = [
   { value: '',  label: '전체' },
@@ -48,7 +55,10 @@ const activeFilters = computed(() => {
   if (f.status) out.push({ key: 'status', label: `status: ${f.status}` });
   return out;
 });
-function removeFilter(key) { list.setFilter({ [key]: '' }, { debounce: false }); }
+function removeFilter(key) {
+  staged.value[key] = '';
+  list.setFilter({ [key]: '' }, { debounce: false });
+}
 
 const columns = [
   { field: 'queryName',   label: 'SQL 이름', sortable: true, sortKey: 'query_name', width: 260 },
@@ -102,15 +112,15 @@ onMounted(() => list.reload());
       <!-- ★ (2026-06-03, dspark): 한 줄 배치 + vertical layout + 명시 [조회]/[초기화] 버튼. -->
       <div class="q-filters">
         <InSearchField
-          :model-value="list.filter.value.q"
+          :model-value="staged.q"
           label="검색"
           input="SQL 이름 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
           @update:model-value="onSearch"
-          @search="onSearch"
+          @search="applyFilter"
         />
         <InSelect
-          :model-value="list.filter.value.dataSource"
+          :model-value="staged.dataSource"
           :options="[{value:'',label:'전체 DS'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
           label="DataSource"
           input="전체"
@@ -119,7 +129,7 @@ onMounted(() => list.reload());
           @update:model-value="onDs"
         />
         <InSelect
-          :model-value="list.filter.value.useYn"
+          :model-value="staged.useYn"
           :options="ynOptions"
           label="Use"
           input="전체"
@@ -127,8 +137,8 @@ onMounted(() => list.reload());
           size="sm"
           @update:model-value="onUseYn"
         />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.reload()">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="list.resetFilter()">초기화</InButton>
+        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
+        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
     </template>
 
