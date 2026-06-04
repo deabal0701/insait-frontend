@@ -8,8 +8,6 @@ const VIEWS = {
   CCD0020Placeholder: () => import('@/pages/admin/CCD0020Placeholder.vue'),
   SettingsPage:       () => import('@/pages/admin/SettingsPage.vue'),
   ComponentsCatalog:  () => import('@/pages/admin/ComponentsCatalogPage.vue'),
-  MetaHub:            () => import('@/pages/admin/meta/MetaHub.vue'),
-  NewScreenWizard:    () => import('@/pages/admin/meta/NewScreenWizard.vue'),
   ServiceCatalog:     () => import('@/pages/admin/services/ServiceCatalog.vue'),
   ServiceTester:      () => import('@/pages/admin/services/ServiceTester.vue'),
   // ★ (2026-06-03, dspark): 04-admin-lane 직접 REST 카탈로그 4 신규
@@ -35,8 +33,8 @@ const ADMIN_SCREENS = [
   { object: 'FRM0090', path: 'frm0090', menuId: 'SD_PDS',   title: 'FRM0090 파일자료실',   view: 'Placeholder' },
   { object: 'SETTINGS', path: 'settings', menuId: '',       title: '환경 설정',            view: 'SettingsPage' },
   { object: 'COMPONENTS', path: 'components', menuId: '',   title: '컴포넌트 카탈로그',     view: 'ComponentsCatalog' },
-  { object: 'META_HUB',  path: 'meta',       menuId: '',    title: '메타관리',                  view: 'MetaHub' },
-  { object: 'META_NEW',  path: 'meta/new',   menuId: '',    title: '메타관리 — 신규 화면 마법사', view: 'NewScreenWizard' },
+  // ★ (2026-06-04, dspark): META_HUB / META_NEW 라우트 제거 — 순차 등록 (5 카탈로그 편집 CRUD)
+  //   완료 후 마법사 재구축 예정. AS-IS 운영 메타 envelope 직접 호출하던 마법사 경로 폐기.
   // ★ (2026-06-03, dspark): admin lane 카탈로그 직접 REST URL (사용자 친화 경로 alias).
   //   기존 OBJECT-ID 기반(/admin/ist0010 등)은 호환 유지하면서 의미 친화 경로 신설.
   { object: 'META_QUERIES',  path: 'meta/queries',  menuId: '', title: 'SQL 관리',         view: 'QueryCatalog' },

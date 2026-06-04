@@ -22,10 +22,8 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   callMetaService,
   getServiceDetail,
-  getMessageColumns,
   classifyMetaError,
   getMetaErrorGuide,
-  extractInsertedOid,
 } from '@/services/metaApi';
 import { buildEnvelope } from '@/services/envelope';
 import { useTestHistory } from '@/composables/useTestHistory';

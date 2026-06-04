@@ -43,7 +43,6 @@ const bentoExpanded = ref({ all: true });
 
 // admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
 const ADMIN_PARENT = {
-  META_HUB: 'meta', META_NEW: 'meta',
   CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
   AUT0030: 'meta', AUT0040: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
@@ -279,8 +278,8 @@ const items = computed(() => {
             // ★ (2026-06-03, dspark): 메타관리 LNB 순서 — TO-BE 04-admin-lane/README.md §2 의
             //   빌드 워크플로우 정합 + 사용자 명시 순서 (서비스→오브젝트→SQL→메시지→엔터티).
             //   AUT prefix(AUT0030)는 OBJECT_ID 잔재이며 AS-IS frm_menu SD_OBJ = SYS_DEV 그룹.
-            { key: 'META_HUB', label: '메타관리 홈',       active: current === 'META_HUB' },
-            { key: 'META_NEW', label: '+ 신규 화면 등록',  active: current === 'META_NEW' },
+            //   ★ (2026-06-04, dspark): META_HUB / META_NEW 항목 제거 — 5 카탈로그 순차 CRUD 완성 후
+            //   재구축 예정. envelope 직접 호출 패턴 폐기.
             { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
             { key: 'AUT0030',  label: '오브젝트 관리',    active: current === 'AUT0030' },
             { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
