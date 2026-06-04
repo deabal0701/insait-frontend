@@ -427,7 +427,9 @@ function onBackClick() {
         >
           <InIcon name="chevron-left" :size="18" />
         </button>
-        <div class="main-layout__crumb">{{ currentTitle }}</div>
+        <!-- ★ (2026-06-04, dspark): detail 페이지 (backTo 있음) 일 때 crumb 숨김.
+             페이지 본문이 이미 자체 헤더(serviceId/도메인) 를 갖고 있어 banner 중복. -->
+        <div v-if="!backTo" class="main-layout__crumb">{{ currentTitle }}</div>
         <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
           <span class="main-layout__user">
             <span class="main-layout__user-avatar">{{ (displayName[0] || '?').toUpperCase() }}</span>
