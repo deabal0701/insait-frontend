@@ -388,27 +388,34 @@ function formatCell(v) {
 
 <template>
   <div class="svc-tst">
-    <!-- ★ (2026-06-04, dspark): 페이지 최상단 명시 [뒤로] nav — 사용자 피드백 "돌아갈 방법이 없다".
-         메인 헤더 위에 별도 영역으로 진입 즉시 시각 식별 가능. -->
-    <nav class="svc-tst__nav" aria-label="페이지 이동">
-      <InButton variant="default" size="md" :left-icon-show="true" :right-icon-show="false" @click="goToCatalog">
-        <template #prefix><InIcon name="chevron-left" :size="16" /></template>
-        뒤로 (서비스 카탈로그)
-      </InButton>
-    </nav>
-
-    <InMetaStepHeader
-      title="서비스 테스터"
-      :code="serviceId"
-      subtitle="임의 서비스 즉석 호출. 메타 lookup → REQ 폼 자동 생성 → envelope 송신 → 응답 분석."
-    >
+    <!-- ★ (2026-06-04, dspark): 페이지 제목 좌측에 원형 [<] 아이콘 버튼 — 표준 UX (Material/iOS/GitHub).
+         사용자 피드백: "동그라미에 < 모양을 넣어서 표시하면 어떨까". 시선 동선 짧고 공간 효율. -->
+    <div class="svc-tst__header">
+      <span class="svc-tst__back-wrap">
+        <InButton
+          variant="only-icon"
+          size="md"
+          :left-icon-show="true"
+          :right-icon-show="false"
+          aria-label="뒤로 — 서비스 카탈로그"
+          @click="goToCatalog"
+        >
+          <template #prefix><InIcon name="chevron-left" :size="18" /></template>
+        </InButton>
+      </span>
+      <InMetaStepHeader
+        title="서비스 테스터"
+        :code="serviceId"
+        subtitle="임의 서비스 즉석 호출. 메타 lookup → REQ 폼 자동 생성 → envelope 송신 → 응답 분석."
+      >
       <template #subtitle>
         <span>임의 서비스 즉석 호출. 메타 lookup → REQ 폼 자동 생성 → envelope 송신 → 응답 분석.</span>
         <span v-if="cmdInfo">
           · Command 종류: <strong>{{ cmdInfo.label }}</strong> ({{ cmdInfo.command }})
         </span>
       </template>
-    </InMetaStepHeader>
+      </InMetaStepHeader>
+    </div>
 
     <!-- ─── 서비스 ID 입력 ─── -->
     <InMetaStepSection step-no="1" title="서비스 ID">
@@ -674,12 +681,36 @@ function formatCell(v) {
   font-family: var(--in-font-family-body);
 }
 
-/* ★ (2026-06-04, dspark): 페이지 최상단 nav — 좌측 정렬 + 명확한 시각 강도. */
-.svc-tst__nav {
+/* ★ (2026-06-04, dspark): 페이지 헤더 — 좌측 원형 [<] 버튼 + 제목 inline.
+   표준 UX (Material/iOS/GitHub 등) — 시선 동선 짧고 공간 효율. */
+.svc-tst__header {
   display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.svc-tst__back-wrap {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  margin-bottom: 4px;
+  justify-content: center;
+  flex: 0 0 auto;
+  /* 제목 줄 높이와 시각 정합 — 첫 줄 가운데 */
+  padding-top: 2px;
+}
+.svc-tst__back-wrap :deep(.in-btn--only-icon) {
+  border-radius: 50%;
+  border: 1px solid var(--in-border-default, #d0d5dd);
+  background: var(--in-surface-default, #fff);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.svc-tst__back-wrap :deep(.in-btn--only-icon:hover:not(:disabled)) {
+  background: var(--in-bg-accent-subtle, #e1f5fc);
+  border-color: var(--in-brand, #0090e7);
+  color: var(--in-brand, #0090e7);
+  box-shadow: 0 1px 4px rgba(0, 144, 231, 0.18);
+}
+.svc-tst__back-wrap :deep(.in-btn--only-icon:focus-visible) {
+  outline: 2px solid var(--in-brand, #0090e7);
+  outline-offset: 2px;
 }
 
 /* === ID input row === */
