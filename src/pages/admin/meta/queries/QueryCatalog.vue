@@ -92,6 +92,9 @@ function copyJson(obj) {
   toast.success?.('JSON 복사됨');
 }
 
+// ★ (2026-06-04, dspark): 이중 <script> 블록 통합 — 외부 export shortCmd 를 setup 안으로 흡수.
+function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
+
 onMounted(() => list.reload());
 </script>
 
@@ -213,10 +216,6 @@ onMounted(() => list.reload());
     </template>
   </CatalogPage>
 </template>
-
-<script>
-export function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
-</script>
 
 <style scoped>
 /* ★ (2026-06-03, dspark): 검색 + 콤보 한 줄 배치. */

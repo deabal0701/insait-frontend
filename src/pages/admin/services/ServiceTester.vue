@@ -106,17 +106,6 @@ async function fetchMeta() {
   }
 }
 
-function normalizeCols(rows) {
-  return (rows || []).map((c) => ({
-    id: c.msg_col_def_id || c.MSG_COL_DEF_ID,
-    name: c.msg_col_def_nm || c.MSG_COL_DEF_NM || c.msg_col_def_id || c.MSG_COL_DEF_ID,
-    typeCd: c.type_cd || c.TYPE_CD || 'string',
-    maxLength: c.max_length || c.MAX_LENGTH || null,
-    mandYn: c.mand_yn || c.MAND_YN || 'N',
-    useEncYn: c.use_enc_yn || c.USE_ENC_YN || 'N',
-  }));
-}
-
 // ★ (2026-06-04, dspark): admin REST 응답 컬럼 (camelCase: colId/dataType/useYn/useEncYn) 정규화.
 function normalizeColsFromAdminRest(rows) {
   return (rows || []).map((c) => ({
