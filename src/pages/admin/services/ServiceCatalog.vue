@@ -168,11 +168,6 @@ function gotoTester(row) {
   // ★ (2026-06-03, dspark): 라우트 이름 + param 정합 — router/routes/admin.js 의 `SERVICE_TESTER` (path param) 사용.
   router.push({ name: 'SERVICE_TESTER', params: { serviceId: row.svDefNm } });
 }
-function copyJson(obj) {
-  navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
-  toast.success?.('JSON 복사됨');
-}
-
 // ★ (2026-06-04, dspark): row 액션 — envelope template 빌드 후 클립보드 복사 (84f83ea 정합).
 //   메타 fetch 1회 → attrs[IN_MSG].msgRef.columns 기반 envelope 본문 자동 채움.
 async function copyRowEnvelope(row) {
@@ -380,8 +375,8 @@ onMounted(() => list.reload());
             <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
             <InTag v-if="trapBreakdown.paramMismatch > 0" :label="`SQL bind 미매칭 ${trapBreakdown.paramMismatch}건`" variant="error" size="sm" />
             <InTag v-if="trapBreakdown.elaMissing > 0"   :label="`ELA 인프라 ${trapBreakdown.elaMissing}건`"        variant="error" size="sm" />
-            <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="gotoTester(selected)">▶ 테스트</InButton>
-            <InButton size="sm" variant="text" :left-icon-show="false" :right-icon-show="false" @click="copyJson(detail)">📋 JSON 복사</InButton>
+            <!-- ★ (2026-06-04, dspark): Drawer 의 ▶ 테스트 / 📋 JSON 복사 제거.
+                 row 액션 ([테스트] [JSON]) 으로 단일화 — 사용자 피드백. -->
           </div>
 
           <InTabs v-model="drawerTab" :items="[
