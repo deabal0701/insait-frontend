@@ -134,7 +134,7 @@ const editor = useMetaEditor({
 });
 const {
   mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
+  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
 } = editor;
 
 const namePatternOk = computed(() => MSG_NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
@@ -216,7 +216,6 @@ onMounted(() => list.reload());
         @save="save"
         @cancel="cancelEdit"
         @close="closePanel"
-        @copy="copyJson(detail)"
       >
         <!-- 컬럼 -->
         <section v-if="drawerTab === 'columns'" class="section">

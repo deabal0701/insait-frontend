@@ -23,10 +23,9 @@ const props = defineProps({
   activeTab: { type: String, default: '' },
   width: { type: Number, default: 900 },
   hasContent: { type: Boolean, default: false },     // create 또는 detail 로드 완료
-  showCopy: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(['update:activeTab', 'edit', 'delete', 'save', 'cancel', 'close', 'copy']);
+const emit = defineEmits(['update:activeTab', 'edit', 'delete', 'save', 'cancel', 'close']);
 
 const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit');
 </script>
@@ -44,17 +43,15 @@ const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit
     <div v-if="loading" class="meta-editor__loading">상세 조회 중…</div>
 
     <div v-else-if="hasContent">
-      <div v-if="mode === 'view' && showCopy" class="meta-editor__head">
-        <InButton size="sm" variant="text" @click="emit('copy')">📋 JSON 복사</InButton>
-      </div>
-
       <InTabs
         :model-value="activeTab"
         :items="tabs"
         @update:model-value="(v) => emit('update:activeTab', v)"
       />
 
-      <slot :tab="activeTab" />
+      <div class="meta-editor__body">
+        <slot :tab="activeTab" />
+      </div>
     </div>
 
     <template #footer>
@@ -73,5 +70,6 @@ const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit
 
 <style scoped>
 .meta-editor__loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
-.meta-editor__head { display: flex; gap: 8px; margin-bottom: 12px; }
+/* ★ (2026-06-05) 탭과 내용 사이 간격 — 배지/폼이 탭에 바로 붙던 문제. 5개 카탈로그 공통. */
+.meta-editor__body { padding-top: 16px; }
 </style>

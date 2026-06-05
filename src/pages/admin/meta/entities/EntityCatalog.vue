@@ -135,7 +135,7 @@ const editor = useMetaEditor({
 });
 const {
   mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
+  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
 } = editor;
 
 // 선택된 컬럼 (매핑 디테일 그리드 대상)
@@ -216,7 +216,6 @@ onMounted(() => list.reload());
         @save="save"
         @cancel="cancelEdit"
         @close="closePanel"
-        @copy="copyJson(detail)"
       >
         <!-- 컬럼 (+ 선택 컬럼의 매핑) -->
         <section v-if="drawerTab === 'columns'" class="section">

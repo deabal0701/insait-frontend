@@ -137,14 +137,9 @@ export function useMetaEditor(opts) {
     }
   }
 
-  function copyJson(obj) {
-    navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
-    toast.success?.('JSON 복사됨');
-  }
-
   return {
     mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
     modalTitle,
-    openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
+    openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
   };
 }

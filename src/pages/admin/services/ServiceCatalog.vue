@@ -359,7 +359,6 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="940"
-        :show-copy="false"
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"

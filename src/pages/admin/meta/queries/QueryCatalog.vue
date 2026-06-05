@@ -118,7 +118,7 @@ const editor = useMetaEditor({
 });
 const {
   mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
+  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
 } = editor;
 
 const namePatternOk = computed(() => SQL_NAME_RE.test((form.value?.def?.queryName || '').trim()));
@@ -211,7 +211,6 @@ onMounted(() => list.reload());
         @save="save"
         @cancel="cancelEdit"
         @close="closePanel"
-        @copy="copyJson(detail)"
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
