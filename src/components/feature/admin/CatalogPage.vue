@@ -126,6 +126,8 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
         v-if="activeFilters.length"
         size="sm"
         variant="text"
+        :left-icon-show="false"
+        :right-icon-show="false"
         @click="onResetFilter"
       >전체 해제</InButton>
     </div>
@@ -139,7 +141,7 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
         :description="list.error.value.message"
       >
         <template #action>
-          <InButton @click="emit('retry')">다시 시도</InButton>
+          <InButton :left-icon-show="false" :right-icon-show="false" @click="emit('retry')">다시 시도</InButton>
         </template>
       </InEmptyState>
 
@@ -193,7 +195,7 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
                 description="필터를 조정하거나 전체 해제 후 다시 조회하세요."
               >
                 <template #action>
-                  <InButton v-if="activeFilters.length" @click="onResetFilter">필터 전체 해제</InButton>
+                  <InButton v-if="activeFilters.length" :left-icon-show="false" :right-icon-show="false" @click="onResetFilter">필터 전체 해제</InButton>
                 </template>
               </InEmptyState>
             </slot>
