@@ -546,7 +546,6 @@ function formatCell(v) {
           :disabled="!serviceId || calling"
           @click="onCall"
         >
-          <InIcon name="arrow-right" :size="12" colorize color="white" />
           {{ calling ? '호출 중…' : `▶ 호출 (${cmdInfo?.label || '?'})` }}
         </InButton>
 
