@@ -1,17 +1,14 @@
 <script setup>
 /**
- * ServiceCatalog — IST0050 서비스관리 (admin lane 카탈로그).
- * ★ (2026-06-03, dspark): envelope listServices → adminApi.meta.services 격상.
- *   v2 디자인시스템 정합 (InTable/InPagination/InSearchField/InChip + CatalogPage 추상).
- *
- * 한 줄로:
- *   FRM_SERVICE_DEF 6,210+ 조회·페이징·정렬·필터 + 행 클릭 상세 Drawer(확장 응답 1회).
- *
- * URL:  /admin/meta/services
- * API:  GET /api/admin/meta/services       목록
- *       GET /api/admin/meta/services/{nm}  상세 (?expand=msg,query,object)
+ * ServiceCatalog — IST0050 서비스관리 (admin lane 카탈로그 + 편집 CRUD).
+ * ★ (2026-06-03, dspark): 조회 + 진단(health/paramDiff/elaInfra/msgColumns) 파일럿.
+ * ★ (2026-06-05, dspark): 편집 CRUD — 공통 컴포넌트 재사용 (99 backlog #8).
+ *   useMetaEditor + MetaDetailEditor + MetaChildGrid 2개 (함수매핑 + 속성, 둘 다 평면 자식).
+ *   ★ 진단 6탭(def/health/attrs/funcMaps/object/elaInfra)은 view 모드에서 그대로 보존,
+ *     편집 모드에서만 def 폼 + funcMaps/attrs 그리드 노출 (drawerTab 을 mode 로 분기).
+ *   서비스 정의는 Waffle 풀 evict 대상 아님 (매 요청 DB → 즉시반영).
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { adminApi } from '@/services/adminApi';
@@ -19,16 +16,19 @@ import { buildEnvelope } from '@/services/envelope';
 import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
+import { useMetaEditor } from '@/composables/useMetaEditor';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
+import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
+import InTextField from '@/components/ui/InTextField.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
-import InTabs from '@/components/ui/InTabs.vue';
 import InTooltip from '@/components/ui/InTooltip.vue';
 import InIcon from '@/components/ui/InIcon.vue';
 
@@ -44,7 +44,6 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-// ★ (2026-06-04, dspark): useCatalogFilter composable — 5 카탈로그 공통 staged filter.
 const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
@@ -76,7 +75,6 @@ const activeFilters = computed(() => {
   if (f.useLogYn) out.push({ key: 'useLogYn', label: `log: ${f.useLogYn}` });
   return out;
 });
-// removeFilter 는 useCatalogFilter 가 제공 (chip 제거 시 staged + list 동기 reset)
 
 const columns = [
   { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
@@ -86,84 +84,132 @@ const columns = [
   { field: 'useLogYn',   label: 'Log',         sortable: true, sortKey: 'use_log_yn',   align: 'center', width: 50 },
   { field: 'modDate',    label: '변경일',      sortable: true, sortKey: 'mod_date', width: 160 },
   { field: 'note',       label: '비고' },
-  // ★ (2026-06-04, dspark): row 액션 컬럼 복원 (84f83ea 정합) — 테스트(arrow-right) + JSON 복사(content-copy).
   { field: 'actions',    label: '액션', align: 'center', width: 150 },
 ];
 
-// ─── 상세 Drawer ─────────────────────────────────────────────────────────
-const selected = ref(null);
-const detail = ref(null);
-const detailLoading = ref(false);
-const drawerTab = ref('def');
+// ─── 편집 폼 옵션 / 그리드 config ─────────────────────────────────────────
+const txAsyncLogOptions = [{ value: 'Y', label: 'Y' }, { value: 'N', label: 'N' }];
+const cmdClassPresets = [
+  'h5.biz.command.common.MultiQueryCommand',
+  'h5.biz.command.common.MultiSaveCommand',
+  'h5.biz.command.common.ProcedureCommand',
+  'h5.ela.command.ElaServiceCommand',
+];
+const NAME_RE = /^[A-Za-z0-9]{7}_[A-Za-z0-9_]+$/;
 
-async function openDetail(row) {
-  selected.value = row;
-  detail.value = null;
-  detailLoading.value = true;
-  try {
-    // ★ (2026-06-03, dspark): expand 보강 — msgColumns/health/paramDiff/elaInfra.
-    //   근거: command-scenarios 4건 + ela §2.A.1 14건 인프라.
-    detail.value = await adminApi.meta.services.detail(row.svDefNm, { expand: ['msg', 'query', 'object', 'msgColumns', 'health', 'paramDiff', 'elaInfra'] });
-    drawerTab.value = 'def';
-  } catch (e) {
-    toast.error?.(e?.message || '상세 조회 실패');
-  } finally {
-    detailLoading.value = false;
-  }
+const funcMapColumns = [
+  { key: 'seqOrder',    label: '순서', kind: 'number', width: 56 },
+  { key: 'svMapTypeCd', label: '타입', kind: 'select', width: 90,
+    options: [{ value: 'sql', label: 'sql' }, { value: 'entity', label: 'entity' }] },
+  { key: 'funcNm',      label: 'func_nm (쿼리/엔터티명)', kind: 'text' },
+  { key: 'reqMsgNm',    label: 'REQ msg', kind: 'text', width: 140 },
+  { key: 'resMsgNm',    label: 'RES msg', kind: 'text', width: 140 },
+];
+function newFuncMap(rows) {
+  const maxSeq = rows.reduce((m, f) => Math.max(m, f.seqOrder || 0), 0);
+  return { rowStatus: 'I', svMapId: null, svMapTypeCd: 'sql', funcNm: '', seqOrder: maxSeq + 1, reqMsgNm: '', resMsgNm: '', useTreeResult: 'N' };
 }
-function closeDetail() { selected.value = null; detail.value = null; }
 
-// ★ (2026-06-03, dspark): trapCount breakdown — 함정 카테고리별 분포 표시.
-//   command-scenarios 4건의 첫 함정 카테고리 5종.
+const attrColumns = [
+  { key: 'svAttrNm',     label: '속성명', kind: 'text', placeholder: 'ME_TST0001_01' },
+  { key: 'svAttrType',   label: '타입', kind: 'select', width: 110,
+    options: [{ value: 'IN_MSG', label: 'IN_MSG' }, { value: 'OUT_MSG', label: 'OUT_MSG' }] },
+  { key: 'valueType',    label: 'value_type (MT_*)', kind: 'text' },
+  { key: 'defaultValue', label: '기본값', kind: 'text', width: 130 },
+];
+function newAttr() {
+  return { rowStatus: 'I', svAttrId: null, svAttrNm: '', svAttrType: 'IN_MSG', valueType: '', defaultValue: '', note: '' };
+}
+
+// ─── 편집 상태기계 (공통) ──────────────────────────────────────────────────
+const editor = useMetaEditor({
+  api: adminApi.meta.services,
+  keyField: 'svDefNm',
+  expand: ['msg', 'query', 'object', 'msgColumns', 'health', 'paramDiff', 'elaInfra'],
+  defaultTab: 'def',
+  createTab: 'def',
+  reload: () => list.reload(),
+  blankForm: () => ({
+    def: { svDefNm: '', cmdClassNm: 'h5.biz.command.common.MultiQueryCommand', txSupportYn: 'N', asyncYn: 'N', useLogYn: 'N', version: '', objectId: '', note: '' },
+    funcMaps: [],
+    attrs: [],
+  }),
+  toForm: (d) => {
+    const def = d.def || {};
+    return {
+      def: {
+        svDefNm: def.svDefNm, cmdClassNm: def.cmdClassNm, txSupportYn: def.txSupportYn || 'N',
+        asyncYn: def.asyncYn || 'N', useLogYn: def.useLogYn || 'N', version: def.version || '',
+        objectId: def.objectId || '', note: def.note || '',
+      },
+      funcMaps: (d.funcMaps || []).map((f) => ({
+        rowStatus: '', svMapId: f.svMapId, svMapTypeCd: f.svMapTypeCd || 'sql', funcNm: f.funcNm,
+        seqOrder: f.seqOrder, reqMsgNm: f.reqMsgNm || '', resMsgNm: f.resMsgNm || '', useTreeResult: f.useTreeResult || 'N',
+      })),
+      attrs: (d.attrs || []).map((a) => ({
+        rowStatus: '', svAttrId: a.svAttrId, svAttrNm: a.svAttrNm, svAttrType: a.svAttrType || 'IN_MSG',
+        valueType: a.valueType || '', defaultValue: a.defaultValue || '', note: a.note || '',
+      })),
+    };
+  },
+  toPayload: (f) => ({ def: { ...f.def }, funcMaps: f.funcMaps, attrs: f.attrs }),
+  validate: (f, { mode, setTab }) => {
+    const d = f.def;
+    if (mode === 'create' && !NAME_RE.test((d.svDefNm || '').trim())) {
+      toast.error?.('서비스명은 7-char 컨벤션을 따라야 합니다 (예: TST0001_00_R01).'); setTab('def'); return false;
+    }
+    if (!d.cmdClassNm || !d.cmdClassNm.trim()) { toast.error?.('Command 클래스(FQCN)는 필수입니다.'); setTab('def'); return false; }
+    for (const fm of (f.funcMaps || []).filter((x) => x.rowStatus !== 'D')) {
+      if (!fm.svMapTypeCd) { toast.error?.('함수매핑 type 이 빈 행이 있습니다.'); setTab('funcMaps'); return false; }
+      if (!fm.funcNm || !fm.funcNm.trim()) { toast.error?.('함수매핑 func_nm 이 빈 행이 있습니다.'); setTab('funcMaps'); return false; }
+    }
+    for (const a of (f.attrs || []).filter((x) => x.rowStatus !== 'D')) {
+      if (!a.svAttrNm || !a.svAttrNm.trim()) { toast.error?.('속성명이 빈 행이 있습니다.'); setTab('attrs'); return false; }
+      if (!a.svAttrType) { toast.error?.(`속성 '${a.svAttrNm}'의 타입은 필수입니다.`); setTab('attrs'); return false; }
+    }
+    return true;
+  },
+});
+const {
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
+} = editor;
+
+// ─── 진단 computeds (view 전용 — detail 기반, 기존 보존) ────────────────────
 const trapBreakdown = computed(() => {
   const out = { msgMissing: 0, queryMissing: 0, useYnN: 0, compatError: 0, compatWarn: 0, paramMismatch: 0, elaMissing: 0 };
   const d = detail.value;
   if (!d) return out;
-  // 메시지 미등록 (자동 바인딩 함정)
   for (const a of d.attrs || []) if (a.msgRef && a.msgRef.exists === false) out.msgMissing += 1;
   for (const f of d.funcMaps || []) {
     if (f.queryRef && f.queryRef.exists === false) out.queryMissing += 1;
     if (f.reqMsgRef && f.reqMsgRef.exists === false) out.msgMissing += 1;
     if (f.resMsgRef && f.resMsgRef.exists === false) out.msgMissing += 1;
   }
-  // 메시지 컬럼 use_yn=N (procedure §5.2 #13, ela §5.2 #1)
   for (const a of d.attrs || []) {
-    if (a.msgRef?.columns) {
-      for (const c of a.msgRef.columns) if (c.useYn !== 'Y') out.useYnN += 1;
-    }
+    if (a.msgRef?.columns) for (const c of a.msgRef.columns) if (c.useYn !== 'Y') out.useYnN += 1;
   }
   for (const f of d.funcMaps || []) {
     for (const ref of [f.reqMsgRef, f.resMsgRef]) {
       if (ref?.columns) for (const c of ref.columns) if (c.useYn !== 'Y') out.useYnN += 1;
     }
   }
-  // 호환성 평가 (sv_map_type × cmd_class)
   if (d.compatibility?.reasons) {
     for (const r of d.compatibility.reasons) {
       if (r.severity === 'error') out.compatError += 1;
       else if (r.severity === 'warn') out.compatWarn += 1;
     }
   }
-  // ★ (2026-06-03, dspark) #4: Procedure SQL bind name 미매칭
   for (const f of d.funcMaps || []) {
     if (f.queryRef?.paramDiff?.unmatched?.length) out.paramMismatch += f.queryRef.paramDiff.unmatched.length;
   }
-  // ★ (2026-06-03, dspark) #5: ELA 14건 인프라 missing
   if (d.elaInfra?.summary) out.elaMissing = d.elaInfra.summary.missingCount || 0;
   return out;
 });
 
-const trapCount = computed(() => {
-  const b = trapBreakdown.value;
-  return b.msgMissing + b.queryMissing + b.useYnN + b.compatError + b.compatWarn;
-});
-
 function gotoTester(row) {
-  // ★ (2026-06-03, dspark): 라우트 이름 + param 정합 — router/routes/admin.js 의 `SERVICE_TESTER` (path param) 사용.
   router.push({ name: 'SERVICE_TESTER', params: { serviceId: row.svDefNm } });
 }
-// ★ (2026-06-04, dspark): row 액션 — envelope template 빌드 후 클립보드 복사 (84f83ea 정합).
-//   메타 fetch 1회 → attrs[IN_MSG].msgRef.columns 기반 envelope 본문 자동 채움.
 async function copyRowEnvelope(row) {
   if (!row?.svDefNm) return;
   try {
@@ -182,45 +228,32 @@ async function copyRowEnvelope(row) {
   }
 }
 
-function shortCmd(fqcn) {
-  if (!fqcn) return '';
-  return fqcn.split('.').pop();
-}
+function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
 
-// ★ (2026-06-03, dspark): 시나리오 정합 헬퍼.
-
-/** 3중 동명 (sv_def_nm == primary funcMap.func_nm). sql 매핑일 때만 의미. */
 const tripleNameStatus = computed(() => {
   const d = detail.value;
   if (!d?.def || !d.funcMaps?.length) return null;
   const primary = d.funcMaps[0];
-  if ((primary.svMapTypeCd || '').toLowerCase() !== 'sql') return null;   // entity 면 EN_* 매핑이라 의미 없음
+  if ((primary.svMapTypeCd || '').toLowerCase() !== 'sql') return null;
   const same = (primary.funcNm || '').toUpperCase() === (d.def.svDefNm || '').toUpperCase();
   return { same, funcNm: primary.funcNm };
 });
 
-/** ELA dispatch — cmd_class 가 ElaServiceCommand 면 envelope 실 serviceId 가 ELA0010_SAVE_0N 으로 변형. */
 const elaDispatch = computed(() => {
   const d = detail.value;
   if (!d?.def) return null;
-  const short = shortCmd(d.def.cmdClassNm);
-  if (short !== 'ElaServiceCommand') return null;
-  // SCENARIO-ela.md §5.2 #26: Submit/TempSave/Approve/Deny → ELA0010_SAVE_01..04
+  if (shortCmd(d.def.cmdClassNm) !== 'ElaServiceCommand') return null;
   return {
     note: '실제 envelope serviceId 가 ELA0010_SAVE_0N (1=Submit / 2=TempSave / 3=Approve / 4=Deny) 으로 sub-Command dispatch 됨',
     ref: 'SCENARIO-ela.md §5.2 #26',
   };
 });
 
-/** ELA 인프라 행 색 — critical missing 빨강 / important missing 노랑 / OK 없음 / unknown 없음. */
 function elaRowClass(it) {
-  if (it.exists === false) {
-    return it.severity === 'critical' ? 'svc-ela-row--critical-missing' : 'svc-ela-row--missing';
-  }
+  if (it.exists === false) return it.severity === 'critical' ? 'svc-ela-row--critical-missing' : 'svc-ela-row--missing';
   return '';
 }
 
-/** objectId NULL 의미 — 일반 Command 는 NULL 정상, ELA Command 는 NULL=등록 누락 의심. */
 const objectIdInterpretation = computed(() => {
   const d = detail.value;
   if (!d?.def) return null;
@@ -234,6 +267,35 @@ const objectIdInterpretation = computed(() => {
       : 'objectId NULL — 일반 Command 는 정상 (대부분 NULL, 매뉴얼 09 §6.1)',
     ref: isEla ? 'SCENARIO-ela.md §5.2 #14' : '매뉴얼 09 §6.1',
   };
+});
+
+// ─── 탭 / 타이틀 (mode 분기) ───────────────────────────────────────────────
+const tabItems = computed(() => {
+  if (isEditing.value) {
+    return [
+      { name: 'def',      tabLabel: '정의' },
+      { name: 'funcMaps', tabLabel: `함수 매핑 (${(form.value.funcMaps || []).filter((f) => f.rowStatus !== 'D').length})` },
+      { name: 'attrs',    tabLabel: `속성 (${(form.value.attrs || []).filter((a) => a.rowStatus !== 'D').length})` },
+    ];
+  }
+  const d = detail.value;
+  const items = [
+    { name: 'def',      tabLabel: '정의' },
+    { name: 'health',   tabLabel: `진단 ${d?.compatibility?.reasons?.length ? `(${d.compatibility.reasons.length})` : ''}` },
+    { name: 'attrs',    tabLabel: `메시지 슬롯 (${d?.attrs?.length || 0})` },
+    { name: 'funcMaps', tabLabel: `함수 매핑 (${d?.funcMaps?.length || 0})` },
+    { name: 'object',   tabLabel: '소속 오브젝트' },
+  ];
+  if (d?.elaInfra) {
+    items.push({ name: 'elaInfra', tabLabel: `ELA 인프라 (${d.elaInfra.summary.missingCount > 0 ? d.elaInfra.summary.okCount + '/' + (d.elaInfra.summary.okCount + d.elaInfra.summary.missingCount) : d.elaInfra.items.length})` });
+  }
+  return items;
+});
+
+const modalTitle = computed(() => {
+  if (mode.value === 'create') return '서비스 신규 등록';
+  if (mode.value === 'edit')   return `서비스 수정 — ${selected.value?.svDefNm}`;
+  return `서비스 상세 — ${selected.value?.svDefNm}`;
 });
 
 onMounted(() => list.reload());
@@ -252,10 +314,11 @@ onMounted(() => list.reload());
     @filter-remove="removeFilter"
     @retry="list.reload()"
   >
+    <template #header-actions>
+      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
+    </template>
+
     <template #filters>
-      <!-- ★ (2026-06-03, dspark): 검색 + 콤보 3개 한 줄 배치 + layout=vertical (라벨 위, 콤보 아래).
-           InSelect placeholder prop 명은 `input` 이며 'placeholder' 는 무시됨 (디자인시스템 v2 정합).
-           ★ '조회' 버튼 명시 인접 배치 — InSearchField suffix 아이콘만으로는 시각 식별 약함 (사용자 피드백). -->
       <div class="svc-filters">
         <InSearchField
           :model-value="staged.q"
@@ -265,33 +328,9 @@ onMounted(() => list.reload());
           @update:model-value="onSearch"
           @search="applyFilter"
         />
-        <InSelect
-          :model-value="staged.cmdClass"
-          :options="cmdOptions"
-          label="Command"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onCmdClass"
-        />
-        <InSelect
-          :model-value="staged.txSupportYn"
-          :options="ynOptions"
-          label="TX"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onTx"
-        />
-        <InSelect
-          :model-value="staged.useLogYn"
-          :options="ynOptions"
-          label="Log"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onUseLog"
-        />
+        <InSelect :model-value="staged.cmdClass" :options="cmdOptions" label="Command" input="전체" layout="vertical" size="sm" @update:model-value="onCmdClass" />
+        <InSelect :model-value="staged.txSupportYn" :options="ynOptions" label="TX" input="전체" layout="vertical" size="sm" @update:model-value="onTx" />
+        <InSelect :model-value="staged.useLogYn" :options="ynOptions" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onUseLog" />
         <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
         <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
@@ -300,335 +339,286 @@ onMounted(() => list.reload());
     <template #cell-svDefNm="{ value, row }">
       <span class="svc-name">
         <strong>{{ value }}</strong>
-        <InTooltip v-if="row.note" :text="row.note">
-          <span class="svc-note-dot">·</span>
-        </InTooltip>
+        <InTooltip v-if="row.note" :text="row.note"><span class="svc-note-dot">·</span></InTooltip>
       </span>
     </template>
-
-    <template #cell-cmdClassNm="{ value }">
-      <span class="svc-cmd">{{ shortCmd(value) }}</span>
-    </template>
-
+    <template #cell-cmdClassNm="{ value }"><span class="svc-cmd">{{ shortCmd(value) }}</span></template>
     <template #cell-txSupportYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
-      <span v-else class="muted">N</span>
+      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" /><span v-else class="muted">N</span>
     </template>
     <template #cell-asyncYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="warning" size="sm" />
-      <span v-else class="muted">N</span>
+      <InTag v-if="value === 'Y'" label="Y" variant="warning" size="sm" /><span v-else class="muted">N</span>
     </template>
     <template #cell-useLogYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="brand" size="sm" />
-      <span v-else class="muted">N</span>
+      <InTag v-if="value === 'Y'" label="Y" variant="brand" size="sm" /><span v-else class="muted">N</span>
     </template>
-
-    <template #cell-modDate="{ value }">
-      <span class="muted">{{ (value || '').slice(0, 10) }}</span>
-    </template>
-
-    <!-- ★ (2026-06-04, dspark): row 액션 — 84f83ea 정합. chevron-right (작은 ">", 테스트) + content-copy (JSON).
-         사용자 피드백: "큰 > 가 아니라 작은 '>' 였다" — registry chevron-right 가 정확한 작은 꺽쇠 (Material, 여백 보유).
-         "세로로 두개가 나온다" → svc-row-actions CSS 에 display:flex + gap. -->
+    <template #cell-modDate="{ value }"><span class="muted">{{ (value || '').slice(0, 10) }}</span></template>
     <template #cell-actions="{ row }">
       <span class="svc-row-actions" @click.stop>
         <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="gotoTester(row)">
-          <template #prefix><InIcon name="chevron-right" :size="14" /></template>
-          테스트
+          <template #prefix><InIcon name="chevron-right" :size="14" /></template>테스트
         </InButton>
         <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="copyRowEnvelope(row)">
-          <template #prefix><InIcon name="content-copy" :size="14" /></template>
-          JSON
+          <template #prefix><InIcon name="content-copy" :size="14" /></template>JSON
         </InButton>
       </span>
     </template>
 
     <template #drawer>
-      <InModal
-        v-if="selected"
-        :model-value="!!selected"
-        type="detail"
-        :title="`서비스 상세 — ${selected.svDefNm}`"
-        :width="900"
-        @update:model-value="(v) => { if (!v) closeDetail(); }"
+      <MetaDetailEditor
+        :mode="mode"
+        :title="modalTitle"
+        :loading="detailLoading"
+        :saving="saving"
+        :tabs="tabItems"
+        :active-tab="drawerTab"
+        :has-content="mode === 'create' || !!detail"
+        :width="940"
+        :show-copy="false"
+        @update:active-tab="(t) => { drawerTab = t; }"
+        @edit="enterEdit"
+        @delete="confirmDelete = true"
+        @save="save"
+        @cancel="cancelEdit"
+        @close="closePanel"
       >
-        <div v-if="detailLoading" class="svc-loading">상세 조회 중…</div>
-        <div v-else-if="detail">
-          <div class="svc-drawer-head">
-            <!-- ★ (2026-06-03, dspark): 단일 trapCount → 호환성 + 카테고리 breakdown 으로 격상. -->
-            <InTag
-              v-if="detail.compatibility"
-              :label="detail.compatibility.level === 'ok' ? '진단 OK' : detail.compatibility.level === 'error' ? '운영 위험' : '주의'"
-              :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'"
-              size="sm"
-            />
-            <InTag v-if="trapBreakdown.compatError > 0"  :label="`호환성 ${trapBreakdown.compatError}건`" variant="error"   size="sm" />
-            <InTag v-if="trapBreakdown.compatWarn > 0"   :label="`주의 ${trapBreakdown.compatWarn}건`"   variant="warning" size="sm" />
-            <InTag v-if="trapBreakdown.msgMissing > 0"   :label="`메시지 미등록 ${trapBreakdown.msgMissing}건`"   variant="error" size="sm" />
-            <InTag v-if="trapBreakdown.queryMissing > 0" :label="`SQL 미등록 ${trapBreakdown.queryMissing}건`"     variant="error" size="sm" />
-            <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
-            <InTag v-if="trapBreakdown.paramMismatch > 0" :label="`SQL bind 미매칭 ${trapBreakdown.paramMismatch}건`" variant="error" size="sm" />
-            <InTag v-if="trapBreakdown.elaMissing > 0"   :label="`ELA 인프라 ${trapBreakdown.elaMissing}건`"        variant="error" size="sm" />
-            <!-- ★ (2026-06-04, dspark): Drawer 의 ▶ 테스트 / 📋 JSON 복사 제거.
-                 row 액션 ([테스트] [JSON]) 으로 단일화 — 사용자 피드백. -->
+        <!-- 진단 배지 (view 전용) -->
+        <div v-if="mode === 'view' && detail" class="svc-drawer-head">
+          <InTag v-if="detail.compatibility"
+                 :label="detail.compatibility.level === 'ok' ? '진단 OK' : detail.compatibility.level === 'error' ? '운영 위험' : '주의'"
+                 :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'" size="sm" />
+          <InTag v-if="trapBreakdown.compatError > 0"  :label="`호환성 ${trapBreakdown.compatError}건`" variant="error"   size="sm" />
+          <InTag v-if="trapBreakdown.compatWarn > 0"   :label="`주의 ${trapBreakdown.compatWarn}건`"   variant="warning" size="sm" />
+          <InTag v-if="trapBreakdown.msgMissing > 0"   :label="`메시지 미등록 ${trapBreakdown.msgMissing}건`"   variant="error" size="sm" />
+          <InTag v-if="trapBreakdown.queryMissing > 0" :label="`SQL 미등록 ${trapBreakdown.queryMissing}건`"     variant="error" size="sm" />
+          <InTag v-if="trapBreakdown.useYnN > 0"       :label="`use_yn=N ${trapBreakdown.useYnN}건`"             variant="warning" size="sm" />
+          <InTag v-if="trapBreakdown.paramMismatch > 0" :label="`SQL bind 미매칭 ${trapBreakdown.paramMismatch}건`" variant="error" size="sm" />
+          <InTag v-if="trapBreakdown.elaMissing > 0"   :label="`ELA 인프라 ${trapBreakdown.elaMissing}건`"        variant="error" size="sm" />
+        </div>
+
+        <!-- ───────── 정의 ───────── -->
+        <section v-if="drawerTab === 'def'" class="svc-section">
+          <!-- 편집 폼 -->
+          <div v-if="isEditing" class="form-grid">
+            <div class="form-row">
+              <InTextField v-model="form.def.svDefNm" label="서비스명" input="예: TST0001_00_R01" layout="vertical" :show-required="true" :disabled="mode === 'edit'" />
+              <p v-if="mode === 'edit'" class="muted hint">서비스명은 업무키(JSP target)라 수정할 수 없습니다.</p>
+            </div>
+            <div class="form-row">
+              <InTextField v-model="form.def.cmdClassNm" label="Command 클래스 (FQCN)" input="h5.biz.command.common.MultiQueryCommand" layout="vertical" :show-required="true" />
+              <p class="muted hint">예: {{ cmdClassPresets.join(' · ') }}</p>
+            </div>
+            <InTextField v-model="form.def.objectId" label="objectId (소속 오브젝트)" input="(선택, 대부분 NULL)" layout="vertical" />
+            <InSelect v-model="form.def.txSupportYn" :options="txAsyncLogOptions" label="TX 지원" layout="vertical" />
+            <InSelect v-model="form.def.asyncYn" :options="txAsyncLogOptions" label="Async" layout="vertical" />
+            <InSelect v-model="form.def.useLogYn" :options="txAsyncLogOptions" label="Log 사용" layout="vertical" />
+            <InTextField v-model="form.def.version" label="버전" input="(선택)" layout="vertical" />
+            <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
           </div>
 
-          <InTabs v-model="drawerTab" :items="[
-            { name: 'def',      tabLabel: '정의' },
-            { name: 'health',   tabLabel: `진단 ${detail.compatibility?.reasons?.length ? `(${detail.compatibility.reasons.length})` : ''}` },
-            { name: 'attrs',    tabLabel: `메시지 슬롯 (${detail.attrs?.length || 0})` },
-            { name: 'funcMaps', tabLabel: `함수 매핑 (${detail.funcMaps?.length || 0})` },
-            { name: 'object',   tabLabel: '소속 오브젝트' },
-            // ★ (2026-06-03, dspark) #5: ELA Command 한정 인프라 탭
-            ...(detail.elaInfra ? [{ name: 'elaInfra', tabLabel: `ELA 인프라 (${detail.elaInfra.summary.missingCount > 0 ? detail.elaInfra.summary.okCount + '/' + (detail.elaInfra.summary.okCount + detail.elaInfra.summary.missingCount) : detail.elaInfra.items.length})` }] : []),
-          ]" />
-
-          <section v-if="drawerTab === 'def'" class="svc-section">
-            <dl class="kv">
-              <dt>서비스명</dt><dd>{{ detail.def.svDefNm }}</dd>
-              <dt>Command</dt>
+          <!-- 보기 (진단 포함, 기존 보존) -->
+          <dl v-else-if="detail" class="kv">
+            <dt>서비스명</dt><dd>{{ detail.def.svDefNm }}</dd>
+            <dt>Command</dt>
+            <dd><code>{{ shortCmd(detail.def.cmdClassNm) }}</code> <span class="muted">— {{ detail.def.cmdClassNm }}</span></dd>
+            <dt>tx / async / log</dt>
+            <dd>{{ detail.def.txSupportYn }} / {{ detail.def.asyncYn }} / {{ detail.def.useLogYn }}</dd>
+            <dt>objectId</dt>
+            <dd>
+              <span v-if="detail.def.objectId"><code>{{ detail.def.objectId }}</code></span>
+              <span v-else class="muted">NULL</span>
+              <InTag v-if="objectIdInterpretation" class="svc-def-chip"
+                     :label="objectIdInterpretation.severity === 'warn' ? '등록 누락 의심' : '정상 (NULL 통상)'"
+                     :variant="objectIdInterpretation.severity === 'warn' ? 'warning' : 'success'" size="sm" />
+              <InTooltip v-if="objectIdInterpretation" :text="`${objectIdInterpretation.message} (근거: ${objectIdInterpretation.ref})`">
+                <span class="svc-def-help">ⓘ</span>
+              </InTooltip>
+            </dd>
+            <template v-if="tripleNameStatus">
+              <dt>3중 동명</dt>
               <dd>
-                <code>{{ shortCmd(detail.def.cmdClassNm) }}</code>
-                <span class="muted">— {{ detail.def.cmdClassNm }}</span>
-              </dd>
-              <dt>tx / async / log</dt>
-              <dd>{{ detail.def.txSupportYn }} / {{ detail.def.asyncYn }} / {{ detail.def.useLogYn }}</dd>
-              <dt>objectId</dt>
-              <dd>
-                <span v-if="detail.def.objectId"><code>{{ detail.def.objectId }}</code></span>
-                <span v-else class="muted">NULL</span>
-                <!-- ★ (2026-06-03, dspark) #8: objectId NULL 의미 분기. -->
-                <InTag
-                  v-if="objectIdInterpretation"
-                  class="svc-def-chip"
-                  :label="objectIdInterpretation.severity === 'warn' ? '등록 누락 의심' : '정상 (NULL 통상)'"
-                  :variant="objectIdInterpretation.severity === 'warn' ? 'warning' : 'success'"
-                  size="sm"
-                />
-                <InTooltip v-if="objectIdInterpretation" :text="`${objectIdInterpretation.message} (근거: ${objectIdInterpretation.ref})`">
+                <InTag :label="tripleNameStatus.same ? '정합' : '불일치'" :variant="tripleNameStatus.same ? 'success' : 'warning'" size="sm" />
+                <span class="muted">func_nm = <code>{{ tripleNameStatus.funcNm }}</code></span>
+                <InTooltip text="sv_def_nm = func_nm = query_name 이 일치해야 framework 자동 바인딩 정상 (multiquery §2). sql 매핑일 때만 의미.">
                   <span class="svc-def-help">ⓘ</span>
                 </InTooltip>
               </dd>
-              <!-- ★ (2026-06-03, dspark) #10: 3중 동명 (sv_def_nm == func_nm) chip. sql 매핑일 때만. -->
-              <template v-if="tripleNameStatus">
-                <dt>3중 동명</dt>
-                <dd>
-                  <InTag
-                    :label="tripleNameStatus.same ? '정합' : '불일치'"
-                    :variant="tripleNameStatus.same ? 'success' : 'warning'"
-                    size="sm"
-                  />
-                  <span class="muted">func_nm = <code>{{ tripleNameStatus.funcNm }}</code></span>
-                  <InTooltip text="sv_def_nm = func_nm = query_name 이 일치해야 framework 자동 바인딩 정상 (multiquery §2). sql 매핑일 때만 의미.">
-                    <span class="svc-def-help">ⓘ</span>
-                  </InTooltip>
-                </dd>
-              </template>
-              <!-- ★ (2026-06-03, dspark) #7: ELA Command 의 sub-Command dispatch 안내. -->
-              <template v-if="elaDispatch">
-                <dt>실 dispatch</dt>
-                <dd>
-                  <InTag label="ELA sub-Command" variant="brand" size="sm" />
-                  <span class="muted">{{ elaDispatch.note }}</span>
-                  <span class="muted svc-def-ref">— {{ elaDispatch.ref }}</span>
-                </dd>
-              </template>
-              <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
-              <dt>변경</dt><dd>{{ detail.def.modUserId }} · {{ detail.def.modDate }}</dd>
-            </dl>
-          </section>
+            </template>
+            <template v-if="elaDispatch">
+              <dt>실 dispatch</dt>
+              <dd>
+                <InTag label="ELA sub-Command" variant="brand" size="sm" />
+                <span class="muted">{{ elaDispatch.note }}</span>
+                <span class="muted svc-def-ref">— {{ elaDispatch.ref }}</span>
+              </dd>
+            </template>
+            <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
+            <dt>변경</dt><dd>{{ detail.def.modUserId }} · {{ detail.def.modDate }}</dd>
+          </dl>
+        </section>
 
-          <!-- ★ (2026-06-03, dspark): 진단 탭 신설 — compatibility.reasons 가 운영자에게 보이는 1차 정보. -->
-          <section v-else-if="drawerTab === 'health'" class="svc-section">
-            <div v-if="!detail.compatibility" class="muted">진단 정보 없음 (expand=health 미적용)</div>
-            <div v-else>
-              <div class="svc-health-summary" :class="`svc-health-summary--${detail.compatibility.level}`">
-                <strong>전체 등급</strong>:
-                <InTag
-                  :label="detail.compatibility.level === 'ok' ? 'OK' : detail.compatibility.level === 'error' ? 'ERROR' : 'WARN'"
-                  :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'"
-                  size="sm"
-                />
-                <span class="muted">{{ detail.compatibility.reasons.length }}건 사유</span>
-              </div>
-              <ul v-if="detail.compatibility.reasons.length" class="svc-reasons">
-                <li v-for="(r, i) in detail.compatibility.reasons" :key="i" :class="`svc-reason--${r.severity}`">
-                  <InTag :label="r.severity === 'error' ? 'ERROR' : 'WARN'" :variant="r.severity === 'error' ? 'error' : 'warning'" size="sm" />
-                  <code class="svc-reason__code">{{ r.code }}</code>
-                  <span class="svc-reason__msg">{{ r.message }}</span>
-                  <span class="muted svc-reason__ref">— {{ r.ref }}</span>
-                </li>
-              </ul>
-              <p v-else class="muted">모든 검증 통과.</p>
-              <p class="muted svc-health-note">
-                근거: AS-IS 매뉴얼 <code>01-asis/manuals/01-meta-management/dev-tools/command-scenarios/</code> 4건 (multiquery·multisave·procedure·ela).
-              </p>
+        <!-- ───────── 진단 (view) ───────── -->
+        <section v-else-if="drawerTab === 'health'" class="svc-section">
+          <div v-if="!detail || !detail.compatibility" class="muted">진단 정보 없음 (expand=health 미적용)</div>
+          <div v-else>
+            <div class="svc-health-summary" :class="`svc-health-summary--${detail.compatibility.level}`">
+              <strong>전체 등급</strong>:
+              <InTag :label="detail.compatibility.level === 'ok' ? 'OK' : detail.compatibility.level === 'error' ? 'ERROR' : 'WARN'"
+                     :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'" size="sm" />
+              <span class="muted">{{ detail.compatibility.reasons.length }}건 사유</span>
             </div>
-          </section>
-
-          <section v-else-if="drawerTab === 'attrs'" class="svc-section">
-            <!-- ★ (2026-06-03, dspark): 메시지 슬롯 → 메시지 + 컬럼 (use_yn/use_enc_yn) 가시화.
-                 근거: SCENARIO-procedure.md §5.2 #13 (use_yn=N → IN NULL) + SCENARIO-multiquery.md §3.1 자동 바인딩. -->
-            <ul class="resource-list">
-              <li v-for="a in detail.attrs" :key="a.svAttrId" class="svc-attr-row">
-                <div class="svc-attr-row__head">
-                  <HealthDot
-                    :tone="a.msgRef ? (a.msgRef.exists ? 'ok' : 'missing') : 'unknown'"
-                    :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''"
-                    size="sm"
-                  />
-                  <InTag :label="a.svAttrType" :variant="a.svAttrType === 'IN_MSG' ? 'brand' : 'warning'" size="sm" />
-                  <code>{{ a.svAttrNm }}</code>
-                  <span class="muted">value_type:</span>
-                  <code>{{ a.valueType }}</code>
-                  <span v-if="a.msgRef?.msgDefNm" class="muted">— {{ a.msgRef.msgDefNm }} ({{ a.msgRef.columnCount }}col · {{ a.msgRef.typeCd }})</span>
-                </div>
-                <table v-if="a.msgRef?.columns?.length" class="svc-msg-columns">
-                  <thead>
-                    <tr><th>#</th><th>COL_ID</th><th>한글명</th><th>타입</th><th>USE</th><th>ENC</th><th>VALUE_TYPE</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="c in a.msgRef.columns" :key="c.seqNo" :class="{ 'svc-msg-columns__off': c.useYn !== 'Y' }">
-                      <td class="muted">{{ c.seqNo }}</td>
-                      <td><code>{{ c.colId }}</code></td>
-                      <td>{{ c.colNm }}</td>
-                      <td class="muted">{{ c.dataType }}</td>
-                      <td>
-                        <InTag v-if="c.useYn === 'Y'" label="Y" variant="success" size="sm" />
-                        <InTag v-else label="N" variant="error" size="sm" />
-                      </td>
-                      <td>
-                        <!-- ★ (2026-06-03, dspark): ENC 는 정보성 (ARIA 자동 암복호 정상 동작). brand 톤. -->
-                        <InTag v-if="c.useEncYn === 'Y'" label="ENC" variant="brand" size="sm" />
-                        <span v-else class="muted">—</span>
-                      </td>
-                      <td class="muted">{{ c.valueType || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <ul v-if="detail.compatibility.reasons.length" class="svc-reasons">
+              <li v-for="(r, i) in detail.compatibility.reasons" :key="i" :class="`svc-reason--${r.severity}`">
+                <InTag :label="r.severity === 'error' ? 'ERROR' : 'WARN'" :variant="r.severity === 'error' ? 'error' : 'warning'" size="sm" />
+                <code class="svc-reason__code">{{ r.code }}</code>
+                <span class="svc-reason__msg">{{ r.message }}</span>
+                <span class="muted svc-reason__ref">— {{ r.ref }}</span>
               </li>
             </ul>
-          </section>
+            <p v-else class="muted">모든 검증 통과.</p>
+          </div>
+        </section>
 
-          <section v-else-if="drawerTab === 'funcMaps'" class="svc-section">
-            <ul class="resource-list">
-              <li v-for="f in detail.funcMaps" :key="f.svMapId" class="svc-attr-row">
-                <div class="svc-attr-row__head">
-                  <HealthDot
-                    :tone="f.queryRef ? (f.queryRef.exists ? 'ok' : 'missing') : 'unknown'"
-                    :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''"
-                    size="sm"
-                  />
-                  <InTag :label="f.svMapTypeCd" size="sm" />
-                  <code>{{ f.funcNm }}</code>
-                  <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
-                  <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>
-                  <!-- ★ (2026-06-03, dspark) #4: paramDiff 결과 — bind 미매칭 / orphan 컬럼 -->
-                  <InTag v-if="f.queryRef?.paramDiff?.unmatched?.length"
-                         :label="`bind 미매칭 ${f.queryRef.paramDiff.unmatched.length}건`"
-                         variant="error" size="sm" />
-                  <InTag v-else-if="f.queryRef?.paramDiff && f.queryRef.paramDiff.sqlBindNames?.length"
-                         label="bind 정합" variant="success" size="sm" />
-                </div>
-                <pre v-if="f.queryRef?.bodyPreview" class="body-preview">{{ f.queryRef.bodyPreview }}</pre>
-                <!-- paramDiff 상세 (Procedure 한정, expand=paramDiff 응답 시에만) -->
-                <div v-if="f.queryRef?.paramDiff" class="svc-param-diff">
-                  <div v-if="f.queryRef.paramDiff.unmatched?.length" class="svc-param-diff__row svc-param-diff__row--error">
-                    <strong>SQL bind 미매칭:</strong>
-                    <code v-for="n in f.queryRef.paramDiff.unmatched" :key="`u-${n}`">{{ n }}</code>
-                    <span class="muted">— SCENARIO-procedure.md §5.2 #8 (IN NULL 위험)</span>
-                  </div>
-                  <div v-if="f.queryRef.paramDiff.orphanColumns?.length" class="svc-param-diff__row svc-param-diff__row--info">
-                    <strong>orphan 컬럼:</strong>
-                    <code v-for="n in f.queryRef.paramDiff.orphanColumns" :key="`o-${n}`">{{ n }}</code>
-                    <span class="muted">— SQL 이 안 쓰는 메시지 컬럼 (정보성)</span>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </section>
-
-          <section v-else-if="drawerTab === 'object'" class="svc-section">
-            <p v-if="!detail.def.objectId" class="muted">objectId 없음 (대부분 NULL — 매뉴얼 09 §6.1).</p>
-            <p v-else-if="!detail.objectRef" class="muted">조회 불가</p>
-            <dl v-else class="kv">
-              <dt>OBJECT_ID</dt><dd>{{ detail.objectRef.objectId }}</dd>
-              <dt>OBJECT_NM</dt><dd>{{ detail.objectRef.objectNm }}</dd>
-              <dt>한글명</dt><dd>{{ detail.objectRef.objectDisplayNm }}</dd>
-              <dt>경로</dt><dd>{{ detail.objectRef.objectLink }}</dd>
-              <dt>타입</dt><dd>{{ detail.objectRef.objectType }}</dd>
-            </dl>
-          </section>
-
-          <!-- ★ (2026-06-03, dspark) #5: ELA 14건 인프라 checklist 탭 -->
-          <section v-else-if="drawerTab === 'elaInfra'" class="svc-section">
-            <div v-if="!detail.elaInfra" class="muted">ELA 인프라 정보 없음</div>
-            <div v-else>
-              <div class="svc-health-summary" :class="detail.elaInfra.summary.missingCount > 0 ? 'svc-health-summary--error' : 'svc-health-summary--ok'">
-                <strong>applCd</strong>:
-                <code v-if="detail.elaInfra.applCd">{{ detail.elaInfra.applCd }}</code>
-                <span v-else class="muted">미등록 (OBJECT 속성 appl_cd 없음 — 모든 평가 skip)</span>
-                <span class="muted svc-def-ref">
-                  · OK {{ detail.elaInfra.summary.okCount }}
-                  · 미등록 {{ detail.elaInfra.summary.missingCount }}
-                  · 자동평가 외 {{ detail.elaInfra.summary.unknownCount }}
-                </span>
+        <!-- ───────── 속성/메시지 슬롯 ───────── -->
+        <section v-else-if="drawerTab === 'attrs'" class="svc-section">
+          <MetaChildGrid
+            v-if="isEditing"
+            :rows="form.attrs"
+            :columns="attrColumns"
+            key-field="svAttrId"
+            :new-row="newAttr"
+            add-label="+ 속성 추가"
+            hint="IN_MSG/OUT_MSG 슬롯. value_type = MT_<화면7자>_NN (메시지 정의)."
+          />
+          <ul v-else-if="detail" class="resource-list">
+            <li v-for="a in detail.attrs" :key="a.svAttrId" class="svc-attr-row">
+              <div class="svc-attr-row__head">
+                <HealthDot :tone="a.msgRef ? (a.msgRef.exists ? 'ok' : 'missing') : 'unknown'"
+                           :title="a.msgRef && !a.msgRef.exists ? `메시지 ${a.valueType} 미등록` : ''" size="sm" />
+                <InTag :label="a.svAttrType" :variant="a.svAttrType === 'IN_MSG' ? 'brand' : 'warning'" size="sm" />
+                <code>{{ a.svAttrNm }}</code>
+                <span class="muted">value_type:</span><code>{{ a.valueType }}</code>
+                <span v-if="a.msgRef?.msgDefNm" class="muted">— {{ a.msgRef.msgDefNm }} ({{ a.msgRef.columnCount }}col · {{ a.msgRef.typeCd }})</span>
               </div>
-              <table class="svc-ela-table">
-                <thead>
-                  <tr><th>#</th><th>코드</th><th>라벨</th><th>테이블</th><th>등록</th><th>안내</th></tr>
-                </thead>
+              <table v-if="a.msgRef?.columns?.length" class="svc-msg-columns">
+                <thead><tr><th>#</th><th>COL_ID</th><th>한글명</th><th>타입</th><th>USE</th><th>ENC</th></tr></thead>
                 <tbody>
-                  <tr v-for="it in detail.elaInfra.items" :key="it.seq" :class="elaRowClass(it)">
-                    <td class="muted">{{ it.seq }}</td>
-                    <td><code>{{ it.code }}</code></td>
-                    <td>{{ it.label }}</td>
-                    <td class="muted">{{ it.table }}</td>
-                    <td>
-                      <InTag v-if="it.exists === true"  label="OK"    variant="success" size="sm" />
-                      <InTag v-else-if="it.exists === false" label="미등록" variant="error" size="sm" />
-                      <InTag v-else label="—" variant="default" size="sm" />
-                    </td>
-                    <td class="svc-ela-hint">
-                      <span>{{ it.hint }}</span>
-                      <span class="muted svc-def-ref">— {{ it.ref }}</span>
-                    </td>
+                  <tr v-for="c in a.msgRef.columns" :key="c.seqNo" :class="{ 'svc-msg-columns__off': c.useYn !== 'Y' }">
+                    <td class="muted">{{ c.seqNo }}</td><td><code>{{ c.colId }}</code></td><td>{{ c.colNm }}</td><td class="muted">{{ c.dataType }}</td>
+                    <td><InTag v-if="c.useYn === 'Y'" label="Y" variant="success" size="sm" /><InTag v-else label="N" variant="error" size="sm" /></td>
+                    <td><InTag v-if="c.useEncYn === 'Y'" label="ENC" variant="brand" size="sm" /><span v-else class="muted">—</span></td>
                   </tr>
                 </tbody>
               </table>
+            </li>
+          </ul>
+        </section>
+
+        <!-- ───────── 함수 매핑 ───────── -->
+        <section v-else-if="drawerTab === 'funcMaps'" class="svc-section">
+          <MetaChildGrid
+            v-if="isEditing"
+            :rows="form.funcMaps"
+            :columns="funcMapColumns"
+            key-field="svMapId"
+            :new-row="newFuncMap"
+            add-label="+ 매핑 추가"
+            hint="sql=쿼리명(조회/프로시저) / entity=엔터티명(저장). func_nm 은 SQL 또는 엔터티 이름."
+          />
+          <ul v-else-if="detail" class="resource-list">
+            <li v-for="f in detail.funcMaps" :key="f.svMapId" class="svc-attr-row">
+              <div class="svc-attr-row__head">
+                <HealthDot :tone="f.queryRef ? (f.queryRef.exists ? 'ok' : 'missing') : 'unknown'"
+                           :title="f.queryRef && !f.queryRef.exists ? `SQL ${f.funcNm} 미등록` : ''" size="sm" />
+                <InTag :label="f.svMapTypeCd" size="sm" />
+                <code>{{ f.funcNm }}</code>
+                <span class="muted">req:</span><code>{{ f.reqMsgNm }}</code>
+                <span class="muted">res:</span><code>{{ f.resMsgNm }}</code>
+                <InTag v-if="f.queryRef?.paramDiff?.unmatched?.length" :label="`bind 미매칭 ${f.queryRef.paramDiff.unmatched.length}건`" variant="error" size="sm" />
+                <InTag v-else-if="f.queryRef?.paramDiff && f.queryRef.paramDiff.sqlBindNames?.length" label="bind 정합" variant="success" size="sm" />
+              </div>
+              <pre v-if="f.queryRef?.bodyPreview" class="body-preview">{{ f.queryRef.bodyPreview }}</pre>
+            </li>
+          </ul>
+        </section>
+
+        <!-- ───────── 소속 오브젝트 (view) ───────── -->
+        <section v-else-if="drawerTab === 'object'" class="svc-section">
+          <p v-if="!detail || !detail.def.objectId" class="muted">objectId 없음 (대부분 NULL — 매뉴얼 09 §6.1).</p>
+          <p v-else-if="!detail.objectRef" class="muted">조회 불가</p>
+          <dl v-else class="kv">
+            <dt>OBJECT_ID</dt><dd>{{ detail.objectRef.objectId }}</dd>
+            <dt>OBJECT_NM</dt><dd>{{ detail.objectRef.objectNm }}</dd>
+            <dt>한글명</dt><dd>{{ detail.objectRef.objectDisplayNm }}</dd>
+            <dt>경로</dt><dd>{{ detail.objectRef.objectLink }}</dd>
+            <dt>타입</dt><dd>{{ detail.objectRef.objectType }}</dd>
+          </dl>
+        </section>
+
+        <!-- ───────── ELA 인프라 (view) ───────── -->
+        <section v-else-if="drawerTab === 'elaInfra'" class="svc-section">
+          <div v-if="!detail || !detail.elaInfra" class="muted">ELA 인프라 정보 없음</div>
+          <div v-else>
+            <div class="svc-health-summary" :class="detail.elaInfra.summary.missingCount > 0 ? 'svc-health-summary--error' : 'svc-health-summary--ok'">
+              <strong>applCd</strong>:
+              <code v-if="detail.elaInfra.applCd">{{ detail.elaInfra.applCd }}</code>
+              <span v-else class="muted">미등록 (OBJECT 속성 appl_cd 없음 — 모든 평가 skip)</span>
+              <span class="muted svc-def-ref">· OK {{ detail.elaInfra.summary.okCount }} · 미등록 {{ detail.elaInfra.summary.missingCount }} · 자동평가 외 {{ detail.elaInfra.summary.unknownCount }}</span>
             </div>
-          </section>
-        </div>
-      </InModal>
+            <table class="svc-ela-table">
+              <thead><tr><th>#</th><th>코드</th><th>라벨</th><th>테이블</th><th>등록</th><th>안내</th></tr></thead>
+              <tbody>
+                <tr v-for="it in detail.elaInfra.items" :key="it.seq" :class="elaRowClass(it)">
+                  <td class="muted">{{ it.seq }}</td><td><code>{{ it.code }}</code></td><td>{{ it.label }}</td><td class="muted">{{ it.table }}</td>
+                  <td>
+                    <InTag v-if="it.exists === true"  label="OK"    variant="success" size="sm" />
+                    <InTag v-else-if="it.exists === false" label="미등록" variant="error" size="sm" />
+                    <InTag v-else label="—" variant="default" size="sm" />
+                  </td>
+                  <td class="svc-ela-hint"><span>{{ it.hint }}</span> <span class="muted svc-def-ref">— {{ it.ref }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </MetaDetailEditor>
+
+      <!-- 삭제 확인 -->
+      <InModal
+        v-if="confirmDelete"
+        :model-value="confirmDelete"
+        type="confirm"
+        title="서비스 삭제"
+        :message="`'${selected?.svDefNm}' 를 삭제할까요? (함수매핑·속성도 함께 삭제)`"
+        confirm-text="삭제"
+        cancel-text="취소"
+        @confirm="doDelete"
+        @cancel="confirmDelete = false"
+        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
+      />
     </template>
   </CatalogPage>
 </template>
 
 <style scoped>
-/* ★ (2026-06-03, dspark): 한 줄 배치 — 검색 textbox 가 grow, 콤보 3개는 고정 폭. */
 .svc-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .svc-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
 .svc-filters > :deep(.in-sel) { flex: 0 0 160px; }
-.svc-filters__search-btn,
-.svc-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; margin-bottom: 0; }
+.svc-filters__search-btn, .svc-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; margin-bottom: 0; }
 
 .svc-name { display: inline-flex; align-items: center; gap: 6px; }
 .svc-note-dot { color: var(--in-text-subtle); }
-
-/* ★ (2026-06-04, dspark): row 액션 — 가로 한 줄 배치. */
 .svc-row-actions { display: inline-flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap; white-space: nowrap; }
 .svc-row-actions :deep(.in-btn) { padding: 2px 6px; }
 .svc-cmd { color: var(--in-text-accent); }
 .muted { color: var(--in-text-subtle); }
+.hint { margin: 0; font-size: var(--in-font-size-sm); }
 
 .svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-
-/* ★ (2026-06-03, dspark): def 탭 chip + tooltip 보조. */
 .svc-def-chip { margin-left: 8px; }
 .svc-def-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; color: var(--in-text-subtle); cursor: help; font-size: 11px; }
-.svc-def-ref  { font-size: var(--in-font-size-sm); margin-left: 4px; }
+.svc-def-ref { font-size: var(--in-font-size-sm); margin-left: 4px; }
 
-/* ★ (2026-06-03, dspark): 진단 탭 + msg 컬럼 표. */
 .svc-health-summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; }
 .svc-health-summary--ok    { background: var(--in-surface-accent-success, #f0f9ff); }
 .svc-health-summary--warn  { background: var(--in-surface-accent-warning, #fffbeb); }
@@ -640,7 +630,6 @@ onMounted(() => list.reload());
 .svc-reason__code { font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .svc-reason__msg { flex: 1 1 auto; }
 .svc-reason__ref { font-size: var(--in-font-size-sm); }
-.svc-health-note { font-size: var(--in-font-size-sm); margin-top: 16px; }
 
 .svc-attr-row { padding: 8px 0; border-bottom: 1px solid var(--in-border-default); }
 .svc-attr-row:last-child { border-bottom: none; }
@@ -648,57 +637,27 @@ onMounted(() => list.reload());
 .svc-msg-columns { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); margin-top: 4px; }
 .svc-msg-columns th { text-align: left; padding: 4px 8px; background: var(--in-surface-state-default); font-weight: var(--in-font-weight-medium); color: var(--in-text-subtle); }
 .svc-msg-columns td { padding: 4px 8px; border-top: 1px solid var(--in-border-default); }
-/* ★ (2026-06-03, dspark): use_yn=N 행 — dimming + subtle 노랑 (warning 톤). 빨강은 진단 탭의 ERROR 전용. */
 .svc-msg-columns__off td { opacity: 0.65; background: var(--in-surface-accent-warning, #fffbeb); }
 
-/* ★ (2026-06-03, dspark) #4: paramDiff 결과 표시. */
-.svc-param-diff { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: var(--in-font-size-sm); }
-.svc-param-diff__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-left: 3px solid var(--in-border-default); }
-.svc-param-diff__row--error { border-left-color: var(--in-text-info-error, #dc2626); background: var(--in-surface-accent-error, #fef2f2); }
-.svc-param-diff__row--info  { border-left-color: var(--in-text-subtle); background: var(--in-surface-state-default); }
-
-/* ★ (2026-06-03, dspark) #5: ELA 인프라 14건 표. */
 .svc-ela-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); margin-top: 12px; }
 .svc-ela-table th { text-align: left; padding: 6px 8px; background: var(--in-surface-state-default); color: var(--in-text-subtle); font-weight: var(--in-font-weight-medium); }
 .svc-ela-table td { padding: 6px 8px; border-top: 1px solid var(--in-border-default); vertical-align: top; }
 .svc-ela-row--critical-missing td { background: var(--in-surface-accent-error, #fef2f2); }
 .svc-ela-row--missing td { background: var(--in-surface-accent-warning, #fffbeb); }
 .svc-ela-hint { color: var(--in-text-default); }
-.svc-loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
 .svc-section { padding: 12px 4px; }
 
-.kv {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 8px 12px;
-  margin: 0;
-}
+.form-grid { display: flex; flex-direction: column; gap: 14px; }
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
-
 .resource-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.resource-list li {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  padding: 8px 10px;
-  background: var(--in-bg-default);
-  border-radius: var(--in-radius-xs);
-}
-.resource-list code {
-  font-family: var(--in-font-family-mono, ui-monospace);
-  font-size: var(--in-font-size-sm);
-  color: var(--in-text-default);
-}
+.resource-list code { font-family: var(--in-font-family-mono, ui-monospace); font-size: var(--in-font-size-sm); color: var(--in-text-default); }
 .body-preview {
-  flex-basis: 100%;
-  margin: 6px 0 0;
-  padding: 8px;
-  background: var(--in-bg-white);
-  border: 1px solid var(--in-border-default);
-  border-radius: var(--in-radius-xxs);
-  font-family: var(--in-font-family-mono, ui-monospace);
-  font-size: 11px;
-  line-height: 16px;
-  color: var(--in-text-accent);
-  overflow-x: auto;
+  flex-basis: 100%; margin: 6px 0 0; padding: 8px;
+  background: var(--in-bg-white); border: 1px solid var(--in-border-default); border-radius: var(--in-radius-xxs);
+  font-family: var(--in-font-family-mono, ui-monospace); font-size: 11px; line-height: 16px; color: var(--in-text-accent); overflow-x: auto;
 }
 </style>
