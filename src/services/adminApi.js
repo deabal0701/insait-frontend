@@ -54,10 +54,20 @@ function makeDomain(basePath) {
         params: expand ? { expand: Array.isArray(expand) ? expand.join(',') : expand } : {},
       });
     },
-    // 후속 편집 (Phase 1) 도입 시:
-    // create(body) { return http.post(basePath, body); },
-    // update(key, body) { return http.put(`${basePath}/${encodeURIComponent(key)}`, body); },
-    // remove(key) { return http.delete(`${basePath}/${encodeURIComponent(key)}`); },
+    // ★ (2026-06-05, dspark): Phase 1 편집 CRUD. 부모+자식 묶음 body 단일 호출.
+    //   백엔드: POST/PUT/DELETE/{key}/exists (com.win.insait.admin.meta.* 직접 REST).
+    create(body) {
+      return http.post(basePath, body);
+    },
+    update(key, body) {
+      return http.put(`${basePath}/${encodeURIComponent(key)}`, body);
+    },
+    remove(key) {
+      return http.delete(`${basePath}/${encodeURIComponent(key)}`);
+    },
+    exists(key) {
+      return http.get(`${basePath}/${encodeURIComponent(key)}/exists`);
+    },
   };
 }
 
