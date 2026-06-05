@@ -15,6 +15,8 @@ const VIEWS = {
   MessageCatalog:     () => import('@/pages/admin/meta/messages/MessageCatalog.vue'),
   EntityCatalog:      () => import('@/pages/admin/meta/entities/EntityCatalog.vue'),
   ObjectCatalog:      () => import('@/pages/admin/meta/objects/ObjectCatalog.vue'),
+  // ★ (2026-06-05, dspark): 메타 등록→envelope 조회 종단(E2E) 검증 데모.
+  E2ETest:            () => import('@/pages/admin/meta/E2ETest.vue'),
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
   // IST0050: () => import('@/pages/admin/IST0050.vue'),
@@ -42,6 +44,7 @@ const ADMIN_SCREENS = [
   { object: 'META_ENTITIES', path: 'meta/entities', menuId: '', title: '엔터티 관리',     view: 'EntityCatalog' },
   { object: 'META_SERVICES', path: 'meta/services', menuId: '', title: '서비스 관리',     view: 'ServiceCatalog' },
   { object: 'META_OBJECTS',  path: 'meta/objects',  menuId: '', title: '오브젝트 관리',   view: 'ObjectCatalog' },
+  { object: 'META_E2E',      path: 'meta/e2e',      menuId: '', title: 'E2E 테스트 (등록→조회)', view: 'E2ETest' },
 ];
 
 const routes = ADMIN_SCREENS.map((s) => ({
