@@ -34,9 +34,10 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', objectType: '', status: '', companyCd: '', hasParent: '' },
+  chipLabels: { q: '검색', objectType: 'type', status: 'status', companyCd: 'company', hasParent: 'parent' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onType(v) { staged.value.objectType = v; }
@@ -55,15 +56,6 @@ const parentOptions = [
   { value: 'N', label: '최상위' },
 ];
 
-const activeFilters = computed(() => {
-  const f = list.filter.value;
-  const out = [];
-  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
-  if (f.objectType) out.push({ key: 'objectType', label: `type: ${f.objectType}` });
-  if (f.hasParent) out.push({ key: 'hasParent', label: `parent: ${f.hasParent}` });
-  if (f.status) out.push({ key: 'status', label: `status: ${f.status}` });
-  return out;
-});
 
 const columns = [
   { field: 'objectNm',        label: 'OBJECT_NM',  sortable: true, sortKey: 'object_nm', width: 220 },
@@ -103,6 +95,7 @@ function newRel(rows) {
 const editor = useMetaEditor({
   api: adminApi.meta.objects,
   keyField: 'objectNm',
+  domainLabel: '오브젝트',
   expand: ['attributes', 'children'],
   defaultTab: 'def',
   createTab: 'def',
@@ -146,7 +139,7 @@ const editor = useMetaEditor({
   },
 });
 const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
 } = editor;
 
@@ -166,11 +159,6 @@ const tabItems = computed(() => {
   ];
 });
 
-const modalTitle = computed(() => {
-  if (mode.value === 'create') return '오브젝트 신규 등록';
-  if (mode.value === 'edit')   return `오브젝트 수정 — ${selected.value?.objectNm}`;
-  return `오브젝트 상세 — ${selected.value?.objectNm}`;
-});
 
 onMounted(() => list.reload());
 </script>

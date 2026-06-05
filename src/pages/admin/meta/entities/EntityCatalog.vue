@@ -12,6 +12,8 @@ import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
+import { shortCmd } from '@/utils/metaUtils';
+import { YN_FILTER_OPTIONS, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
@@ -33,28 +35,14 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', historyTypeCd: '', logYn: '', unitCd: '' },
+  chipLabels: { q: '검색', historyTypeCd: 'history', logYn: 'log', unitCd: 'unit' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onLog(v) { staged.value.logYn = v; }
 
-const ynOptions = [
-  { value: '',  label: '전체' },
-  { value: 'Y', label: 'Y' },
-  { value: 'N', label: 'N' },
-];
-
-const activeFilters = computed(() => {
-  const f = list.filter.value;
-  const out = [];
-  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
-  if (f.historyTypeCd) out.push({ key: 'historyTypeCd', label: `history: ${f.historyTypeCd}` });
-  if (f.logYn) out.push({ key: 'logYn', label: `log: ${f.logYn}` });
-  if (f.unitCd) out.push({ key: 'unitCd', label: `unit: ${f.unitCd}` });
-  return out;
-});
 
 const columns = [
   { field: 'entityNm',     label: '테이블명',  sortable: true, sortKey: 'entity_nm', width: 220 },
@@ -71,7 +59,6 @@ const historyEditOptions = [
   { value: 'master', label: 'master' },
   { value: 'history', label: 'history' },
 ];
-const ynEditOptions = [{ value: 'Y', label: 'Y' }, { value: 'N', label: 'N' }];
 
 // 컬럼 그리드 config
 const colColumns = [
@@ -105,6 +92,7 @@ function newMapping() {
 const editor = useMetaEditor({
   api: adminApi.meta.entities,
   keyField: 'entityNm',
+  domainLabel: '엔터티',
   expand: ['mappings', 'services'],
   defaultTab: 'columns',
   createTab: 'def',
@@ -146,7 +134,7 @@ const editor = useMetaEditor({
   },
 });
 const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
 } = editor;
 
@@ -168,11 +156,6 @@ const tabItems = computed(() => {
   return items;
 });
 
-const modalTitle = computed(() => {
-  if (mode.value === 'create') return '엔터티 신규 등록';
-  if (mode.value === 'edit')   return `엔터티 수정 — ${selected.value?.entityNm}`;
-  return `엔터티 상세 — ${selected.value?.entityNm}`;
-});
 
 onMounted(() => list.reload());
 </script>
@@ -316,7 +299,7 @@ onMounted(() => list.reload());
             <InTextField v-model="form.def.displayNm" label="한글명" input="엔터티 설명" layout="vertical" :show-required="true" />
             <InTextField v-model="form.def.unitCd" label="단위코드 (Unit)" input="예: TST" layout="vertical" :show-required="true" />
             <InSelect v-model="form.def.historyTypeCd" :options="historyEditOptions" label="History 유형" layout="vertical" />
-            <InSelect v-model="form.def.logYn" :options="ynEditOptions" label="Log 사용" layout="vertical" />
+            <InSelect v-model="form.def.logYn" :options="YN_EDIT_OPTIONS" label="Log 사용" layout="vertical" />
             <InTextField v-model="form.def.creatorCd" label="Creator 코드" input="기본 WEB" layout="vertical" />
             <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
           </div>
@@ -328,7 +311,7 @@ onMounted(() => list.reload());
           <ul class="resource-list">
             <li v-for="u in detail.usages" :key="u.svDefId">
               <code>{{ u.svDefNm }}</code>
-              <span class="muted">{{ (u.cmdClassNm || '').split('.').pop() }}</span>
+              <span class="muted">{{ shortCmd(u.cmdClassNm) }}</span>
             </li>
             <li v-if="!detail.usages?.length" class="muted">사용처 없음</li>
           </ul>

@@ -17,6 +17,8 @@ import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
+import { shortCmd } from '@/utils/metaUtils';
+import { SERVICE_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
@@ -44,9 +46,10 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
+  chipLabels: { q: '검색', cmdClass: 'Cmd', txSupportYn: 'tx', useLogYn: 'log' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onCmdClass(v) { staged.value.cmdClass = v; }
@@ -60,21 +63,6 @@ const cmdOptions = [
   { value: 'Procedure',  label: 'Procedure (PL/SQL)' },
   { value: 'ElaService', label: 'ElaService (전자결재)' },
 ];
-const ynOptions = [
-  { value: '',  label: '전체' },
-  { value: 'Y', label: 'Y' },
-  { value: 'N', label: 'N' },
-];
-
-const activeFilters = computed(() => {
-  const f = list.filter.value;
-  const out = [];
-  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
-  if (f.cmdClass) out.push({ key: 'cmdClass', label: `Cmd: ${f.cmdClass}` });
-  if (f.txSupportYn) out.push({ key: 'txSupportYn', label: `tx: ${f.txSupportYn}` });
-  if (f.useLogYn) out.push({ key: 'useLogYn', label: `log: ${f.useLogYn}` });
-  return out;
-});
 
 const columns = [
   { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
@@ -98,7 +86,6 @@ const cmdClassPresets = [
   'h5.biz.command.common.ProcedureCommand',
   'h5.ela.command.ElaServiceCommand',
 ];
-const NAME_RE = /^[A-Za-z0-9]{7}_[A-Za-z0-9_]+$/;
 
 const funcMapColumns = [
   { key: 'seqOrder',    label: '순서', kind: 'number', width: 56 },
@@ -128,6 +115,7 @@ function newAttr() {
 const editor = useMetaEditor({
   api: adminApi.meta.services,
   keyField: 'svDefNm',
+  domainLabel: '서비스',
   expand: ['msg', 'query', 'object', 'msgColumns', 'health', 'paramDiff', 'elaInfra'],
   defaultTab: 'def',
   createTab: 'def',
@@ -158,7 +146,7 @@ const editor = useMetaEditor({
   toPayload: (f) => ({ def: { ...f.def }, funcMaps: f.funcMaps, attrs: f.attrs }),
   validate: (f, { mode, setTab }) => {
     const d = f.def;
-    if (mode === 'create' && !NAME_RE.test((d.svDefNm || '').trim())) {
+    if (mode === 'create' && !SERVICE_NAME_RE.test((d.svDefNm || '').trim())) {
       toast.error?.('서비스명은 7-char 컨벤션을 따라야 합니다 (예: TST0001_00_R01).'); setTab('def'); return false;
     }
     if (!d.cmdClassNm || !d.cmdClassNm.trim()) { toast.error?.('Command 클래스(FQCN)는 필수입니다.'); setTab('def'); return false; }
@@ -174,7 +162,7 @@ const editor = useMetaEditor({
   },
 });
 const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
 } = editor;
 
@@ -231,7 +219,6 @@ async function copyRowEnvelope(row) {
   }
 }
 
-function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
 
 const tripleNameStatus = computed(() => {
   const d = detail.value;
@@ -295,12 +282,6 @@ const tabItems = computed(() => {
   return items;
 });
 
-const modalTitle = computed(() => {
-  if (mode.value === 'create') return '서비스 신규 등록';
-  if (mode.value === 'edit')   return `서비스 수정 — ${selected.value?.svDefNm}`;
-  return `서비스 상세 — ${selected.value?.svDefNm}`;
-});
-
 onMounted(() => list.reload());
 </script>
 
@@ -333,8 +314,8 @@ onMounted(() => list.reload());
           @search="applyFilter"
         />
         <InSelect :model-value="staged.cmdClass" :options="cmdOptions" label="Command" input="전체" layout="vertical" size="sm" @update:model-value="onCmdClass" />
-        <InSelect :model-value="staged.txSupportYn" :options="ynOptions" label="TX" input="전체" layout="vertical" size="sm" @update:model-value="onTx" />
-        <InSelect :model-value="staged.useLogYn" :options="ynOptions" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onUseLog" />
+        <InSelect :model-value="staged.txSupportYn" :options="YN_FILTER_OPTIONS" label="TX" input="전체" layout="vertical" size="sm" @update:model-value="onTx" />
+        <InSelect :model-value="staged.useLogYn" :options="YN_FILTER_OPTIONS" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onUseLog" />
         <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
         <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>

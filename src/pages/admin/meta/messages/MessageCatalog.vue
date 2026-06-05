@@ -12,6 +12,8 @@ import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
+import { shortCmd } from '@/utils/metaUtils';
+import { MSG_NAME_RE, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
@@ -34,9 +36,10 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', typeCd: '', allowChildYn: '', hasParent: '' },
+  chipLabels: { q: '검색', typeCd: 'type', allowChildYn: 'child', hasParent: 'parent' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onType(v) { staged.value.typeCd = v; }
@@ -54,14 +57,6 @@ const parentOptions = [
   { value: 'N', label: '최상위' },
 ];
 
-const activeFilters = computed(() => {
-  const f = list.filter.value;
-  const out = [];
-  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
-  if (f.typeCd) out.push({ key: 'typeCd', label: `type: ${f.typeCd}` });
-  if (f.hasParent) out.push({ key: 'hasParent', label: `parent: ${f.hasParent}` });
-  return out;
-});
 
 const columns = [
   { field: 'msgDefId',     label: '메시지 ID', sortable: true, sortKey: 'msg_def_id', width: 220 },
@@ -78,8 +73,6 @@ const typeEditOptions = [
   { value: 'MT', label: 'MT (타입)' },
   { value: 'ME', label: 'ME (인스턴스)' },
 ];
-const ynEditOptions = [{ value: 'Y', label: 'Y' }, { value: 'N', label: 'N' }];
-const NAME_RE = /^(MT|ME)_[A-Za-z0-9]{7}_[A-Za-z0-9_]+$/;
 
 const colColumns = [
   { key: 'orderSeq',    label: '순서',   kind: 'number',   width: 56 },
@@ -102,6 +95,7 @@ function newCol(rows) {
 const editor = useMetaEditor({
   api: adminApi.meta.messages,
   keyField: 'msgDefId',
+  domainLabel: '메시지',
   expand: ['children', 'services'],
   defaultTab: 'columns',
   createTab: 'def',
@@ -139,11 +133,11 @@ const editor = useMetaEditor({
   },
 });
 const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
 } = editor;
 
-const namePatternOk = computed(() => NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
+const namePatternOk = computed(() => MSG_NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
 
 const tabItems = computed(() => {
   const editingCount = (form.value.columns || []).filter((c) => c.rowStatus !== 'D').length;
@@ -158,11 +152,6 @@ const tabItems = computed(() => {
   return items;
 });
 
-const modalTitle = computed(() => {
-  if (mode.value === 'create') return '메시지 신규 등록';
-  if (mode.value === 'edit')   return `메시지 수정 — ${selected.value?.msgDefId}`;
-  return `메시지 상세 — ${selected.value?.msgDefId}`;
-});
 
 onMounted(() => list.reload());
 </script>
@@ -281,7 +270,7 @@ onMounted(() => list.reload());
             </div>
             <InTextField v-model="form.def.msgDefNm" label="한글명" input="메시지 설명" layout="vertical" :show-required="true" />
             <InSelect v-model="form.def.typeCd" :options="typeEditOptions" label="Type" layout="vertical" />
-            <InSelect v-model="form.def.allowChildYn" :options="ynEditOptions" label="자식 허용" layout="vertical" />
+            <InSelect v-model="form.def.allowChildYn" :options="YN_EDIT_OPTIONS" label="자식 허용" layout="vertical" />
             <InTextField v-model="form.def.parentId" label="부모 메시지 ID" input="자기참조 (선택)" layout="vertical" />
             <InTextField v-model="form.def.childColId" label="child col" input="(선택)" layout="vertical" />
             <InTextField v-model="form.def.parentColId" label="parent col" input="(선택)" layout="vertical" />
@@ -308,7 +297,7 @@ onMounted(() => list.reload());
             <li v-for="u in detail.usages" :key="u.svDefId + '-' + u.usage">
               <InTag :label="u.usage" variant="brand" size="sm" />
               <code>{{ u.svDefNm }}</code>
-              <span class="muted">{{ (u.cmdClassNm || '').split('.').pop() }}</span>
+              <span class="muted">{{ shortCmd(u.cmdClassNm) }}</span>
             </li>
             <li v-if="!detail.usages?.length" class="muted">사용처 없음</li>
           </ul>
