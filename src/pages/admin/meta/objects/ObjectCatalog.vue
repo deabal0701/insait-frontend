@@ -69,7 +69,7 @@ const columns = [
   { field: 'objectNm',        label: 'OBJECT_NM',  sortable: true, sortKey: 'object_nm', width: 220 },
   { field: 'objectDisplayNm', label: '한글명',     sortable: true, sortKey: 'object_display_nm' },
   { field: 'objectType',      label: 'Type',       sortable: true, sortKey: 'object_type', align: 'center', width: 80 },
-  { field: 'objectLink',      label: 'JSP 경로' },
+  { field: 'objectLink',      label: '화면 경로' },
   { field: 'parentId',        label: '부모', align: 'right', width: 100 },
   { field: 'status',          label: 'Status', sortable: true, sortKey: 'status', align: 'center', width: 80 },
 ];
@@ -238,7 +238,7 @@ onMounted(() => list.reload());
             <dt>OBJECT_ID</dt><dd>{{ detail.def.objectId }}</dd>
             <dt>OBJECT_NM</dt><dd>{{ detail.def.objectNm }}</dd>
             <dt>한글명</dt><dd>{{ detail.def.objectDisplayNm || '—' }}</dd>
-            <dt>JSP 경로</dt><dd><code>{{ detail.def.objectLink || '—' }}</code></dd>
+            <dt>화면 경로</dt><dd><code>{{ detail.def.objectLink || '—' }}</code></dd>
             <dt>Type</dt><dd>{{ detail.def.objectType }}</dd>
             <dt>부모</dt><dd>{{ detail.def.parentId || '—' }}</dd>
             <dt>Status / Company</dt><dd>{{ detail.def.status || '—' }} / {{ detail.def.companyCd || '—' }}</dd>
@@ -251,7 +251,7 @@ onMounted(() => list.reload());
               <p v-if="mode === 'edit'" class="hint">OBJECT_NM 은 업무키라 수정할 수 없습니다.</p>
             </div>
             <InTextField v-model="form.def.objectDisplayNm" label="화면표시명" input="예: [테스트] 자기참조 메타 조회" layout="vertical" :show-required="true" />
-            <InTextField v-model="form.def.objectLink" label="JSP 경로 (OBJECT_LINK)" input="예: /tst/web/tst0001.jsp" layout="vertical" />
+            <InTextField v-model="form.def.objectLink" label="화면 경로 (OBJECT_LINK)" input="TO-BE: Vue 라우트 (예: /tst/tst0008) · envelope 전용이면 비움" layout="vertical" />
             <InSelect v-model="form.def.objectType" :options="typeEditOptions" label="오브젝트 유형" layout="vertical" />
             <InTextField v-model="form.def.status" label="Status" input="(선택)" layout="vertical" />
             <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
