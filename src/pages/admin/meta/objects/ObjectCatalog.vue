@@ -16,11 +16,11 @@ import { useMetaEditor } from '@/composables/useMetaEditor';
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
+import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InTextField from '@/components/ui/InTextField.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 
@@ -143,6 +143,17 @@ const {
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
 } = editor;
 
+const defFields = computed(() => [
+  { key: 'objectNm', type: 'text', label: 'OBJECT_NM', input: '예: TST0001_51', required: true,
+    disabled: mode.value === 'edit',
+    hint: mode.value === 'edit' ? 'OBJECT_NM 은 업무키라 수정할 수 없습니다.' : undefined },
+  { key: 'objectDisplayNm', type: 'text', label: '화면표시명', input: '예: [테스트] 자기참조 메타 조회', required: true },
+  { key: 'objectLink', type: 'text', label: '화면 경로 (OBJECT_LINK)', input: 'TO-BE: Vue 라우트 (예: /tst/tst0008) · envelope 전용이면 비움' },
+  { key: 'objectType', type: 'select', label: '오브젝트 유형', options: typeEditOptions },
+  { key: 'status', type: 'text', label: 'Status', input: '(선택)' },
+  { key: 'note', type: 'text', label: '비고', input: '(선택)' },
+]);
+
 const tabItems = computed(() => {
   if (isEditing.value) {
     return [
@@ -233,17 +244,7 @@ onMounted(() => list.reload());
             <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
           </dl>
 
-          <div v-else class="form-grid">
-            <div class="form-row">
-              <InTextField v-model="form.def.objectNm" label="OBJECT_NM" input="예: TST0001_51" layout="vertical" :show-required="true" :disabled="mode === 'edit'" />
-              <p v-if="mode === 'edit'" class="hint">OBJECT_NM 은 업무키라 수정할 수 없습니다.</p>
-            </div>
-            <InTextField v-model="form.def.objectDisplayNm" label="화면표시명" input="예: [테스트] 자기참조 메타 조회" layout="vertical" :show-required="true" />
-            <InTextField v-model="form.def.objectLink" label="화면 경로 (OBJECT_LINK)" input="TO-BE: Vue 라우트 (예: /tst/tst0008) · envelope 전용이면 비움" layout="vertical" />
-            <InSelect v-model="form.def.objectType" :options="typeEditOptions" label="오브젝트 유형" layout="vertical" />
-            <InTextField v-model="form.def.status" label="Status" input="(선택)" layout="vertical" />
-            <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
-          </div>
+          <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
         <!-- 속성 -->

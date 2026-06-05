@@ -18,11 +18,11 @@ import { MSG_NAME_RE, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
+import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InTextField from '@/components/ui/InTextField.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 
@@ -139,6 +139,20 @@ const {
 
 const namePatternOk = computed(() => MSG_NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
 
+const defFields = computed(() => [
+  { key: 'msgDefId', type: 'text', label: '메시지 ID', input: '예: MT_TST0009_01', required: true,
+    disabled: mode.value === 'edit',
+    hint: mode.value === 'edit' ? '메시지 ID는 업무키라 수정할 수 없습니다.'
+      : (form.value.def.msgDefId && !namePatternOk.value) ? '권장: MT_<화면7자>_NN (예: MT_TST0009_01)' : undefined },
+  { key: 'msgDefNm', type: 'text', label: '한글명', input: '메시지 설명', required: true },
+  { key: 'typeCd', type: 'select', label: 'Type', options: typeEditOptions },
+  { key: 'allowChildYn', type: 'select', label: '자식 허용', options: YN_EDIT_OPTIONS },
+  { key: 'parentId', type: 'text', label: '부모 메시지 ID', input: '자기참조 (선택)' },
+  { key: 'childColId', type: 'text', label: 'child col', input: '(선택)' },
+  { key: 'parentColId', type: 'text', label: 'parent col', input: '(선택)' },
+  { key: 'note', type: 'text', label: '비고', input: '(선택)' },
+]);
+
 const tabItems = computed(() => {
   const editingCount = (form.value.columns || []).filter((c) => c.rowStatus !== 'D').length;
   const items = [
@@ -254,27 +268,7 @@ onMounted(() => list.reload());
             <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
           </dl>
 
-          <div v-else class="form-grid">
-            <div class="form-row">
-              <InTextField
-                v-model="form.def.msgDefId"
-                label="메시지 ID"
-                input="예: MT_TST0009_01"
-                layout="vertical"
-                :show-required="true"
-                :disabled="mode === 'edit'"
-              />
-              <p v-if="mode === 'edit'" class="hint">메시지 ID는 업무키라 수정할 수 없습니다.</p>
-              <p v-else-if="form.def.msgDefId && !namePatternOk" class="hint">권장: MT_&lt;화면7자&gt;_NN (예: MT_TST0009_01)</p>
-            </div>
-            <InTextField v-model="form.def.msgDefNm" label="한글명" input="메시지 설명" layout="vertical" :show-required="true" />
-            <InSelect v-model="form.def.typeCd" :options="typeEditOptions" label="Type" layout="vertical" />
-            <InSelect v-model="form.def.allowChildYn" :options="YN_EDIT_OPTIONS" label="자식 허용" layout="vertical" />
-            <InTextField v-model="form.def.parentId" label="부모 메시지 ID" input="자기참조 (선택)" layout="vertical" />
-            <InTextField v-model="form.def.childColId" label="child col" input="(선택)" layout="vertical" />
-            <InTextField v-model="form.def.parentColId" label="parent col" input="(선택)" layout="vertical" />
-            <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
-          </div>
+          <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
         <!-- 자식 (view) -->

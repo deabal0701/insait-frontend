@@ -18,6 +18,7 @@ import { YN_FILTER_OPTIONS, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
+import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
@@ -145,6 +146,18 @@ function selectColumn(c) { selectedColumn.value = c; }
 watch([mode, drawerTab], () => { selectedColumn.value = null; });
 
 const visibleCols = computed(() => (form.value.columns || []).filter((c) => c.rowStatus !== 'D'));
+
+const defFields = computed(() => [
+  { key: 'entityNm', type: 'text', label: '테이블명 (ENTITY_NM)', input: '예: EN_TST_DEMO', required: true,
+    disabled: mode.value === 'edit',
+    hint: mode.value === 'edit' ? '테이블명은 업무키라 수정할 수 없습니다.' : undefined },
+  { key: 'displayNm', type: 'text', label: '한글명', input: '엔터티 설명', required: true },
+  { key: 'unitCd', type: 'text', label: '단위코드 (Unit)', input: '예: TST', required: true },
+  { key: 'historyTypeCd', type: 'select', label: 'History 유형', options: historyEditOptions },
+  { key: 'logYn', type: 'select', label: 'Log 사용', options: YN_EDIT_OPTIONS },
+  { key: 'creatorCd', type: 'text', label: 'Creator 코드', input: '기본 WEB' },
+  { key: 'note', type: 'text', label: '비고', input: '(선택)' },
+]);
 
 const tabItems = computed(() => {
   const editingCount = visibleCols.value.length;
@@ -283,25 +296,7 @@ onMounted(() => list.reload());
             <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
           </dl>
 
-          <div v-else class="form-grid">
-            <div class="form-row">
-              <InTextField
-                v-model="form.def.entityNm"
-                label="테이블명 (ENTITY_NM)"
-                input="예: EN_TST_DEMO"
-                layout="vertical"
-                :show-required="true"
-                :disabled="mode === 'edit'"
-              />
-              <p v-if="mode === 'edit'" class="hint">테이블명은 업무키라 수정할 수 없습니다.</p>
-            </div>
-            <InTextField v-model="form.def.displayNm" label="한글명" input="엔터티 설명" layout="vertical" :show-required="true" />
-            <InTextField v-model="form.def.unitCd" label="단위코드 (Unit)" input="예: TST" layout="vertical" :show-required="true" />
-            <InSelect v-model="form.def.historyTypeCd" :options="historyEditOptions" label="History 유형" layout="vertical" />
-            <InSelect v-model="form.def.logYn" :options="YN_EDIT_OPTIONS" label="Log 사용" layout="vertical" />
-            <InTextField v-model="form.def.creatorCd" label="Creator 코드" input="기본 WEB" layout="vertical" />
-            <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
-          </div>
+          <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
         <!-- 사용처 (view) -->

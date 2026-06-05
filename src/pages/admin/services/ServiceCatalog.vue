@@ -24,11 +24,11 @@ import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
+import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InTextField from '@/components/ui/InTextField.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 import InTooltip from '@/components/ui/InTooltip.vue';
@@ -167,6 +167,20 @@ const {
 } = editor;
 
 // ─── 진단 computeds (view 전용 — detail 기반, 기존 보존) ────────────────────
+const defFields = computed(() => [
+  { key: 'svDefNm', type: 'text', label: '서비스명', input: '예: TST0001_00_R01', required: true,
+    disabled: mode.value === 'edit',
+    hint: mode.value === 'edit' ? '서비스명은 업무키(JSP target)라 수정할 수 없습니다.' : undefined },
+  { key: 'cmdClassNm', type: 'text', label: 'Command 클래스 (FQCN)', input: 'h5.biz.command.common.MultiQueryCommand', required: true,
+    hint: `예: ${cmdClassPresets.join(' · ')}` },
+  { key: 'objectId', type: 'text', label: 'objectId (소속 오브젝트)', input: '(선택, 대부분 NULL)' },
+  { key: 'txSupportYn', type: 'select', label: 'TX 지원', options: txAsyncLogOptions },
+  { key: 'asyncYn', type: 'select', label: 'Async', options: txAsyncLogOptions },
+  { key: 'useLogYn', type: 'select', label: 'Log 사용', options: txAsyncLogOptions },
+  { key: 'version', type: 'text', label: '버전', input: '(선택)' },
+  { key: 'note', type: 'text', label: '비고', input: '(선택)' },
+]);
+
 const trapBreakdown = computed(() => {
   const out = { msgMissing: 0, queryMissing: 0, useYnN: 0, compatError: 0, compatWarn: 0, paramMismatch: 0, elaMissing: 0 };
   const d = detail.value;
@@ -383,22 +397,7 @@ onMounted(() => list.reload());
         <!-- ───────── 정의 ───────── -->
         <section v-if="drawerTab === 'def'" class="svc-section">
           <!-- 편집 폼 -->
-          <div v-if="isEditing" class="form-grid">
-            <div class="form-row">
-              <InTextField v-model="form.def.svDefNm" label="서비스명" input="예: TST0001_00_R01" layout="vertical" :show-required="true" :disabled="mode === 'edit'" />
-              <p v-if="mode === 'edit'" class="muted hint">서비스명은 업무키(JSP target)라 수정할 수 없습니다.</p>
-            </div>
-            <div class="form-row">
-              <InTextField v-model="form.def.cmdClassNm" label="Command 클래스 (FQCN)" input="h5.biz.command.common.MultiQueryCommand" layout="vertical" :show-required="true" />
-              <p class="muted hint">예: {{ cmdClassPresets.join(' · ') }}</p>
-            </div>
-            <InTextField v-model="form.def.objectId" label="objectId (소속 오브젝트)" input="(선택, 대부분 NULL)" layout="vertical" />
-            <InSelect v-model="form.def.txSupportYn" :options="txAsyncLogOptions" label="TX 지원" layout="vertical" />
-            <InSelect v-model="form.def.asyncYn" :options="txAsyncLogOptions" label="Async" layout="vertical" />
-            <InSelect v-model="form.def.useLogYn" :options="txAsyncLogOptions" label="Log 사용" layout="vertical" />
-            <InTextField v-model="form.def.version" label="버전" input="(선택)" layout="vertical" />
-            <InTextField v-model="form.def.note" label="비고" input="(선택)" layout="vertical" />
-          </div>
+          <MetaDefForm v-if="isEditing" :model="form.def" :fields="defFields" />
 
           <!-- 보기 (진단 포함, 기존 보존) -->
           <dl v-else-if="detail" class="kv">

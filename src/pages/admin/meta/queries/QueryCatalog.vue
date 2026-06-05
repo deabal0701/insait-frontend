@@ -19,11 +19,11 @@ import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaCodeEditor from '@/components/feature/admin/MetaCodeEditor.vue';
+import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InTextField from '@/components/ui/InTextField.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 
@@ -122,6 +122,24 @@ const {
 } = editor;
 
 const namePatternOk = computed(() => SQL_NAME_RE.test((form.value?.def?.queryName || '').trim()));
+
+// ★ (2026-06-06) 정의 폼 필드 config → MetaDefForm. (mode/패턴에 따라 disabled/status/message/hint 산출)
+const defFields = computed(() => {
+  const badName = mode.value === 'create' && form.value.def.queryName && !namePatternOk.value;
+  return [
+    { key: 'queryName', type: 'text', label: 'SQL 이름', input: '예: TST0009_00_R01', required: true,
+      disabled: mode.value === 'edit',
+      status: badName ? 'error' : 'default',
+      message: badName ? '7-char 컨벤션: 앞 7자 + _ + 나머지 (예: TST0009_00_R01)' : undefined,
+      hint: mode.value === 'edit' ? 'SQL 이름은 서비스 자동바인딩 키라 수정할 수 없습니다.' : undefined },
+    { key: 'displayName', type: 'text', label: '한글명', input: '화면표시명', required: true },
+    { key: 'dataSource', type: 'select', label: 'DataSource', options: dsOptions, required: true },
+    { key: 'status', type: 'select', label: '바인딩 상태', options: statusOptions },
+    { key: 'useYn', type: 'select', label: '사용여부', options: useYnEditOptions },
+    { key: 'version', type: 'text', label: '버전', input: '예: 1' },
+    { key: 'note', type: 'text', label: '비고', input: '설명 (선택)' },
+  ];
+});
 
 const tabItems = computed(() => {
   const editingCount = (form.value.params || []).filter((p) => p.rowStatus !== 'D').length;
@@ -225,27 +243,7 @@ onMounted(() => list.reload());
             <dt>decorators</dt><dd>{{ detail.def.decorators || '—' }}</dd>
           </dl>
 
-          <div v-else class="form-grid">
-            <div class="form-row">
-              <InTextField
-                v-model="form.def.queryName"
-                label="SQL 이름"
-                input="예: TST0009_00_R01"
-                layout="vertical"
-                :show-required="true"
-                :disabled="mode === 'edit'"
-                :status="mode === 'create' && form.def.queryName && !namePatternOk ? 'error' : 'default'"
-                :message="mode === 'create' && form.def.queryName && !namePatternOk ? '7-char 컨벤션: 앞 7자 + _ + 나머지 (예: TST0009_00_R01)' : undefined"
-              />
-              <p v-if="mode === 'edit'" class="hint">SQL 이름은 서비스 자동바인딩 키라 수정할 수 없습니다.</p>
-            </div>
-            <InTextField v-model="form.def.displayName" label="한글명" input="화면표시명" layout="vertical" :show-required="true" />
-            <InSelect v-model="form.def.dataSource" :options="dsOptions" label="DataSource" layout="vertical" :show-required="true" />
-            <InSelect v-model="form.def.status" :options="statusOptions" label="바인딩 상태" layout="vertical" />
-            <InSelect v-model="form.def.useYn" :options="useYnEditOptions" label="사용여부" layout="vertical" />
-            <InTextField v-model="form.def.version" label="버전" input="예: 1" layout="vertical" />
-            <InTextField v-model="form.def.note" label="비고" input="설명 (선택)" layout="vertical" />
-          </div>
+          <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
         <!-- SQL 본문 -->
