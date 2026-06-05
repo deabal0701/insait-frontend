@@ -84,7 +84,10 @@ const columns = [
   { field: 'useLogYn',   label: 'Log',         sortable: true, sortKey: 'use_log_yn',   align: 'center', width: 50 },
   { field: 'modDate',    label: '변경일',      sortable: true, sortKey: 'mod_date', width: 160 },
   { field: 'note',       label: '비고' },
-  { field: 'actions',    label: '액션', align: 'center', width: 150 },
+  // ★ (2026-06-05, dspark): field 'actions' → 'ops'. 'actions' 는 헤더 슬롯명 'header-actions' 를
+  //   생성해 CatalogPage 의 페이지 헤더 슬롯(header-actions = [+신규] 버튼)과 충돌 →
+  //   [+신규] 가 이 컬럼 헤더에도 새어 들어가던 버그. 'ops' 로 회피.
+  { field: 'ops',        label: '액션', align: 'center', width: 150 },
 ];
 
 // ─── 편집 폼 옵션 / 그리드 config ─────────────────────────────────────────
@@ -354,7 +357,7 @@ onMounted(() => list.reload());
       <InTag v-if="value === 'Y'" label="Y" variant="brand" size="sm" /><span v-else class="muted">N</span>
     </template>
     <template #cell-modDate="{ value }"><span class="muted">{{ (value || '').slice(0, 10) }}</span></template>
-    <template #cell-actions="{ row }">
+    <template #cell-ops="{ row }">
       <span class="svc-row-actions" @click.stop>
         <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="gotoTester(row)">
           <template #prefix><InIcon name="chevron-right" :size="14" /></template>테스트
