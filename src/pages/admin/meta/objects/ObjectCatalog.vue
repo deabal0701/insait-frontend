@@ -199,6 +199,7 @@ onMounted(() => list.reload());
           label="검색"
           input="OBJECT_NM prefix — 예: AUT0030 (Enter 또는 [조회] 버튼)"
           layout="vertical"
+          :icon-clickable="false"
           @update:model-value="onSearch"
           @search="applyFilter"
         />

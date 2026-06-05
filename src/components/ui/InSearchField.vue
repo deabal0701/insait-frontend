@@ -23,6 +23,9 @@ const props = defineProps({
   size: { type: String, default: 'md' },                // sm / md / lg
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
+  // ★ (2026-06-05, dspark): 돋보기 아이콘 클릭으로 검색 발화 여부. false 면 장식(비클릭).
+  //   별도 [조회] 버튼이 있는 카탈로그에선 false 로 둬 검색 트리거 중복/혼란 제거.
+  iconClickable: { type: Boolean, default: true },
   helper: { type: String, default: '' },
   message: { type: String, default: '' },
   labelWidth: { type: [Number, String], default: 85 },
@@ -76,8 +79,10 @@ const message = computed(() => props.message || props.helper);
           @keyup.enter="onEnter"
         >
           <template #suffix>
-            <!-- ★ (2026-06-03, dspark): 검색 아이콘 클릭 시에도 검색 발화 (Enter 와 동일 emit). -->
+            <!-- ★ (2026-06-03, dspark): 검색 아이콘 클릭 시에도 검색 발화 (Enter 와 동일 emit).
+                 ★ (2026-06-05, dspark): iconClickable=false 면 장식 span (별도 [조회] 버튼 화면용). -->
             <button
+              v-if="iconClickable"
               type="button"
               class="in-sf__icon-btn"
               :disabled="disabled"
@@ -88,6 +93,9 @@ const message = computed(() => props.message || props.helper);
                 <img :src="SearchIcon" alt="" />
               </span>
             </button>
+            <span v-else class="in-sf__icon" aria-hidden="true">
+              <img :src="SearchIcon" alt="" />
+            </span>
           </template>
         </el-input>
       </div>

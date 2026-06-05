@@ -191,6 +191,7 @@ onMounted(() => list.reload());
           label="검색"
           input="메시지 ID prefix — 예: MT_IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
+          :icon-clickable="false"
           @update:model-value="onSearch"
           @search="applyFilter"
         />

@@ -436,8 +436,12 @@ function onBackClick() {
       <main class="main-layout__content">
         <!-- ★ (2026-05-29, dspark): :key 로 route 변경 시 강제 remount.
              SPA navigation 후 blank 화면 (HMR/lazy-import 캐시 race) 방지 — 사용자
-             "메타관리 홈 클릭 시 빈 화면 / 새로고침 시 정상" 보고에 대응. -->
-        <RouterView :key="$route.fullPath" />
+             "메타관리 홈 클릭 시 빈 화면 / 새로고침 시 정상" 보고에 대응.
+             ★ (2026-06-05, dspark): fullPath → path 로 변경. fullPath 는 query 포함이라
+             목록의 필터/페이징/정렬(URL query 동기화)마다 페이지를 remount → setup 재실행 →
+             검색 staged 등 로컬상태 소실(검색어 입력칸 비워짐) 버그. path 만 키로 쓰면
+             화면(경로) 전환 시에만 remount, query 변경엔 remount 안 함(상태 보존). -->
+        <RouterView :key="$route.path" />
       </main>
     </div>
   </div>

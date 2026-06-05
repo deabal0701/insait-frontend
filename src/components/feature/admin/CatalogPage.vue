@@ -298,15 +298,18 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
   align-items: center;
   justify-content: center;
 }
+/* 기본(정렬 비활성): 흐린 아래 삼각형으로 "정렬 가능" 표식 — 정렬 시 진하게.
+   (이전: border 없어 투명 → sortable 컬럼인지 알 수 없던 버그, 2026-06-05) */
 .arrow {
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  opacity: 0.45;
+  border-bottom: 5px solid currentColor;
+  opacity: 0.3;
 }
-.arrow--asc { border-bottom: 5px solid currentColor; opacity: 1; }
-.arrow--desc { border-top: 5px solid currentColor; opacity: 1; }
+.arrow--asc { border-top: 0; border-bottom: 5px solid currentColor; opacity: 1; }
+.arrow--desc { border-bottom: 0; border-top: 5px solid currentColor; opacity: 1; }
 
 .catalog-page__footer {
   display: flex;

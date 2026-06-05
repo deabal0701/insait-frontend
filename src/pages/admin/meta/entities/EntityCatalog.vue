@@ -201,6 +201,7 @@ onMounted(() => list.reload());
           label="검색"
           input="테이블명 prefix — 예: PHM_ (Enter 또는 [조회] 버튼)"
           layout="vertical"
+          :icon-clickable="false"
           @update:model-value="onSearch"
           @search="applyFilter"
         />

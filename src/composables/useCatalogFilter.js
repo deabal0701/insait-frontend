@@ -29,7 +29,8 @@ import { ref } from 'vue';
 
 export function useCatalogFilter({ list, initial }) {
   const blank = () => ({ ...initial });
-  const staged = ref(blank());
+  // 적용된 필터(URL→list.filter)로 staged 초기화 → 새로고침/직접진입 시 검색칸이 현재 필터를 반영.
+  const staged = ref({ ...blank(), ...(list?.filter?.value ?? {}) });
 
   function applyFilter() {
     list.setFilter({ ...staged.value }, { debounce: false });

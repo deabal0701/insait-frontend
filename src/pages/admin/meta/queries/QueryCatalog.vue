@@ -181,6 +181,7 @@ onMounted(() => list.reload());
           label="검색"
           input="SQL 이름 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
           layout="vertical"
+          :icon-clickable="false"
           @update:model-value="onSearch"
           @search="applyFilter"
         />
