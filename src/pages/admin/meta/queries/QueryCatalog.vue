@@ -12,6 +12,8 @@ import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
+import { shortCmd } from '@/utils/metaUtils';
+import { SQL_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
@@ -35,29 +37,15 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
+const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
   initial: { q: '', dataSource: '', useYn: '', status: '' },
+  chipLabels: { q: '검색', dataSource: 'DS', useYn: 'use', status: 'status' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onDs(v) { staged.value.dataSource = v; }
 function onUseYn(v) { staged.value.useYn = v; }
 
-const ynOptions = [
-  { value: '',  label: '전체' },
-  { value: 'Y', label: 'Y' },
-  { value: 'N', label: 'N' },
-];
-
-const activeFilters = computed(() => {
-  const f = list.filter.value;
-  const out = [];
-  if (f.q) out.push({ key: 'q', label: `검색: ${f.q}` });
-  if (f.dataSource) out.push({ key: 'dataSource', label: `DS: ${f.dataSource}` });
-  if (f.useYn) out.push({ key: 'useYn', label: `use: ${f.useYn}` });
-  if (f.status) out.push({ key: 'status', label: `status: ${f.status}` });
-  return out;
-});
 
 const columns = [
   { field: 'queryName',   label: 'SQL 이름', sortable: true, sortKey: 'query_name', width: 260 },
@@ -75,7 +63,6 @@ const statusOptions = [
   { value: 'ADDR', label: '주소바인딩 (ADDR)' },
 ];
 const useYnEditOptions = [{ value: 'Y', label: 'Y (사용)' }, { value: 'N', label: 'N (미사용)' }];
-const NAME_RE = /^[A-Za-z0-9]{7}_[A-Za-z0-9_]+$/;
 
 const paramColumns = [
   { key: 'queryParamSeq',       label: '순서',     kind: 'number', width: 56 },
@@ -93,6 +80,7 @@ function newParam(rows) {
 const editor = useMetaEditor({
   api: adminApi.meta.queries,
   keyField: 'queryName',
+  domainLabel: 'SQL',
   expand: ['body', 'params', 'services'],
   defaultTab: 'def',
   reload: () => list.reload(),
@@ -122,18 +110,18 @@ const editor = useMetaEditor({
     const d = f.def;
     if (!d.displayName || !d.displayName.trim()) { toast.error?.('한글명(화면표시명)은 필수입니다.'); setTab('def'); return false; }
     if (!d.dataSource || !d.dataSource.trim()) { toast.error?.('DataSource는 필수입니다.'); setTab('def'); return false; }
-    if (mode === 'create' && !NAME_RE.test((d.queryName || '').trim())) {
+    if (mode === 'create' && !SQL_NAME_RE.test((d.queryName || '').trim())) {
       toast.error?.('SQL 이름은 7-char 컨벤션을 따라야 합니다 (예: TST0009_00_R01).'); setTab('def'); return false;
     }
     return true;
   },
 });
 const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
   openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
 } = editor;
 
-const namePatternOk = computed(() => NAME_RE.test((form.value?.def?.queryName || '').trim()));
+const namePatternOk = computed(() => SQL_NAME_RE.test((form.value?.def?.queryName || '').trim()));
 
 const tabItems = computed(() => {
   const editingCount = (form.value.params || []).filter((p) => p.rowStatus !== 'D').length;
@@ -146,13 +134,6 @@ const tabItems = computed(() => {
   return items;
 });
 
-const modalTitle = computed(() => {
-  if (mode.value === 'create') return 'SQL 신규 등록';
-  if (mode.value === 'edit')   return `SQL 수정 — ${selected.value?.queryName}`;
-  return `SQL 상세 — ${selected.value?.queryName}`;
-});
-
-function shortCmd(fqcn) { return fqcn ? fqcn.split('.').pop() : ''; }
 
 onMounted(() => list.reload());
 </script>
@@ -196,7 +177,7 @@ onMounted(() => list.reload());
         />
         <InSelect
           :model-value="staged.useYn"
-          :options="ynOptions"
+          :options="YN_FILTER_OPTIONS"
           label="Use"
           input="전체"
           layout="vertical"

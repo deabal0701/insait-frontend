@@ -27,6 +27,7 @@ export function useMetaEditor(opts) {
   const {
     api, keyField, expand, blankForm, toForm, toPayload,
     validate, defaultTab = 'def', createTab, reload,
+    domainLabel = '항목',   // ★ (2026-06-05) modalTitle 공통화용 도메인 라벨 (예: 'SQL'·'메시지')
   } = opts;
 
   const toast = useToast();
@@ -42,6 +43,13 @@ export function useMetaEditor(opts) {
 
   const isEditing = computed(() => mode.value === 'create' || mode.value === 'edit');
   const keyOf = (row) => (row ? row[keyField] : undefined);
+
+  // ★ (2026-06-05) modalTitle 공통화 — 5개 카탈로그 동일 패턴 흡수. domainLabel + 업무키.
+  const modalTitle = computed(() => {
+    if (mode.value === 'create') return `${domainLabel} 신규 등록`;
+    const k = keyOf(selected.value) ?? '';
+    return mode.value === 'edit' ? `${domainLabel} 수정 — ${k}` : `${domainLabel} 상세 — ${k}`;
+  });
 
   async function openDetail(row) {
     selected.value = row;
@@ -136,6 +144,7 @@ export function useMetaEditor(opts) {
 
   return {
     mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing,
+    modalTitle,
     openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete, copyJson,
   };
 }
