@@ -122,14 +122,6 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
         @close="emit('filter-remove', f.key)"
       />
       <slot name="active-filters" />
-      <InButton
-        v-if="activeFilters.length"
-        size="sm"
-        variant="text"
-        :left-icon-show="false"
-        :right-icon-show="false"
-        @click="onResetFilter"
-      >전체 해제</InButton>
     </div>
 
     <!-- 테이블 -->
