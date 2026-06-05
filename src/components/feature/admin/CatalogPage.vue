@@ -53,7 +53,7 @@ const props = defineProps({
   selectedRow: { type: [String, Number, Object], default: null },
 });
 
-const emit = defineEmits(['row-click', 'filter-remove', 'retry', 'reset-filter']);
+const emit = defineEmits(['row-click', 'filter-remove', 'retry']);
 
 const totalLabel = computed(() => {
   const total = props.list.total?.value ?? 0;
@@ -85,7 +85,6 @@ function onRowClick({ row, index }) {
 
 function onPageChange(p) { props.list.setPage?.(p); }
 function onSizeChange(s) { props.list.setSize?.(s); }
-function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
 </script>
 
 <template>
@@ -184,12 +183,8 @@ function onResetFilter() { props.list.resetFilter?.(); emit('reset-filter'); }
             <slot name="empty">
               <InEmptyState
                 title="결과가 없습니다"
-                description="필터를 조정하거나 전체 해제 후 다시 조회하세요."
-              >
-                <template #action>
-                  <InButton v-if="activeFilters.length" :left-icon-show="false" :right-icon-show="false" @click="onResetFilter">필터 전체 해제</InButton>
-                </template>
-              </InEmptyState>
+                description="필터를 조정하거나 칩의 ✕ / [초기화] 후 다시 조회하세요."
+              />
             </slot>
           </template>
         </InTable>
