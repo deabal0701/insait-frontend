@@ -30,8 +30,15 @@ const ADMIN_SCREENS = [
   { object: 'IST0030', path: 'ist0030', menuId: 'SD_MSG',   title: 'IST0030 메시지 관리',  view: 'MessageCatalog' },
   { object: 'IST0050', path: 'ist0050', menuId: 'SD_MSG1',  title: 'IST0050 서비스 카탈로그', view: 'ServiceCatalog' },
   { object: 'AUT0030', path: 'aut0030', menuId: 'SD_OBJ',   title: 'AUT0030 오브젝트 관리', view: 'ObjectCatalog' },
-  { object: 'AUT0040', path: 'aut0040', menuId: '',         title: 'AUT0040 권한 관리',    view: 'Placeholder' },
-  { object: 'AUT0050', path: 'aut0050', menuId: '',         title: 'AUT0050 메뉴 관리',    view: 'Placeholder' },
+  // ★ (2026-06-07, dspark): 「사용자와 접근제어」 7 화면 메뉴 구성 — 라우트 골격(Placeholder).
+  //   설계서 = 02-tobe/04-admin-lane/access-control/01~07. 화면 본체는 차수로 교체 예정.
+  { object: 'AUT0010', path: 'aut0010', menuId: 'SA_USER',  title: 'AUT0010 사용자 관리',     view: 'Placeholder' },
+  { object: 'AUT0020', path: 'aut0020', menuId: 'SA_GROUP', title: 'AUT0020 사용자그룹 관리', view: 'Placeholder' },
+  { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'Placeholder' },
+  { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'Placeholder' },
+  { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'Placeholder' },
+  { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'Placeholder' },
+  { object: 'AUT0050', path: 'aut0050', menuId: 'SA_MENU',  title: 'AUT0050 메뉴 관리',       view: 'Placeholder' },
   { object: 'FRM0090', path: 'frm0090', menuId: 'SD_PDS',   title: 'FRM0090 파일자료실',   view: 'Placeholder' },
   { object: 'SETTINGS', path: 'settings', menuId: '',       title: '환경 설정',            view: 'SettingsPage' },
   { object: 'COMPONENTS', path: 'components', menuId: '',   title: '컴포넌트 카탈로그',     view: 'ComponentsCatalog' },

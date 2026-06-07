@@ -44,7 +44,9 @@ const bentoExpanded = ref({ all: true });
 // admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
 const ADMIN_PARENT = {
   CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
-  AUT0030: 'meta', AUT0040: 'auth', AUT0050: 'auth',
+  AUT0030: 'meta',
+  // ★ (2026-06-07, dspark): 「사용자와 접근제어」(auth) 그룹 = AS-IS SYS_ACCESS 7 화면.
+  AUT0010: 'auth', AUT0020: 'auth', AUT0040: 'auth', AUT0060: 'auth', AUT0070: 'auth', AUT0100: 'auth', AUT0050: 'auth',
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
@@ -289,12 +291,20 @@ const items = computed(() => {
           ],
         },
         {
+          // ★ (2026-06-07, dspark): AS-IS 「사용자와 접근제어」(SYS_ACCESS) 7 화면 정합.
+          //   순서 = 논리 흐름(주체→부여→기준→외부→대상): 사용자·그룹 → 권한·조직권한·권한기준
+          //   → 외부사용자 → 메뉴. 설계서 = 04-admin-lane/access-control/01~07. 현재 전부 Placeholder.
           key: 'auth',
-          label: '권한관리',
+          label: '사용자와 접근제어',
           expanded: settingsExpanded.value.auth,
           children: [
-            { key: 'AUT0040', label: '권한 관리', active: current === 'AUT0040' },
-            { key: 'AUT0050', label: '메뉴 관리', active: current === 'AUT0050' },
+            { key: 'AUT0010', label: '사용자 관리',     active: current === 'AUT0010' },
+            { key: 'AUT0020', label: '사용자그룹 관리', active: current === 'AUT0020' },
+            { key: 'AUT0040', label: '권한 관리',       active: current === 'AUT0040' },
+            { key: 'AUT0060', label: '조직권한 관리',   active: current === 'AUT0060' },
+            { key: 'AUT0070', label: '권한기준 관리',   active: current === 'AUT0070' },
+            { key: 'AUT0100', label: '외부사용자 관리', active: current === 'AUT0100' },
+            { key: 'AUT0050', label: '메뉴 관리',       active: current === 'AUT0050' },
           ],
         },
         {
