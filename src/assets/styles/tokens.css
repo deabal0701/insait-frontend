@@ -137,8 +137,11 @@
   --in-z-modal:       1000;
   --in-z-popover:     1100;
   --in-z-tooltip:     1200;
-  --in-z-toast:       1300;
-  --in-z-notification:1400;
+  /* ★ (2026-06-07, dspark): toast/notification = 전역 알림 계층. Element Plus 의 JS 관리 popper
+   *   (z-index 2000+ 부터 증가, 프로젝트에 --el-index-* override 없음)보다 위에 떠야 select 드롭다운·
+   *   달력이 열린 상태에서도 토스트가 가려지지 않음. InToastHost 기존 하드코딩 9999 와 동일 의도(토큰화). */
+  --in-z-toast:       9000;
+  --in-z-notification:9100;
 
   /* === Animation === */
   --in-duration-fast:     100ms;

@@ -83,8 +83,10 @@ const placement = computed(() => {
   font-family: var(--in-font-family-body);
 }
 .in-tooltip__body {
-  /* ★ (2026-06-07, dspark): primitive(--in-iblue-50) → semantic alias. white 테마 동일(#e1f5fc) + green 테마 추종 */
-  background: var(--in-bg-accent-brand);
+  /* ★ (2026-06-07, dspark): primitive(--in-iblue-50) → 브랜드 램프 semantic alias.
+   *   --in-bg-accent-brand 는 일부 정의에서 alpha(99) 가 섞여 반투명 위험 → 항상 불투명한
+   *   --in-brand-50 (white #e1f5fc / green #e4faf0) 사용. 기존 불투명 시각 보존 + green 테마 추종. */
+  background: var(--in-brand-50);
   color: var(--in-text-default);
   font-size: var(--in-font-size-sm);
   line-height: var(--in-line-height-sm);
