@@ -113,11 +113,12 @@ const iconSrc = computed(() => (internalVisible.value ? VisibilityOnIcon : Visib
           @update:model-value="(v) => $emit('update:modelValue', v)"
         >
           <template #suffix>
+            <!-- ★ (2026-06-07, dspark): aria 상태를 prop(visible) 이 아닌 실제 상태(internalVisible)에 바인딩 — uncontrolled 사용 시 desync 교정 -->
             <button
               type="button"
               class="in-pw__visibility"
-              :aria-label="visible ? '비밀번호 가리기' : '비밀번호 보기'"
-              :aria-pressed="visible"
+              :aria-label="internalVisible ? '비밀번호 가리기' : '비밀번호 보기'"
+              :aria-pressed="internalVisible"
               :disabled="disabled"
               @click="toggleVisible"
             >

@@ -33,7 +33,7 @@ const { remove } = useToast();
   top: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: var(--in-z-toast);   /* ★ (2026-06-07, dspark): 9999 매직넘버 → 토큰 (1300, modal 1000 위) */
   display: flex;
   flex-direction: column;
   align-items: center; /* 스택 가운데 정렬 */

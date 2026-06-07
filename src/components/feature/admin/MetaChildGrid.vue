@@ -60,8 +60,16 @@ function removeRow(r) {
   else r.rowStatus = 'D';                                // 기존행 D 마크
 }
 
-function rowKey(r, i) {
-  return (props.keyField && r[props.keyField] != null) ? r[props.keyField] : `new-${i}`;
+// ★ (2026-06-07, dspark): 기존 `new-${i}` 는 visibleRows 인덱스 기반이라, 위 행을 soft-delete 하면
+//   아래 신규행들의 :key 가 밀려 바뀜 → Vue 가 <input> 을 teardown/재생성 → 입력 중 포커스 소실.
+//   행 객체 동일성에 묶인 안정 uid(WeakMap)로 교체 — payload 오염(toPayload 가 rows 직송) 없이 key 안정성 확보.
+const uidMap = new WeakMap();
+let uidSeq = 0;
+function rowKey(r) {
+  if (props.keyField && r[props.keyField] != null) return r[props.keyField];
+  let u = uidMap.get(r);
+  if (u == null) { u = ++uidSeq; uidMap.set(r, u); }
+  return `uid-${u}`;
 }
 
 function setCheckbox(r, key, checked) {
@@ -84,7 +92,7 @@ function setCheckbox(r, key, checked) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(r, i) in visibleRows" :key="rowKey(r, i)" :class="{ 'meta-grid__row--sel': selectable && r === selectedRow }">
+        <tr v-for="r in visibleRows" :key="rowKey(r)" :class="{ 'meta-grid__row--sel': selectable && r === selectedRow }">
           <td v-if="selectable" class="ctr">
             <input type="radio" :checked="r === selectedRow" @change="emit('row-select', r)" />
           </td>

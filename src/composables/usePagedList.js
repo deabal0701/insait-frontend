@@ -57,11 +57,14 @@ export function usePagedList(options) {
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)));
 
   let debounceTimer = null;
-  let inflightAbort = null;
+  // ★ (2026-06-07, dspark): 기존 inflightAbort 는 AbortController 가 한 번도 할당되지 않아
+  //   abort() 가 죽은 코드였고, 겹친 reload 가 last-response-wins 로 서로 덮어쓰는 경합이 있었음.
+  //   fetcher 가 AbortSignal 을 안 받아도 되는 단조 증가 reqSeq 가드로 교체 — 최신 요청 결과만 반영.
+  let reqSeq = 0;
 
   async function reload({ silent = false } = {}) {
     if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    if (inflightAbort) inflightAbort.abort();
+    const myReq = ++reqSeq;
 
     if (!silent) loading.value = true;
     error.value = null;
@@ -74,15 +77,17 @@ export function usePagedList(options) {
         ...extraParams(),
       };
       const data = await fetcher(params);
+      if (myReq !== reqSeq) return;            // 더 새로운 요청이 진행 중 — stale 결과 폐기
       rows.value = data?.content ?? [];
       total.value = data?.total ?? 0;
       if (syncUrl) writeToUrl(router, route, page.value, size.value, filter.value, sort.value);
     } catch (e) {
+      if (myReq !== reqSeq) return;            // stale 요청의 에러도 무시
       error.value = normalizeError(e);
       rows.value = [];
       total.value = 0;
     } finally {
-      loading.value = false;
+      if (myReq === reqSeq) loading.value = false; // 최신 요청만 로딩 해제 (이전 요청이 늦게 끝나도 로딩 유지)
     }
   }
 

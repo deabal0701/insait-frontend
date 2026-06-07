@@ -66,6 +66,10 @@ const gridRef = ref(null);
 const instance = shallowRef(null);
 const themeStore = useThemeStore();
 
+// ★ (2026-06-07, dspark): self-managed(서비스 props) vs controlled(:data) 모드 판별.
+//   두 데이터 소스(entity.rows / props.data)가 서로 resetData 로 덮어쓰지 않도록 배타 가드에 사용.
+const selfManaged = computed(() => !!props.retrieveServiceId);
+
 // ★ (2026-06-02, dspark): [옵션 1] 조회·저장 흐름 내부 흡수. useEntityGrid 를 그대로
 //   재사용하되 grid 인스턴스를 본 컴포넌트 내부에서 공급(getInstance 게터)한다. 따라서
 //   화면은 useEntityGrid 를 직접 import 하지 않는다 — IBSheet sheet 객체처럼 InDataTable
@@ -84,9 +88,10 @@ const entity = useEntityGrid({
 });
 
 // self-managed 조회/재조회 결과(entity.rows)를 그리드에 반영. controlled 모드(:data)는
-// 아래 watch(() => props.data) 가 담당 — 둘 중 실제 변하는 쪽만 동작한다.
+// 아래 watch(() => props.data) 가 담당.
+// ★ (2026-06-07, dspark): selfManaged 일 때만 entity.rows → resetData (이중 바인딩 경합 차단).
 watch(entity.rows, (r) => {
-  if (instance.value) instance.value.resetData(r || []);
+  if (instance.value && selfManaged.value) instance.value.resetData(r || []);
 });
 
 const GRID_EVENT_MAP = [
@@ -108,28 +113,40 @@ const GRID_EVENT_MAP = [
 
 const resolvedColumns = computed(() => resolveColumnFormats(props.columns));
 
+// ★ (2026-06-07, dspark): build 재진입 락. 기존엔 instance 가드가 await loadGrid() '이전'에만
+//   검사돼, 동시 rebuild(options/rowKey/bodyHeight/theme watch 가 겹칠 때) 두 개의 Grid 가
+//   같은 DOM 에 생성되고 첫 인스턴스가 destroy 안 돼 누수+이벤트 중복됐음. 진행 중 build 약속을
+//   공유하고 await 후 instance 를 재확인해 단일 생성 보장.
+let buildLock = null;
 async function build() {
   if (!gridRef.value || instance.value) return;
-  const Grid = await loadGrid();
-  const opts = {
-    el: gridRef.value,
-    columns: resolvedColumns.value,
-    data: props.data,
-    ...(props.bodyHeight != null ? { bodyHeight: props.bodyHeight } : {}),
-    ...(props.rowKey ? { keyColumnName: props.rowKey } : {}),
-    ...props.options,
-  };
-  instance.value = new Grid(opts);
-  GRID_EVENT_MAP.forEach(([gridName, emitName]) => {
-    try {
-      instance.value.on(gridName, (ev) => emit(emitName, ev));
-    } catch (_) { /* 일부 이벤트는 버전별 미지원 — 무시 */ }
-  });
-  emit('instance-ready', instance.value);
+  if (buildLock) return buildLock;
+  buildLock = (async () => {
+    const Grid = await loadGrid();
+    if (!gridRef.value || instance.value) return;   // await 후 재확인 (그 사이 unmount/생성 가능)
+    const opts = {
+      el: gridRef.value,
+      columns: resolvedColumns.value,
+      data: selfManaged.value ? (entity.rows.value || []) : props.data,
+      ...(props.bodyHeight != null ? { bodyHeight: props.bodyHeight } : {}),
+      ...(props.rowKey ? { keyColumnName: props.rowKey } : {}),
+      ...props.options,
+    };
+    instance.value = new Grid(opts);
+    GRID_EVENT_MAP.forEach(([gridName, emitName]) => {
+      try {
+        instance.value.on(gridName, (ev) => emit(emitName, ev));
+      } catch (_) { /* 일부 이벤트는 버전별 미지원 — 무시 */ }
+    });
+    emit('instance-ready', instance.value);
+  })();
+  try { await buildLock; } finally { buildLock = null; }
 }
 
+// ★ (2026-06-07, dspark): controlled(:data) 모드에서만 props.data → resetData.
+//   selfManaged 면 entity.rows watch 가 소유 (이중 바인딩 경합 차단).
 watch(() => props.data, (next) => {
-  if (!instance.value) return;
+  if (!instance.value || selfManaged.value) return;
   instance.value.resetData(next || []);
 });
 
@@ -194,7 +211,12 @@ function addRow(row = {}, opts = {}) {
   let at = opts.at;
   if (at == null && typeof g.getFocusedCell === 'function' && typeof g.getIndexOfRow === 'function') {
     const focused = g.getFocusedCell();
-    if (focused && focused.rowKey != null) at = g.getIndexOfRow(focused.rowKey) + 1;
+    // ★ (2026-06-07, dspark): getIndexOfRow 가 -1(행 못 찾음) 이면 at=0 으로 맨 위 삽입되던 버그 →
+    //   유효 인덱스일 때만 다음 위치 지정, 아니면 맨 끝(append).
+    if (focused && focused.rowKey != null) {
+      const fi = g.getIndexOfRow(focused.rowKey);
+      if (fi >= 0) at = fi + 1;
+    }
   }
   g.appendRow(row, { at, focus: opts.focus !== false });
 }

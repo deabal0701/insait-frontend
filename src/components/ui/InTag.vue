@@ -72,20 +72,21 @@ const emit = defineEmits(['close']);
   color: var(--in-text-brand);
   border-color: var(--in-border-brand);
 }
+/* ★ (2026-06-07, dspark): rgba/#hex 리터럴 → semantic 토큰 (InToast 와 정합, 테마 추종). */
 .in-tag--success {
-  background: rgba(55, 174, 52, 0.1);
-  color: #37ae34;
-  border-color: #37ae34;
+  background: var(--in-surface-success);
+  color: var(--in-text-success);
+  border-color: var(--in-border-success);
 }
 .in-tag--warning {
-  background: rgba(255, 168, 48, 0.1);
-  color: var(--in-icon-info-accent);
-  border-color: var(--in-icon-info-accent);
+  background: var(--in-surface-warning);
+  color: var(--in-text-warning);
+  border-color: var(--in-border-warning);
 }
 .in-tag--error {
-  background: rgba(227, 49, 49, 0.1);
+  background: var(--in-surface-error);
   color: var(--in-text-error);
-  border-color: var(--in-text-error);
+  border-color: var(--in-border-error);
 }
 
 .in-tag__close {

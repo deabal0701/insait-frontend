@@ -284,9 +284,7 @@ function onItemClick(it, idx) {
 
 .in-lnb__item--active .in-lnb__icon-box {
   background: var(--in-bg-state-hover);          /* Surface/Action/Bolder #0488c7 */
-  box-shadow:
-    1px 4px 5px 0 #1cb0ef,
-    inset 2px 2px 4px 0 #1c759b4d;
+  box-shadow: var(--in-shadow-1depon);   /* ★ (2026-06-07, dspark): 하드코딩 #1cb0ef → 토큰 (green 테마 추종) */
 }
 
 .in-lnb__icon {

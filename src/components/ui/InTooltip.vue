@@ -83,7 +83,8 @@ const placement = computed(() => {
   font-family: var(--in-font-family-body);
 }
 .in-tooltip__body {
-  background: var(--in-iblue-50);
+  /* ★ (2026-06-07, dspark): primitive(--in-iblue-50) → semantic alias. white 테마 동일(#e1f5fc) + green 테마 추종 */
+  background: var(--in-bg-accent-brand);
   color: var(--in-text-default);
   font-size: var(--in-font-size-sm);
   line-height: var(--in-line-height-sm);

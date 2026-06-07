@@ -16,14 +16,20 @@ let seq = 0;
 function push(status, message, opts = {}) {
   const id = ++seq;
   const duration = opts.duration ?? 3000;
-  state.toasts.push({ id, status, message: String(message ?? ''), closable: opts.closable !== false });
-  if (duration > 0) setTimeout(() => remove(id), duration);
+  // ★ (2026-06-07, dspark): 타이머 핸들을 토스트에 보관 → 수동 닫기(remove) 시 clearTimeout 으로 취소.
+  //   기존엔 핸들을 안 잡아 조기 제거 후에도 타이머가 살아 누적·중복 splice 시도가 있었음.
+  const toast = { id, status, message: String(message ?? ''), closable: opts.closable !== false, _timer: null };
+  state.toasts.push(toast);
+  if (duration > 0) toast._timer = setTimeout(() => remove(id), duration);
   return id;
 }
 
 function remove(id) {
   const i = state.toasts.findIndex((t) => t.id === id);
-  if (i >= 0) state.toasts.splice(i, 1);
+  if (i >= 0) {
+    const [removed] = state.toasts.splice(i, 1);
+    if (removed && removed._timer) clearTimeout(removed._timer);
+  }
 }
 
 /** InToastHost 전용 — 렌더할 큐 구독. */

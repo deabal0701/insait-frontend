@@ -201,7 +201,8 @@ onMounted(() => list.reload());
           @update:model-value="onSearch"
           @search="applyFilter"
         />
-        <InSelect :model-value="staged.logYn" :options="ynOptions" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onLog" />
+        <!-- ★ (2026-06-07, dspark): 미선언 변수 ynOptions → YN_FILTER_OPTIONS (Log 필터 옵션이 undefined 라 깨지던 버그 수정) -->
+        <InSelect :model-value="staged.logYn" :options="YN_FILTER_OPTIONS" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onLog" />
         <InButton class="e-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
         <InButton class="e-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>

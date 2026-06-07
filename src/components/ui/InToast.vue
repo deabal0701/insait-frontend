@@ -37,7 +37,7 @@ const props = defineProps({
   closable: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['close']);
+defineEmits(['close']);   // close 는 template 의 $emit('close') 로 직접 발신
 
 const statusIcon = computed(() => {
   switch (props.status) {
@@ -47,8 +47,6 @@ const statusIcon = computed(() => {
     default:        return CheckCircleIcon;       // Enabled — brand check-circle
   }
 });
-
-void emit;  // 명시 — close emit 은 template 에서 사용
 </script>
 
 <template>

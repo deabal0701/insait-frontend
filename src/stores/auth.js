@@ -38,7 +38,10 @@ export const useAuthStore = defineStore('auth', {
         { refreshToken: this.refreshToken },
         { headers: { 'Content-Type': 'application/json' } },
       );
-      this.setAccessToken(resp.data?.accessToken);
+      // ★ (2026-06-07, dspark): 토큰 누락 응답에 조용히 로그아웃되지 않도록 throw (interceptor refresh 와 정합)
+      const t = resp.data?.accessToken;
+      if (!t) throw new Error('refresh returned no accessToken');
+      this.setAccessToken(t);
       return resp.data;
     },
     async logout() {

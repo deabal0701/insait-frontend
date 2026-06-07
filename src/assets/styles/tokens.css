@@ -86,6 +86,11 @@
   --in-surface-error:      #e3313114; /* Figma Surface/Error  (#e33131 + alpha 14) */
   --in-surface-warning:    #ed6c0214; /* Figma Surface/Warning */
   --in-surface-success:    #37ae3414; /* Figma Surface/Success */
+  /* ★ (2026-06-07, dspark): ServiceCatalog 진단 행 배경 — 컴포넌트가 미정의 토큰을 참조해
+   *   항상 hex fallback 으로 빠지던 정합 결손 해소. 상태 배경이라 테마 고정(현행 시각 보존). */
+  --in-surface-accent-success: #f0f9ff;
+  --in-surface-accent-warning: #fffbeb;
+  --in-surface-accent-error:   #fef2f2;
 
   /* === Border === */
   --in-border-default:        #e2e2e2; /* Figma Border/Default */
@@ -153,6 +158,7 @@
 
   /* === Shadow === */
   --in-shadow-elev-1: 1px 2px 4px 0 #d4b7b714;
+  --in-shadow-elev-2: 0 2px 4px 0 #566ab10d;   /* ★ (2026-06-07, dspark): Elevation Light/2 — InCard 등 raw rgba(86,106,177,.05) 하드코딩 제거용 */
   --in-shadow-elev-3: 0 4px 10px 0 #00000014;
   --in-shadow-1depon: 1px 4px 5px 0 #1cb0ef, inset 2px 2px 4px 0 #1c759b4d;
 

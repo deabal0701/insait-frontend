@@ -42,19 +42,24 @@ async function submit() {
   state.value = 'submitting';
   errorMsg.value = '';
 
+  // ★ (2026-06-07, dspark): rememberId persist 를 login() 호출 전에 확정.
+  //   login() 내부 router.replace 로 화면이 전환되며 이 컴포넌트가 unmount 되므로,
+  //   navigation 이후 코드의 실행 보장이 약함 → 저장 부수효과를 먼저 처리.
+  const trimmedId = userId.value.trim();
+  if (rememberId.value) {
+    localStorage.setItem(REMEMBER_KEY, trimmedId);
+  } else {
+    localStorage.removeItem(REMEMBER_KEY);
+  }
+
   try {
     await login({
-      loginId: userId.value.trim(),
+      loginId: trimmedId,
       password: password.value,
       companyCd: companyCd.value.trim() || '01',
       localeCd: 'KO',
     });
     state.value = 'success';
-    if (rememberId.value) {
-      localStorage.setItem(REMEMBER_KEY, userId.value.trim());
-    } else {
-      localStorage.removeItem(REMEMBER_KEY);
-    }
   } catch (e) {
     state.value = 'error';
     errorMsg.value = e?.response?.data?.error || e?.message || t('login.failed');

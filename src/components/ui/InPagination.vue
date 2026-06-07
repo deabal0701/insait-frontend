@@ -15,7 +15,7 @@
  *   - emits:  update:modelValue · change(page)
  *   - 페이지 수 max 초과 시 ellipsis (…) 자동 삽입
  */
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import ArrowLeftIcon from '@/assets/icons/arrow-left.svg';
 import ArrowRightIcon from '@/assets/icons/arrow-right.svg';
 
@@ -38,7 +38,9 @@ const pages = computed(() => {
 
   if (tp <= max) return Array.from({ length: tp }, (_, i) => i + 1);
 
-  const side = Math.max(1, Math.floor((max - 3) / 2));
+  // ★ (2026-06-07, dspark): first/last(2) + ellipsis(2) + current 을 고려해 (max-5)/2.
+  //   기존 (max-3)/2 는 maxVisible=7 일 때 최대 9개 버튼이 노출돼 maxVisible contract 위반.
+  const side = Math.max(1, Math.floor((max - 5) / 2));
   const result = [];
   const startWindow = Math.max(2, cur - side);
   const endWindow = Math.min(tp - 1, cur + side);
@@ -61,6 +63,15 @@ function go(p) {
 
 const prevDisabled = computed(() => props.disabled || props.modelValue <= 1);
 const nextDisabled = computed(() => props.disabled || props.modelValue >= totalPages.value);
+
+// ★ (2026-06-07, dspark): total/pageSize 축소로 현재 페이지가 마지막 페이지를 초과하면
+//   마지막 유효 페이지로 보정 emit (없으면 데이터 없는 페이지에 갇힘).
+watch(totalPages, (tp) => {
+  if (props.modelValue > tp) {
+    emit('update:modelValue', tp);
+    emit('change', tp);
+  }
+});
 </script>
 
 <template>

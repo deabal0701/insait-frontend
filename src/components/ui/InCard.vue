@@ -46,7 +46,7 @@ defineProps({
   background: var(--in-surface-overlay);                   /* Surface/Overlay/Default #ffffff */
   border: 1px solid var(--in-border-default);              /* Border/Default #e2e2e2 */
   border-radius: var(--in-radius-sm);                       /* Corner/sm 8px */
-  box-shadow: 0 2px 4px 0 rgba(86, 106, 177, 0.05);        /* Elevation Light/2 */
+  box-shadow: var(--in-shadow-elev-2);                     /* ★ (2026-06-07, dspark): raw rgba → 토큰 (Elevation Light/2) */
   padding: 20px 20px 15px 24px;                            /* Figma 정합 */
   display: flex;
   flex-direction: column;

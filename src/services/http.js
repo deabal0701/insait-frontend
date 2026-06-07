@@ -11,7 +11,8 @@ function clearAndRedirectToLogin(auth) {
   auth.clear();
   const current = router.currentRoute.value;
   if (current.name !== 'Login') {
-    router.push({ name: 'Login', query: { redirect: current.fullPath } });
+    // ★ (2026-06-07, dspark): push → replace — 만료된 보호 URL 을 history 에 남기지 않음 (뒤로가기 바운스 방지)
+    router.replace({ name: 'Login', query: { redirect: current.fullPath } });
   }
 }
 

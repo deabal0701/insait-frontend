@@ -11,7 +11,10 @@ export function useAuth() {
 
   async function login(payload) {
     const result = await auth.login(payload);
-    const redirect = typeof route.query?.redirect === 'string' ? route.query.redirect : '/';
+    const raw = typeof route.query?.redirect === 'string' ? route.query.redirect : '/';
+    // ★ (2026-06-07, dspark): open-redirect 방어 — 내부 절대경로(/path)만 허용.
+    //   '//host'(프로토콜 상대), 'http(s):', 백슬래시 등 외부 URL 은 '/' 로 폴백.
+    const redirect = /^\/(?!\/)/.test(raw) && !raw.includes('\\') ? raw : '/';
     await router.replace(redirect);
     return result;
   }

@@ -1,6 +1,5 @@
 <script setup>
-import { computed } from 'vue';
-import InIcon from '@/components/ui/InIcon.vue';
+import { computed, ref } from 'vue';
 
 /**
  * InNumberField — Figma 노드 ID = TBD (design-system v2 에 미정의, v1 SSOT)
@@ -59,9 +58,12 @@ const onInput = (e) => {
   if (!isNaN(n)) setValue(n);
 };
 
+// ★ (2026-06-07, dspark): 편집 중(focused)엔 천단위 콤마 포맷 미적용 — 타이핑마다 콤마가 끼어
+//   caret(커서)이 튀던 문제 회피. blur 시 다시 포맷.
+const focused = ref(false);
 const display = computed(() => {
   if (props.modelValue == null) return '';
-  if (props.formatComma) return props.modelValue.toLocaleString();
+  if (props.formatComma && !focused.value) return props.modelValue.toLocaleString();
   return String(props.modelValue);
 });
 
@@ -82,7 +84,8 @@ const cls = computed(() => ['in-num', `in-num--${props.size}`, {
       aria-label="감소"
       @click="dec"
     >
-      <InIcon name="close" :size="12" />
+      <!-- ★ (2026-06-07, dspark): registry 에 minus 아이콘 부재 + 임의 SVG 작성 금지(feedback) → 텍스트 − 글리프. close(X) 오용 교정 -->
+      <span class="in-num__sign" aria-hidden="true">−</span>
     </button>
     <input
       type="text"
@@ -93,6 +96,8 @@ const cls = computed(() => ['in-num', `in-num--${props.size}`, {
       :disabled="disabled"
       :readonly="readonly"
       @input="onInput"
+      @focus="focused = true"
+      @blur="focused = false"
     />
     <button
       v-if="showControls"
@@ -102,7 +107,7 @@ const cls = computed(() => ['in-num', `in-num--${props.size}`, {
       aria-label="증가"
       @click="inc"
     >
-      <InIcon name="add" :size="12" />
+      <span class="in-num__sign" aria-hidden="true">+</span>
     </button>
   </div>
 </template>
@@ -136,6 +141,7 @@ const cls = computed(() => ['in-num', `in-num--${props.size}`, {
 }
 .in-num__btn:hover:not(:disabled) { color: var(--in-text-brand); }
 .in-num__btn:disabled { color: var(--in-icon-subtle); cursor: not-allowed; }
+.in-num__sign { font-size: 15px; line-height: 1; font-weight: 400; user-select: none; }
 
 .in-num__input {
   flex: 1 1 0;

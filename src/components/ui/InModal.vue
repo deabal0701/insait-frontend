@@ -1,3 +1,11 @@
+<script>
+// ★ (2026-06-07, dspark): 모듈 스코프 — 모든 InModal 인스턴스가 공유하는 "열린 모달 스택".
+//   (1) ESC 가 최상단(마지막에 열린) 모달만 닫도록 하여, drawer 위에 confirm 이 떠 있을 때
+//       ESC 한 번에 둘 다 닫히던 문제 방지. (2) body 스크롤 잠금을 refcount — 스택이 비어야 해제.
+const openModalStack = [];
+let modalSeq = 0;
+</script>
+
 <script setup>
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import CloseIcon from '@/assets/icons/close.svg';
@@ -69,6 +77,7 @@ function onCancel() {
 // W6 #3 — focus trap (Tab cycle + ESC + restore previous focus)
 const modalEl = ref(null);
 let previouslyFocused = null;
+const modalId = ++modalSeq;   // ★ (2026-06-07, dspark): 인스턴스 식별자 — ESC 스택 최상단 판별용
 
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
@@ -104,6 +113,8 @@ function trapTab(e) {
 
 function onKeydown(e) {
   if (!props.modelValue) return;
+  // ★ (2026-06-07, dspark): 최상단 모달만 키 처리 — 하위(스택 아래) 모달은 ESC/Tab 양보.
+  if (openModalStack.length && openModalStack[openModalStack.length - 1] !== modalId) return;
   if (e.key === 'Escape') {
     close();
   } else if (e.key === 'Tab') {
@@ -111,28 +122,44 @@ function onKeydown(e) {
   }
 }
 
-watch(() => props.modelValue, (v) => {
+// ★ (2026-06-07, dspark): 스크롤 잠금 + 포커스 트랩 진입/복원을 watch 단독이 아니라 헬퍼로 분리.
+//   기존 watch(no immediate) 의 두 결함을 교정: (1) v-if 로 modelValue=true 인 채 '마운트되며
+//   열리는' 일반 패턴(예: EntityCatalog 삭제 confirm)에서 스크롤 잠금·초기 포커스가 전혀 안 걸림,
+//   (2) 열린 채 unmount(부모 v-if off) 되면 false 분기가 안 돌아 body 스크롤이 잠긴 채 남고
+//   포커스도 복원 안 됨. 스택 refcount 로 다중 모달 스크롤 잠금도 정합.
+function lockAndFocus() {
   if (typeof document === 'undefined') return;
-  document.body.style.overflow = v ? 'hidden' : '';
-  if (v) {
-    previouslyFocused = document.activeElement ?? null;
-    nextTick(() => {
-      const list = getFocusable();
-      if (list.length > 0) list[0].focus();
-      else modalEl.value?.focus();
-    });
-  } else if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-    previouslyFocused.focus();
-    previouslyFocused = null;
-  }
+  document.body.style.overflow = 'hidden';
+  if (!openModalStack.includes(modalId)) openModalStack.push(modalId);
+  previouslyFocused = document.activeElement ?? null;
+  nextTick(() => {
+    const list = getFocusable();
+    if (list.length > 0) list[0].focus();
+    else modalEl.value?.focus();
+  });
+}
+
+function unlockAndRestore() {
+  if (typeof document === 'undefined') return;
+  const idx = openModalStack.indexOf(modalId);
+  if (idx >= 0) openModalStack.splice(idx, 1);
+  if (openModalStack.length === 0) document.body.style.overflow = '';   // 다른 모달 없을 때만 해제
+  if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+  previouslyFocused = null;
+}
+
+watch(() => props.modelValue, (v) => {
+  if (v) lockAndFocus();
+  else unlockAndRestore();
 });
 
 onMounted(() => {
   if (typeof window !== 'undefined') window.addEventListener('keydown', onKeydown);
+  if (props.modelValue) lockAndFocus();    // open-on-mount (v-if 패턴) 대응
 });
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') window.removeEventListener('keydown', onKeydown);
-  if (typeof document !== 'undefined') document.body.style.overflow = '';
+  if (openModalStack.includes(modalId)) unlockAndRestore();   // 열린 채 unmount 시 정리
 });
 </script>
 
@@ -181,7 +208,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--in-z-modal, 2000);
+  z-index: var(--in-z-modal);
 }
 
 .in-modal {

@@ -265,9 +265,7 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
 
 .in-lnb2__1dep--active .in-lnb2__1dep-icon-box {
   background: var(--in-bg-state-hover);           /* Surface/Action/Bolder #0488c7 */
-  box-shadow:
-    1px 4px 5px 0 #1cb0ef,                        /* drop 1depOn */
-    inset 2px 2px 4px 0 #1c759b4d;                /* inner 1depOn */
+  box-shadow: var(--in-shadow-1depon);            /* ★ (2026-06-07, dspark): 하드코딩 #1cb0ef → 토큰 (green 테마 추종) */
 }
 
 .in-lnb2__1dep-icon {

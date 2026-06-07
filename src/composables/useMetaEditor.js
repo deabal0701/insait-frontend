@@ -97,6 +97,7 @@ export function useMetaEditor(opts) {
   }
 
   async function save() {
+    if (saving.value) return;   // ★ (2026-06-07, dspark): 재진입(엔터+버튼 중복 제출) 가드 — 중복 생성 방지
     if (validate && !validate(form.value, { mode: mode.value, setTab: (t) => { drawerTab.value = t; } })) return;
     saving.value = true;
     try {
@@ -110,8 +111,9 @@ export function useMetaEditor(opts) {
         toast.success?.('수정되었습니다.');
       }
       if (reload) await reload();
-      selected.value = saved.def;    // 저장 결과로 보기모드 복귀
-      detail.value = saved;
+      // ★ (2026-06-07, dspark): api 응답이 {def,...} 가 아닐 수 있어 방어 — selected/detail 오염 방지
+      selected.value = saved?.def ?? saved ?? selected.value;
+      detail.value = saved ?? detail.value;
       mode.value = 'view';
       drawerTab.value = defaultTab;
     } catch (e) {
@@ -122,6 +124,7 @@ export function useMetaEditor(opts) {
   }
 
   async function doDelete() {
+    if (saving.value) return;   // ★ (2026-06-07, dspark): 재진입 가드
     saving.value = true;
     try {
       await api.remove(keyOf(selected.value));

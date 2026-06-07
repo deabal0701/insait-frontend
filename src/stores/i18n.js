@@ -15,8 +15,7 @@ export const useI18nStore = defineStore('i18n', {
       localStorage.setItem('insait.locale', this.locale);
     },
   },
-  persist: {
-    storage: localStorage,
-    key: 'insait.i18n',
-  },
+  // ★ (2026-06-07, dspark): pinia-plugin-persistedstate(insait.i18n) 제거 — 이중 출처 정합.
+  //   state() 가 'insait.locale' 에서 복원하고 setLocale 이 같은 키에 기록하며,
+  //   vue-i18n(main.js)·envelope(buildHeader) 도 'insait.locale' 만 읽음 → 단일 출처로 통일.
 });
