@@ -402,7 +402,10 @@ defineExpose({
 .in-dt__ctx-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9000;
+  /* ★ (2026-06-07, dspark): raw 9000(매직넘버 + --in-z-toast 9000 과 동률 충돌) → popover 토큰(1100).
+   *   컨텍스트 메뉴는 드롭다운/popover 계층이 적절. 토스트(9000)가 항상 위 → 메뉴 열린 채 토스트가 떠도
+   *   투명 backdrop(inset:0) 이 토스트 클릭을 가로채지 않음. (모듈화 점검 206e17e 누락분 보완) */
+  z-index: var(--in-z-popover);
 }
 .in-dt__ctx {
   position: fixed;
