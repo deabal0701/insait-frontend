@@ -86,7 +86,24 @@ export const adminApi = {
     entities: makeDomain('/api/admin/meta/entities'),    // IST0020
     objects:  makeDomain('/api/admin/meta/objects'),     // AUT0030
   },
-  // access:  { users: ..., roles: ..., menus: ... },   // Phase 1 후속
+  // ★ (2026-06-08, dspark): 「사용자와 접근제어」 직접 REST (com.win.insait.admin.access.*).
+  //   표준 list/detail/create/update/remove 는 makeDomain. 화면별 비표준 메서드만 확장.
+  access: {
+    users: {
+      ...makeDomain('/api/admin/access/users'),          // AUT0010
+      // exists 는 /{key}/exists 가 아니라 ?loginId 쿼리 (백엔드 계약 — login_id 가 업무 유일키, PK 는 userId).
+      exists(loginId, companyCd) {
+        return http.get('/api/admin/access/users/exists', {
+          params: { loginId, ...(companyCd ? { companyCd } : {}) },
+        });
+      },
+      // 비밀번호 초기화 — 랜덤 임시비번 발급 (S2). 응답 { tempPassword, message }.
+      passwordReset(userId) {
+        return http.post(`/api/admin/access/users/${encodeURIComponent(userId)}/password-reset`);
+      },
+    },
+    // 후속: userGroups / authItems / orgAuth / externalUsers / menus / authCriteria
+  },
   // system:  { commonCodes: ..., options: ..., logs: ... },
 };
 
