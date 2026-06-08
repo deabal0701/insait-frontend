@@ -43,17 +43,19 @@ function onSearch(v) { staged.value.q = v; }
 function onType(v) { staged.value.objectType = v; }
 function onParent(v) { staged.value.hasParent = v; }
 
+// ★ (2026-06-08, dspark): AS-IS 정합 — OBJECT_TYPE 은 IST_OBJECT_TYPE 공통코드 USE_YN='Y' = view/elaform 2종뿐.
+//   기존 popup/detail/dialog 는 실 데이터 0건인 임의값이라 제거(고르면 무조건 0건이던 버그).
+//   실측: view 4520 · elaform 193 · (legacy fsq 3 · statis 2). [aut0030.jsp:240 listProvider="AutObjectType"]
+//   ※ TODO: 장기적으로 IST_OBJECT_TYPE 공통코드 API 로 동적 로드(SSOT)하면 USE_YN 변경에 자동 추종.
 const typeOptions = [
-  { value: '',          label: '전체 타입' },
-  { value: 'view',      label: 'view (메인)' },
-  { value: 'popup',     label: 'popup' },
-  { value: 'detail',    label: 'detail' },
-  { value: 'dialog',    label: 'dialog' },
+  { value: '',        label: '전체 타입' },
+  { value: 'view',    label: 'view (뷰)' },
+  { value: 'elaform', label: 'elaform (전자결재유형)' },
 ];
 const parentOptions = [
   { value: '',  label: '부모 무관' },
-  { value: 'Y', label: '하위 (popup/detail)' },
-  { value: 'N', label: '최상위' },
+  { value: 'Y', label: '하위 (PARENT_ID 있음)' },
+  { value: 'N', label: '최상위 (PARENT_ID 없음)' },
 ];
 
 
@@ -67,11 +69,11 @@ const columns = [
 ];
 
 // ── 편집 폼 옵션 / 그리드 config ──
+// ★ (2026-06-08, dspark): AS-IS 편집 콤보 정합 — 뷰/전자결재유형 2종 (이미지3, IST_OBJECT_TYPE USE_YN='Y').
+//   기존 popup/report 는 공통코드 카탈로그엔 있으나 운영 비활성(USE_YN='N')·데이터 0건이라 제거.
 const typeEditOptions = [
-  { value: 'view', label: 'view (뷰)' },
-  { value: 'popup', label: 'popup (팝업)' },
-  { value: 'elaform', label: 'elaform (전자결재)' },
-  { value: 'report', label: 'report (리포트)' },
+  { value: 'view',    label: 'view (뷰)' },
+  { value: 'elaform', label: 'elaform (전자결재유형)' },
 ];
 const attrColumns = [
   { key: 'attributeTypeCd', label: '타입', kind: 'text', width: 120, placeholder: 'INIT_DATA' },
@@ -196,7 +198,7 @@ onMounted(() => list.reload());
         <InSearchField
           :model-value="staged.q"
           label="검색"
-          input="OBJECT_NM prefix — 예: AUT0030 (Enter 또는 [조회] 버튼)"
+          input="오브젝트명 또는 화면표시명 포함 검색 — 예: 발령품의서 / CAM0002 (Enter 또는 [조회])"
           layout="vertical"
           :icon-clickable="false"
           @update:model-value="onSearch"
