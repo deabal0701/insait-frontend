@@ -321,7 +321,6 @@ onMounted(() => list.reload());
                   clearable
                   placeholder="SQL관리에 등록된 쿼리 이름 — 입력 시 자동완성 (예: ACM0010_00_R01)"
                   @select="(it) => { sqlLoadId = it.value; loadColumnsFromSql(); }"
-                  @keyup.enter="loadColumnsFromSql"
                 >
                   <template #default="{ item }">
                     <div class="sql-ac-item">
