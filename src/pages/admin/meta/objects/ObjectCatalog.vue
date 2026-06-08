@@ -59,7 +59,8 @@ const columns = [
   { field: 'objectDisplayNm', label: '한글명',     sortable: true, sortKey: 'object_display_nm' },
   { field: 'objectType',      label: 'Type',       sortable: true, sortKey: 'object_type', align: 'center', width: 80 },
   { field: 'objectLink',      label: '화면 경로' },
-  { field: 'parentId',        label: '부모', align: 'right', width: 100 },
+  // ★ (2026-06-08, dspark): '부모(parentId)' 컬럼 제거 — AS-IS 목록엔 없고 FRM_EXECUTABLE_OBJECT.PARENT_ID 는
+  //   죽은 컬럼(빈값/0). 실 계층은 상세의 '하위오브젝트(자식)' 탭(FRM_OBJECT_RELATION, 1:N)에서 다룸.
   { field: 'status',          label: 'Status', sortable: true, sortKey: 'status', align: 'center', width: 80 },
 ];
 
@@ -208,7 +209,6 @@ onMounted(() => list.reload());
     <template #cell-objectNm="{ value }"><strong>{{ value }}</strong></template>
     <template #cell-objectType="{ value }"><InTag :label="value" :variant="value === 'view' ? 'brand' : 'default'" size="sm" /></template>
     <template #cell-objectLink="{ value }"><code class="link">{{ value || '—' }}</code></template>
-    <template #cell-parentId="{ value }"><span class="muted">{{ value || '—' }}</span></template>
 
     <template #drawer>
       <MetaDetailEditor
