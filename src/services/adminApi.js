@@ -74,7 +74,14 @@ function makeDomain(basePath) {
 export const adminApi = {
   meta: {
     services: makeDomain('/api/admin/meta/services'),    // IST0050
-    queries:  makeDomain('/api/admin/meta/queries'),     // IST0010 SQL
+    // ★ (2026-06-08, dspark): #3 queries 에 describeColumns 추가 — 등록 SQL 출력 컬럼 자동 추출.
+    //   메시지관리(IST0030) RES 메시지 컬럼 자동 채움 소비. GET /api/admin/meta/queries/{name}/columns.
+    queries: {
+      ...makeDomain('/api/admin/meta/queries'),          // IST0010 SQL
+      describeColumns(queryName) {
+        return http.get(`/api/admin/meta/queries/${encodeURIComponent(queryName)}/columns`);
+      },
+    },
     messages: makeDomain('/api/admin/meta/messages'),    // IST0030
     entities: makeDomain('/api/admin/meta/entities'),    // IST0020
     objects:  makeDomain('/api/admin/meta/objects'),     // AUT0030

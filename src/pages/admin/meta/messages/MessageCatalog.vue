@@ -6,7 +6,7 @@
  * ★ (2026-06-05, dspark): 공통 컴포넌트 추출 리팩터 (99 backlog #8) —
  *   useMetaEditor + MetaDetailEditor + MetaChildGrid(컬럼). MOD_USER_ID 는 백엔드가 JWT 에서 주입.
  */
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
 import { useCatalogFilter } from '@/composables/useCatalogFilter';
@@ -45,11 +45,12 @@ function onSearch(v) { staged.value.q = v; }
 function onType(v) { staged.value.typeCd = v; }
 function onParent(v) { staged.value.hasParent = v; }
 
+// ★ (2026-06-08, dspark): #2 정합 — FRM_MSG_DEF.TYPE_CD 도메인은 DEFAULT/TREE 2종 (AS-IS 메뉴얼 03 §3.4).
+//   기존 MT/ME 옵션은 'ID 접두사'를 type_cd 로 혼동한 것 → 백엔드 WHERE TYPE_CD='MT' 는 항상 0건이라 제거.
 const typeOptions = [
   { value: '',        label: '전체 type' },
-  { value: 'MT',      label: 'MT (타입)' },
-  { value: 'ME',      label: 'ME (인스턴스)' },
-  { value: 'DEFAULT', label: 'DEFAULT' },
+  { value: 'DEFAULT', label: 'DEFAULT (평면)' },
+  { value: 'TREE',    label: 'TREE (계층)' },
 ];
 const parentOptions = [
   { value: '',  label: '부모 무관' },
@@ -68,10 +69,10 @@ const columns = [
 ];
 
 // ── 편집 폼 옵션 ──
+// ★ (2026-06-08, dspark): #2 정합 — TYPE_CD 는 DEFAULT(평면)/TREE(계층·마스터디테일). MT/ME 는 메시지 ID 접두라 별개 개념.
 const typeEditOptions = [
-  { value: 'DEFAULT', label: 'DEFAULT' },
-  { value: 'MT', label: 'MT (타입)' },
-  { value: 'ME', label: 'ME (인스턴스)' },
+  { value: 'DEFAULT', label: 'DEFAULT (평면)' },
+  { value: 'TREE', label: 'TREE (계층)' },
 ];
 
 const colColumns = [
@@ -79,16 +80,20 @@ const colColumns = [
   { key: 'msgColDefId', label: '컬럼 ID', kind: 'text',     placeholder: 'emp_id' },
   { key: 'typeCd',      label: '타입',   kind: 'text',     width: 96, placeholder: 'string' },
   { key: 'labelCd',     label: '라벨',   kind: 'text',     width: 96 },
+  { key: 'formatText',  label: '포맷',   kind: 'text',     width: 96, placeholder: '예: yyyy-MM-dd' },
   { key: 'minLength',   label: '최소',   kind: 'number',   width: 56 },
   { key: 'maxLength',   label: '최대',   kind: 'number',   width: 56 },
   { key: 'mandatoryYn', label: '필수',   kind: 'checkbox' },
-  { key: 'useEncYn',    label: '암호화', kind: 'checkbox' },
-  { key: 'useYn',       label: '사용',   kind: 'checkbox' },
+  // ★ (2026-06-08, dspark): #1 라벨 정합 — DB 컬럼명과 실제 의미가 반대(AS-IS 메뉴얼 03 §4.3.2, dead code).
+  //   USE_ENC_YN = 실제 '사용여부' · USE_YN = 실제 '암호화'. 컬럼명 글자대로 두지 말 것(데이터 오해 누적).
+  { key: 'useEncYn',    label: '사용',   kind: 'checkbox' },
+  { key: 'useYn',       label: '암호화', kind: 'checkbox' },
 ];
 function newCol(rows) {
   const maxSeq = rows.reduce((m, c) => Math.max(m, c.orderSeq || 0), 0);
+  // ★ (2026-06-08, dspark): #1 정합 — useEncYn=실제'사용여부'(신규=Y), useYn=실제'암호화'(신규=N). #5 formatText 추가.
   return { rowStatus: 'I', msgColDefOid: null, msgColDefId: '', orderSeq: maxSeq + 1,
-    typeCd: 'string', labelCd: '', minLength: null, maxLength: null, mandatoryYn: 'N', useEncYn: 'N', useYn: 'Y' };
+    typeCd: 'string', labelCd: '', formatText: '', minLength: null, maxLength: null, mandatoryYn: 'N', useEncYn: 'Y', useYn: 'N' };
 }
 
 // ── 편집 상태기계 (공통) ──
@@ -101,7 +106,7 @@ const editor = useMetaEditor({
   createTab: 'def',
   reload: () => list.reload(),
   blankForm: () => ({
-    def: { msgDefId: '', msgDefNm: '', typeCd: 'DEFAULT', parentId: '', allowChildYn: 'N', childColId: '', parentColId: '', note: '' },
+    def: { msgDefId: '', msgDefNm: '', typeCd: 'DEFAULT', parentId: '', allowChildYn: 'N', childColId: '', parentColId: '', validator: '', msgClassNm: '', note: '' },
     columns: [],
   }),
   toForm: (detail) => {
@@ -110,12 +115,13 @@ const editor = useMetaEditor({
       def: {
         msgDefId: d.msgDefId, msgDefNm: d.msgDefNm, typeCd: d.typeCd || 'DEFAULT',
         parentId: d.parentId || '', allowChildYn: d.allowChildYn || 'N',
-        childColId: d.childColId || '', parentColId: d.parentColId || '', note: d.note || '',
+        childColId: d.childColId || '', parentColId: d.parentColId || '',
+        validator: d.validator || '', msgClassNm: d.msgClassNm || '', note: d.note || '',
       },
       columns: (detail.columns || []).map((c) => ({
         rowStatus: '', msgColDefOid: c.msgColDefOid,
         msgColDefId: c.msgColDefId, orderSeq: c.orderSeq, typeCd: c.typeCd || 'string',
-        labelCd: c.labelCd || '', minLength: c.minLength, maxLength: c.maxLength,
+        labelCd: c.labelCd || '', formatText: c.formatText || '', minLength: c.minLength, maxLength: c.maxLength,
         mandatoryYn: c.mandatoryYn || 'N', useEncYn: c.useEncYn || 'N', useYn: c.useYn || 'Y',
       })),
     };
@@ -139,6 +145,59 @@ const {
 
 const namePatternOk = computed(() => MSG_NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
 
+// ★ (2026-06-08, dspark): #3 SQL→컬럼 자동채움 — 등록 SQL 의 출력 컬럼을 컬럼 그리드에 추가.
+//   AS-IS [SQL로부터 읽어오기] 이식. describe(비실행) 결과를 신규('I') 행으로 append, 기존 컬럼 ID 는 중복 제외.
+const sqlLoadId = ref('');
+const sqlLoading = ref(false);
+
+// ★ (2026-06-08, dspark): el-autocomplete 제안 — SQL관리(IST0010) prefix 검색(queries.list q). 잘못된 이름 입력 방지.
+async function querySqlSuggestions(queryString, cb) {
+  const qs = (queryString || '').trim();
+  if (!qs) { cb([]); return; }
+  try {
+    const res = await adminApi.meta.queries.list({ q: qs, page: 1, size: 10 });
+    cb((res?.content || []).map((r) => ({ value: r.queryName, displayName: r.displayName })));
+  } catch {
+    cb([]);   // 제안 실패는 조용히 — 사용자는 직접 입력 후 [불러오기] 가능
+  }
+}
+
+async function loadColumnsFromSql() {
+  const qid = (sqlLoadId.value || '').trim();
+  if (!qid) { toast.warning?.('SQL 이름(쿼리 ID)을 입력하세요.'); return; }
+  if (!isEditing.value) { toast.warning?.('편집 모드에서만 컬럼을 불러올 수 있습니다.'); return; }
+  sqlLoading.value = true;
+  try {
+    const cols = await adminApi.meta.queries.describeColumns(qid);
+    if (!Array.isArray(cols) || !cols.length) { toast.warning?.('컬럼을 찾지 못했습니다.'); return; }
+    const rows = form.value.columns;
+    const existing = new Set(rows.filter((c) => c.rowStatus !== 'D').map((c) => (c.msgColDefId || '').toLowerCase()));
+    let maxSeq = rows.reduce((m, c) => Math.max(m, c.orderSeq || 0), 0);
+    let added = 0, skipped = 0;
+    for (const col of cols) {
+      const id = (col.name || '').toLowerCase();
+      if (!id || existing.has(id)) { skipped += 1; continue; }
+      existing.add(id);
+      rows.push({
+        rowStatus: 'I', msgColDefOid: null,
+        msgColDefId: id, orderSeq: (maxSeq += 1),
+        typeCd: col.typeCd || 'string', labelCd: col.label || '', formatText: '',
+        minLength: null, maxLength: col.length ?? null,
+        mandatoryYn: col.nullable ? 'N' : 'Y',
+        useEncYn: 'Y', useYn: 'N',   // #1 정합: useEncYn=실제'사용여부'(Y), useYn=실제'암호화'(N)
+      });
+      added += 1;
+    }
+    drawerTab.value = 'columns';
+    if (added) toast.success?.(`${added}개 컬럼 추가${skipped ? ` (${skipped}개 중복 제외)` : ''}`);
+    else toast.warning?.(`추가된 컬럼이 없습니다 (${skipped}개 모두 중복).`);
+  } catch (e) {
+    toast.error?.(e?.response?.data?.error?.message || e?.message || 'SQL 컬럼 읽기 실패');
+  } finally {
+    sqlLoading.value = false;
+  }
+}
+
 const defFields = computed(() => [
   { key: 'msgDefId', type: 'text', label: '메시지 ID', input: '예: MT_TST0009_01', required: true,
     disabled: mode.value === 'edit',
@@ -150,6 +209,8 @@ const defFields = computed(() => [
   { key: 'parentId', type: 'text', label: '부모 메시지 ID', input: '자기참조 (선택)' },
   { key: 'childColId', type: 'text', label: 'child col', input: '(선택)' },
   { key: 'parentColId', type: 'text', label: 'parent col', input: '(선택)' },
+  { key: 'validator', type: 'text', label: '유효성검사기', input: 'Validator 클래스 FQCN (선택)' },
+  { key: 'msgClassNm', type: 'text', label: '메시지클래스', input: 'MSG_CLASS_NM (선택)' },
   { key: 'note', type: 'text', label: '비고', input: '(선택)' },
 ]);
 
@@ -207,7 +268,7 @@ onMounted(() => list.reload());
 
     <template #cell-msgDefId="{ value }"><strong>{{ value }}</strong></template>
     <template #cell-typeCd="{ value }">
-      <InTag :label="value" :variant="value === 'MT' ? 'brand' : value === 'ME' ? 'warning' : 'default'" size="sm" />
+      <InTag :label="value" :variant="value === 'TREE' ? 'brand' : 'default'" size="sm" />
     </template>
     <template #cell-allowChildYn="{ value }">
       <span :class="value === 'Y' ? '' : 'muted'">{{ value || '—' }}</span>
@@ -239,21 +300,57 @@ onMounted(() => list.reload());
               <code>{{ c.msgColDefId }}</code>
               <InTag :label="c.typeCd" size="sm" />
               <span v-if="c.mandatoryYn === 'Y'" class="req">필수</span>
-              <InTag v-if="c.useEncYn === 'Y'" label="암호화" variant="warning" size="sm" />
+              <InTag v-if="c.useYn === 'Y'" label="암호화" variant="warning" size="sm" />
               <span class="muted">len: {{ c.minLength ?? '?' }}~{{ c.maxLength ?? '?' }}</span>
               <span v-if="c.labelCd" class="muted">label: {{ c.labelCd }}</span>
-              <InTag v-if="c.useYn !== 'Y'" label="미사용" variant="default" size="sm" />
+              <InTag v-if="c.useEncYn !== 'Y'" label="미사용" variant="default" size="sm" />
             </li>
             <li v-if="!detail.columns?.length" class="muted">컬럼 없음</li>
           </ul>
-          <MetaChildGrid
-            v-else
-            :rows="form.columns"
-            :columns="colColumns"
-            key-field="msgColDefOid"
-            :new-row="newCol"
-            hint="타입: string / numeric / date / clob (또는 value-type MT_*). 개인정보 컬럼은 암호화 체크."
-          />
+          <template v-else>
+            <!-- ★ (2026-06-08, dspark): #3 [SQL에서 컬럼 읽기] — 등록 SQL 출력 컬럼 자동 채움 (AS-IS [SQL로부터 읽어오기] 이식)
+                 ★ (2026-06-08, dspark): SQL관리(IST0010) prefix 검색 자동완성 — 잘못된 이름(404) 혼동 방지. queries.list(q) 재사용 -->
+            <div class="sql-load">
+              <div class="sql-load__field">
+                <label class="sql-load__label">SQL 에서 컬럼 읽기</label>
+                <el-autocomplete
+                  v-model="sqlLoadId"
+                  class="sql-load__ac"
+                  :fetch-suggestions="querySqlSuggestions"
+                  :trigger-on-focus="false"
+                  clearable
+                  placeholder="SQL관리에 등록된 쿼리 이름 — 입력 시 자동완성 (예: ACM0010_00_R01)"
+                  @select="(it) => { sqlLoadId = it.value; loadColumnsFromSql(); }"
+                  @keyup.enter="loadColumnsFromSql"
+                >
+                  <template #default="{ item }">
+                    <div class="sql-ac-item">
+                      <span class="sql-ac-item__name">{{ item.value }}</span>
+                      <span v-if="item.displayName" class="sql-ac-item__desc">{{ item.displayName }}</span>
+                    </div>
+                  </template>
+                </el-autocomplete>
+              </div>
+              <InButton
+                class="sql-load__btn"
+                variant="default" size="md"
+                :left-icon-show="false" :right-icon-show="false"
+                :disabled="sqlLoading"
+                @click="loadColumnsFromSql"
+              >{{ sqlLoading ? '읽는 중…' : '불러오기' }}</InButton>
+            </div>
+            <p class="sql-load__hint">
+              SQL관리(IST0010)에 등록된 쿼리의 출력 컬럼을 가져옵니다. 메시지 ID·서비스 ID 가 아니라
+              <strong>SQL 쿼리 이름</strong>을 입력하세요 (없는 이름은 “찾을 수 없음”).
+            </p>
+            <MetaChildGrid
+              :rows="form.columns"
+              :columns="colColumns"
+              key-field="msgColDefOid"
+              :new-row="newCol"
+              hint="타입: string / numeric / date / clob (또는 value-type MT_*). 개인정보 컬럼은 암호화 체크."
+            />
+          </template>
         </section>
 
         <!-- 정의 -->
@@ -265,6 +362,8 @@ onMounted(() => list.reload());
             <dt>부모</dt><dd>{{ detail.def.parentId || '—' }}</dd>
             <dt>자식허용</dt><dd>{{ detail.def.allowChildYn }}</dd>
             <dt>child/parent col</dt><dd>{{ detail.def.childColId || '—' }} / {{ detail.def.parentColId || '—' }}</dd>
+            <dt>유효성검사기</dt><dd>{{ detail.def.validator || '—' }}</dd>
+            <dt>메시지클래스</dt><dd>{{ detail.def.msgClassNm || '—' }}</dd>
             <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
           </dl>
 
@@ -321,6 +420,16 @@ onMounted(() => list.reload());
 .m-filters__search-btn, .m-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
+.sql-load { display: flex; gap: 8px; align-items: flex-end; }
+.sql-load__field { flex: 1 1 auto; min-width: 0; }
+.sql-load__label { display: block; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); margin-bottom: 4px; }
+.sql-load__ac { width: 100%; display: block; }
+.sql-load__ac :deep(.el-input) { width: 100%; }
+.sql-load__btn { flex: 0 0 auto; align-self: flex-end; }
+.sql-load__hint { margin: 6px 0 12px; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+.sql-ac-item { display: flex; flex-direction: column; line-height: 1.3; padding: 2px 0; }
+.sql-ac-item__name { font-weight: var(--in-font-weight-medium); }
+.sql-ac-item__desc { font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; word-break: break-all; }
