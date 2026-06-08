@@ -29,19 +29,20 @@ const toast = useToast();
 const list = usePagedList({
   fetcher: adminApi.meta.objects.list,
   initialSize: 50,
-  initialFilter: { q: '', objectType: '', status: '', companyCd: '', hasParent: '' },
+  initialFilter: { q: '', objectType: '', status: '', companyCd: '' },
   defaultSort: ['object_nm,asc'],
   syncUrl: true,
 });
 
 const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
   list,
-  initial: { q: '', objectType: '', status: '', companyCd: '', hasParent: '' },
-  chipLabels: { q: '검색', objectType: 'type', status: 'status', companyCd: 'company', hasParent: 'parent' },
+  initial: { q: '', objectType: '', status: '', companyCd: '' },
+  chipLabels: { q: '검색', objectType: 'type', status: 'status', companyCd: 'company' },
 });
 function onSearch(v) { staged.value.q = v; }
 function onType(v) { staged.value.objectType = v; }
-function onParent(v) { staged.value.hasParent = v; }
+// ★ (2026-06-08, dspark): parent 필터 제거 — AS-IS aut0030.jsp 검색박스엔 키워드+유형 2개뿐(parent 없음).
+//   FRM_EXECUTABLE_OBJECT.PARENT_ID 는 거의 미사용 컬럼이고 실 계층은 FRM_OBJECT_RELATION 이라 의미도 약했음.
 
 // ★ (2026-06-08, dspark): AS-IS 정합 — OBJECT_TYPE 은 IST_OBJECT_TYPE 공통코드 USE_YN='Y' = view/elaform 2종뿐.
 //   기존 popup/detail/dialog 는 실 데이터 0건인 임의값이라 제거(고르면 무조건 0건이던 버그).
@@ -52,12 +53,6 @@ const typeOptions = [
   { value: 'view',    label: 'view (뷰)' },
   { value: 'elaform', label: 'elaform (전자결재유형)' },
 ];
-const parentOptions = [
-  { value: '',  label: '부모 무관' },
-  { value: 'Y', label: '하위 (PARENT_ID 있음)' },
-  { value: 'N', label: '최상위 (PARENT_ID 없음)' },
-];
-
 
 const columns = [
   { field: 'objectNm',        label: 'OBJECT_NM',  sortable: true, sortKey: 'object_nm', width: 220 },
@@ -205,7 +200,6 @@ onMounted(() => list.reload());
           @search="applyFilter"
         />
         <InSelect :model-value="staged.objectType" :options="typeOptions" label="Type" input="전체" layout="vertical" size="sm" @update:model-value="onType" />
-        <InSelect :model-value="staged.hasParent" :options="parentOptions" label="부모" input="전체" layout="vertical" size="sm" @update:model-value="onParent" />
         <InButton class="o-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
         <InButton class="o-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
       </div>
