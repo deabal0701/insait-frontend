@@ -84,16 +84,16 @@ const colColumns = [
   { key: 'minLength',   label: '최소',   kind: 'number',   width: 56 },
   { key: 'maxLength',   label: '최대',   kind: 'number',   width: 56 },
   { key: 'mandatoryYn', label: '필수',   kind: 'checkbox' },
-  // ★ (2026-06-08, dspark): #1 라벨 정합 — DB 컬럼명과 실제 의미가 반대(AS-IS 메뉴얼 03 §4.3.2, dead code).
-  //   USE_ENC_YN = 실제 '사용여부' · USE_YN = 실제 '암호화'. 컬럼명 글자대로 두지 말 것(데이터 오해 누적).
-  { key: 'useEncYn',    label: '사용',   kind: 'checkbox' },
-  { key: 'useYn',       label: '암호화', kind: 'checkbox' },
+  // ★ (2026-06-08, dspark): USE_ENC_YN=암호화 / USE_YN=사용 (DB 참된 의미 — B05 use_enc_yn←isEncrypt, 매뉴얼 03 §7).
+  //   AS-IS JSP 는 그리드 헤더↔바디 스왑으로 화면만 반전 표시하나 DB 의미는 정상 → TO-BE 는 참된 의미 표기(AS-IS 화면 버그 미복제).
+  { key: 'useEncYn',    label: '암호화', kind: 'checkbox' },
+  { key: 'useYn',       label: '사용',   kind: 'checkbox' },
 ];
 function newCol(rows) {
   const maxSeq = rows.reduce((m, c) => Math.max(m, c.orderSeq || 0), 0);
-  // ★ (2026-06-08, dspark): #1 정합 — useEncYn=실제'사용여부'(신규=Y), useYn=실제'암호화'(신규=N). #5 formatText 추가.
+  // ★ (2026-06-08, dspark): 신규 = 암호화(useEncYn)=N · 사용(useYn)=Y (DB 참된 의미, AS-IS B05 정합). #5 formatText 추가.
   return { rowStatus: 'I', msgColDefOid: null, msgColDefId: '', orderSeq: maxSeq + 1,
-    typeCd: 'string', labelCd: '', formatText: '', minLength: null, maxLength: null, mandatoryYn: 'N', useEncYn: 'Y', useYn: 'N' };
+    typeCd: 'string', labelCd: '', formatText: '', minLength: null, maxLength: null, mandatoryYn: 'N', useEncYn: 'N', useYn: 'Y' };
 }
 
 // ── 편집 상태기계 (공통) ──
@@ -184,7 +184,7 @@ async function loadColumnsFromSql() {
         typeCd: col.typeCd || 'string', labelCd: col.label || '', formatText: '',
         minLength: null, maxLength: col.length ?? null,
         mandatoryYn: col.nullable ? 'N' : 'Y',
-        useEncYn: 'Y', useYn: 'N',   // #1 정합: useEncYn=실제'사용여부'(Y), useYn=실제'암호화'(N)
+        useEncYn: 'N', useYn: 'Y',   // DB 참된 의미: useEncYn=암호화(기본 N)·useYn=사용(기본 Y) — AS-IS B05 정합
       });
       added += 1;
     }
@@ -300,10 +300,10 @@ onMounted(() => list.reload());
               <code>{{ c.msgColDefId }}</code>
               <InTag :label="c.typeCd" size="sm" />
               <span v-if="c.mandatoryYn === 'Y'" class="req">필수</span>
-              <InTag v-if="c.useYn === 'Y'" label="암호화" variant="warning" size="sm" />
+              <InTag v-if="c.useEncYn === 'Y'" label="암호화" variant="warning" size="sm" />
               <span class="muted">len: {{ c.minLength ?? '?' }}~{{ c.maxLength ?? '?' }}</span>
               <span v-if="c.labelCd" class="muted">label: {{ c.labelCd }}</span>
-              <InTag v-if="c.useEncYn !== 'Y'" label="미사용" variant="default" size="sm" />
+              <InTag v-if="c.useYn !== 'Y'" label="미사용" variant="default" size="sm" />
             </li>
             <li v-if="!detail.columns?.length" class="muted">컬럼 없음</li>
           </ul>
