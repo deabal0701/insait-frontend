@@ -6,6 +6,11 @@
  *   설계: 02-tobe/04-admin-lane/access-control/01_user-aut0010.md.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/users (+ /exists?loginId, /{id}/password-reset).
  *   보안: 비밀번호 미노출 / 비번초기화 = 랜덤 임시비번(S2) / 삭제 = 단일 트랜잭션(S4, 그룹멤버 가드).
+ *
+ * ★ TEMP (2026-06-08, dspark, 추후 삭제 예정): [신규] 로그인ID 등록은 "편의상" 제공하는 임시 기능.
+ *   AS-IS 정상 경로 = 로그인ID(=사번)가 인사발령(채용발령관리 CAM0050) "발령 확정" 시 자동 생성
+ *   (P_CAM_EMP_NO_CREATE → P_FRM_USER_CREATE). AUT0010 본래 역할은 관리 전용.
+ *   → 운영 확정 시 본 안내 배너 + [신규] 생성 흐름 재검토/제거 예정.
  */
 import { computed, onMounted, ref, watch } from 'vue';
 import { adminApi } from '@/services/adminApi';
@@ -240,6 +245,13 @@ onMounted(() => list.reload());
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
+          <!-- ★ TEMP (2026-06-08, dspark, 추후 삭제 예정): AS-IS 로그인ID 생성 경로 안내 + 편의상 등록 명시 -->
+          <div v-if="mode === 'create'" class="asis-note">
+            ※ AS-IS 에서 <strong>로그인ID(=사번)</strong>는 <strong>인사운영 ▸ 발령관리 ▸ 채용발령관리(CAM0050)</strong> 의
+            <strong>발령 확정</strong> 시 사번으로 <strong>자동 생성</strong>됩니다
+            (P_CAM_EMP_NO_CREATE → P_FRM_USER_CREATE).
+            본 [신규]는 <strong>편의상 제공하는 로그인ID 등록</strong>입니다 (임시 기능 — 추후 삭제 예정).
+          </div>
           <dl v-if="mode === 'view'" class="kv">
             <dt>로그인ID</dt><dd>{{ detail.def.loginId }}</dd>
             <dt>성명</dt><dd>{{ detail.def.userNm || '—' }}</dd>
@@ -315,6 +327,15 @@ onMounted(() => list.reload());
 .kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
 .pw-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--in-border-subtle, #eee); flex-wrap: wrap; }
 .hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+/* ★ TEMP (2026-06-08, dspark, 추후 삭제 예정): AS-IS 로그인ID 생성 경로 안내 배너 */
+.asis-note {
+  margin: 0 0 14px; padding: 10px 12px;
+  background: var(--in-bg-warning-subtle, #fff8e1);
+  border: 1px solid var(--in-border-warning, #f0d68a);
+  border-radius: var(--in-radius-xs, 4px);
+  font-size: var(--in-font-size-sm); line-height: 1.5; color: var(--in-text-default);
+}
+.asis-note strong { color: var(--in-text-accent, #8a6d00); }
 .resource-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .resource-list li {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
