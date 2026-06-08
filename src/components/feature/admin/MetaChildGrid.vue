@@ -18,7 +18,7 @@
  *
  * Figma 노드 ID = TBD (atomic <table> + 입력 셀).
  */
-import { computed } from 'vue';
+import { computed, getCurrentInstance } from 'vue';
 import InButton from '@/components/ui/InButton.vue';
 
 const props = defineProps({
@@ -36,6 +36,10 @@ const props = defineProps({
 const emit = defineEmits(['row-select']);
 
 const visibleRows = computed(() => props.rows.filter((r) => r.rowStatus !== 'D'));
+
+// ★ (2026-06-08, dspark): combo(datalist) 컬럼 — 자유입력 + 표준값 제안. 인스턴스별 고유 id 로 datalist 충돌 회피(다중 그리드 공존).
+const instanceId = getCurrentInstance()?.uid ?? 0;
+const comboColumns = computed(() => props.columns.filter((c) => c.kind === 'combo'));
 
 function touch(r) { if (r.rowStatus !== 'I') r.rowStatus = 'U'; }
 
@@ -121,6 +125,16 @@ function setCheckbox(r, key, checked) {
               <option v-for="o in (c.options || [])" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <input
+              v-else-if="c.kind === 'combo'"
+              v-model="r[c.key]"
+              type="text"
+              class="meta-grid__cell"
+              :list="`dl-${instanceId}-${c.key}`"
+              :style="c.width ? { width: c.width + 'px' } : null"
+              :placeholder="c.placeholder || ''"
+              @input="touch(r)"
+            />
+            <input
               v-else
               v-model="r[c.key]"
               type="text"
@@ -137,6 +151,10 @@ function setCheckbox(r, key, checked) {
         </tr>
       </tbody>
     </table>
+    <!-- ★ (2026-06-08, dspark): combo 컬럼 datalist (인스턴스당 1개, 행마다 :list 로 참조) -->
+    <datalist v-for="c in comboColumns" :id="`dl-${instanceId}-${c.key}`" :key="`dl-${c.key}`">
+      <option v-for="o in (c.options || [])" :key="o" :value="o" />
+    </datalist>
     <p v-if="hint" class="meta-grid__hint">{{ hint }}</p>
   </div>
 </template>

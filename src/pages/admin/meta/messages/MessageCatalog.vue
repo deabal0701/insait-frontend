@@ -78,7 +78,8 @@ const typeEditOptions = [
 const colColumns = [
   { key: 'orderSeq',    label: '순서',   kind: 'number',   width: 56 },
   { key: 'msgColDefId', label: '컬럼 ID', kind: 'text',     placeholder: 'emp_id' },
-  { key: 'typeCd',      label: '타입',   kind: 'text',     width: 96, placeholder: 'string' },
+  // ★ (2026-06-08, dspark): M2 — datalist 콤보(표준값 제안 + 자유입력). MT_* value-type·기존 비표준값 보존(오타만 줄임, AS-IS §3.5).
+  { key: 'typeCd',      label: '타입',   kind: 'combo',    width: 110, options: ['string', 'numeric', 'date', 'clob'], placeholder: 'string' },
   { key: 'labelCd',     label: '라벨',   kind: 'text',     width: 96 },
   { key: 'formatText',  label: '포맷',   kind: 'text',     width: 96, placeholder: '예: yyyy-MM-dd' },
   { key: 'minLength',   label: '최소',   kind: 'number',   width: 56 },
@@ -253,7 +254,7 @@ onMounted(() => list.reload());
         <InSearchField
           :model-value="staged.q"
           label="검색"
-          input="메시지 ID prefix — 예: MT_IST0050 (Enter 또는 [조회] 버튼)"
+          input="메시지 ID(앞부분) 또는 한글명 — 예: MT_IST0050 / 조회결과 (Enter 또는 [조회])"
           layout="vertical"
           :icon-clickable="false"
           @update:model-value="onSearch"
