@@ -58,9 +58,17 @@ const columns = [
   { field: 'userNm',        label: '성명',     sortable: true, sortKey: 'user_nm',  width: 120 },
   { field: 'orgNm',         label: '소속',     width: 200 },
   { field: 'statusCd',      label: '상태',     sortable: true, sortKey: 'status_cd', align: 'center', width: 90 },
-  { field: 'tryCnt',        label: '시도',     sortable: true, sortKey: 'try_cnt',  align: 'center', width: 60 },
-  { field: 'bindingTypeCd', label: '구분',     align: 'center', width: 80 },
+  { field: 'tryCnt',        label: '접속시도횟수', sortable: true, sortKey: 'try_cnt', align: 'center', width: 110 },
+  { field: 'bindingTypeCd', label: '사용자구분', align: 'center', width: 100 },
 ];
+
+// ★ (2026-06-08, dspark): 사용자구분(bindingTypeCd) = 로그인 계정과 사원(인물)의 연결 유형.
+//   출처 FRM_USER_EMP_MAP.BINDING_TYPE_CD. AS-IS 매뉴얼 10 §4.1: EMP = 정규 사원. (그 외 코드는 코드 그대로)
+const BINDING_TYPE_LABELS = { EMP: '정규 사원' };
+function bindingTypeText(cd) {
+  if (!cd) return '—';
+  return BINDING_TYPE_LABELS[cd] ? `${cd} (${BINDING_TYPE_LABELS[cd]})` : cd;
+}
 
 // ── 사용자옵션 자식 그리드 ──
 const optionColumns = [
@@ -121,7 +129,8 @@ const defFields = computed(() => [
     disabled: mode.value === 'edit',
     hint: mode.value === 'edit' ? '로그인ID는 변경할 수 없습니다.' : undefined },
   { key: 'userNm', type: 'text', label: '성명', disabled: true, hint: '인사정보(재직뷰) 자동 — 편집 불가' },
-  { key: 'bindingTypeCd', type: 'text', label: '사용자구분', input: '예: EMP' },
+  { key: 'bindingTypeCd', type: 'text', label: '사용자구분', input: '예: EMP',
+    hint: '로그인 계정과 사원의 연결 유형 (EMP = 정규 사원). 출처: FRM_USER_EMP_MAP.BINDING_TYPE_CD' },
   { key: 'statusCd', type: 'select', label: '상태', options: statusEditOptions },
   { key: 'tryCnt', type: 'text', label: '접속시도횟수', input: '0' },
   { key: 'email', type: 'text', label: 'E-Mail', input: 'name@company.com' },
@@ -208,6 +217,9 @@ onMounted(() => list.reload());
       <InTag v-if="value === 'Y'" label="사용" variant="success" size="sm" />
       <span v-else class="muted">잠금</span>
     </template>
+    <template #cell-bindingTypeCd="{ value }">
+      <span :title="bindingTypeText(value) + ' — 로그인 계정과 사원의 연결 유형'">{{ value || '—' }}</span>
+    </template>
 
     <template #drawer>
       <MetaDetailEditor
@@ -232,7 +244,7 @@ onMounted(() => list.reload());
             <dt>로그인ID</dt><dd>{{ detail.def.loginId }}</dd>
             <dt>성명</dt><dd>{{ detail.def.userNm || '—' }}</dd>
             <dt>소속</dt><dd>{{ detail.def.orgNm || '—' }}</dd>
-            <dt>사용자구분</dt><dd>{{ detail.def.bindingTypeCd || '—' }}</dd>
+            <dt>사용자구분</dt><dd>{{ bindingTypeText(detail.def.bindingTypeCd) }} <span class="muted">— 로그인 계정과 사원의 연결 유형</span></dd>
             <dt>상태</dt><dd>{{ detail.def.statusCd === 'Y' ? '사용' : '잠금' }} ({{ detail.def.statusCd }})</dd>
             <dt>접속시도</dt><dd>{{ detail.def.tryCnt ?? '—' }}</dd>
             <dt>E-Mail</dt><dd>{{ detail.def.email || '—' }}</dd>
