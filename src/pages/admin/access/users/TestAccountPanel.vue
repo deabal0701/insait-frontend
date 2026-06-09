@@ -32,22 +32,29 @@ const creating = ref(false);
 const result = ref(null);          // { empId, loginId, password, message }
 const createdName = ref('');       // 방금 생성한 이름 (생성 내역 표시용)
 
-// 발령 체인이 실제로 만든 9개 자원 (어디에 무엇이) — result 의 실제 값으로 구성.
-const resources = computed(() => {
-  if (!result.value) return [];
-  const id = result.value.loginId;
-  const eid = result.value.empId;
-  const nm = createdName.value || '테스트계정';
+// 발령 체인이 실제로 만든 9개 테이블 (어떤 테이블에 무엇이) — 그룹화 + result 실제 값.
+const breakdown = computed(() => {
+  const r = result.value;
+  const id = r ? r.loginId : '—';
+  const eid = r ? r.empId : '—';
+  const nm = createdName.value || '—';
+  const pw = r ? r.password : '—';
   return [
-    { t: 'FRM_USER',            d: '로그인 계정',          v: `LOGIN_ID=${id} · 상태 사용(Y) · 비번 SHA(주민뒷7)` },
-    { t: 'FRM_USER_EMP_MAP',    d: '계정 ↔ 사원 연결',     v: `USER_ID=${eid} · BINDING_TYPE=EMP` },
-    { t: 'FRM_USER_GROUP_MAP',  d: '권한 그룹(기본)',       v: `PRIVATE_GROUP (개인 메뉴 기본권한)` },
-    { t: 'PHM_EMP',             d: '인사기본 · 재직중',     v: `사번=${id} · IN_OFFI_YN=Y · 부서/직위/직급 차용` },
-    { t: 'PHM_PRIVATE',         d: '인적사항',             v: `더미 주민(ARIA 암호화)·성별·생년월일·국적 KR` },
-    { t: 'PHM_NAME',            d: '이름',                v: `${nm} (성/이름 분리)` },
-    { t: 'PHM_EMP_LOCALE',      d: '지역(한글)명',         v: nm },
-    { t: 'CAM_PRE',             d: '발령대상자',           v: `발령유형=채용(A00) · 발령일=오늘` },
-    { t: 'CAM_EMP_NO',          d: '발령 임시(표식 TEST)', v: `사번=${id} · NOTE='TEST' (삭제 가드 키)` },
+    { group: '① 로그인 · 계정 (3)', rows: [
+      { t: 'FRM_USER',           c: `LOGIN_ID=${id} · PASSWORD=SHA(${pw}) · STATUS_CD=Y · INIT_YN=N · TRY_CNT=0` },
+      { t: 'FRM_USER_EMP_MAP',   c: `USER_ID=${eid} · EMP_ID=${eid} · BINDING_TYPE_CD=EMP` },
+      { t: 'FRM_USER_GROUP_MAP', c: `USERGROUP_ID=PRIVATE_GROUP (개인 메뉴 기본권한)` },
+    ]},
+    { group: '② 인사정보 (4)', rows: [
+      { t: 'PHM_EMP',        c: `EMP_NO=${id} · IN_OFFI_YN=Y(보정) · GENDER/BIRTH(주민 파생) · 부서·직위·직급·직책·호칭·직군·호봉(차용)` },
+      { t: 'PHM_PRIVATE',    c: `CTZ_NO(ARIA 암호화) · 성별 · 생년월일 · NATION_CD=KR` },
+      { t: 'PHM_NAME',       c: `LAST_NM(성) · FIRST_NM(이름) = ${nm}` },
+      { t: 'PHM_EMP_LOCALE', c: `EMP_NM=${nm} · LOCALE_CD=KO` },
+    ]},
+    { group: '③ 발령 (2)', rows: [
+      { t: 'CAM_PRE',    c: `발령대상자 · TYPE_CD=A00(채용) · EMP_ID=${eid} · 발령일=오늘` },
+      { t: 'CAM_EMP_NO', c: `발령 임시테이블 · NOTE='TEST'(삭제 가드 키) · EMP_NO=${id}` },
+    ]},
   ];
 });
 const accounts = ref([]);
@@ -74,9 +81,11 @@ async function reload() {
 async function create() {
   creating.value = true;
   result.value = null;
+  const usedName = (name.value || '').trim() || '테스트계정';
   try {
-    const res = await adminApi.access.testAccounts.create({ name: (name.value || '').trim() || '테스트계정' });
+    const res = await adminApi.access.testAccounts.create({ name: usedName });
     result.value = res?.data ?? res;
+    createdName.value = usedName;
     toast.success?.(`테스트 계정 생성: ${result.value.loginId}`);
     await reload();
     emit('changed');
@@ -144,7 +153,7 @@ watch(() => props.modelValue, (v) => {
     :model-value="modelValue"
     type="form"
     title="🧪 테스트 계정 (임시)"
-    :width="560"
+    :width="820"
     @update:model-value="(v) => { if (!v) close(); }"
     @close="close"
   >
@@ -214,6 +223,27 @@ watch(() => props.modelValue, (v) => {
           </tbody>
         </table>
       </div>
+
+      <!-- ★ 하단 상세 내역: 어떤 테이블에 무엇이 들어갔나 (생성 후 표시) -->
+      <div v-if="result" class="ta__detail">
+        <div class="ta__detail-head">📋 방금 생성된 데이터 — 어떤 테이블에 무엇이 (총 9개 테이블)</div>
+        <div v-for="g in breakdown" :key="g.group" class="ta__detail-group">
+          <div class="ta__detail-gname">{{ g.group }}</div>
+          <table class="ta__detail-table">
+            <tbody>
+              <tr v-for="row in g.rows" :key="row.t">
+                <td class="ta__detail-t"><code>{{ row.t }}</code></td>
+                <td class="ta__detail-c">{{ row.c }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ta__detail-foot">
+          ※ 보정: <b>PHM_EMP.IN_OFFI_YN</b> D→Y(재직) · <b>FRM_USER.INIT_YN</b> NULL→N(JSP 첫로그인 비번변경 우회).<br />
+          ※ 'S' 공용사번이라 계약(CNM_MANAGER)·동의서(PHM_EMP_ASSENT)·급여(P_PAY)는 <b>생성 안 함</b>.
+          삭제 시 위 9개 테이블을 자식→부모 역순으로 <b>한 번에</b> 정리합니다.
+        </p>
+      </div>
     </div>
 
     <template #footer>
@@ -282,4 +312,34 @@ watch(() => props.modelValue, (v) => {
 .ta__btn--danger { background: #fff; color: #c0392b; border-color: #e6b3ad; margin-right: auto; }
 .ta__btn--danger:hover:not(:disabled) { background: #fdecea; }
 .ta__btn--danger:disabled { opacity: .5; cursor: default; }
+
+/* ★ 하단 상세 내역 (어떤 테이블에 무엇이) */
+.ta__detail {
+  border: 1px solid var(--in-border-default); border-radius: var(--in-radius-xs);
+  padding: 14px 16px; background: var(--in-bg-default);
+}
+.ta__detail-head {
+  font-size: var(--in-font-size-md); font-weight: var(--in-font-weight-medium);
+  color: var(--in-text-accent); margin-bottom: 10px;
+}
+.ta__detail-group { margin-bottom: 10px; }
+.ta__detail-gname {
+  font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-medium);
+  color: var(--in-text-default); margin-bottom: 4px;
+}
+.ta__detail-table { width: 100%; border-collapse: collapse; }
+.ta__detail-table td {
+  padding: 5px 8px; font-size: var(--in-font-size-sm); vertical-align: top;
+  border-bottom: 1px solid var(--in-border-subtle, #ececec);
+}
+.ta__detail-t { width: 180px; white-space: nowrap; }
+.ta__detail-t code {
+  font-family: var(--in-font-family-mono, ui-monospace); font-size: var(--in-font-size-sm);
+  color: var(--in-text-accent); font-weight: 600;
+}
+.ta__detail-c { color: var(--in-text-default); word-break: break-all; line-height: 1.5; }
+.ta__detail-foot {
+  margin: 8px 0 0 0; font-size: var(--in-font-size-sm); line-height: 1.6;
+  color: var(--in-text-subtle);
+}
 </style>
