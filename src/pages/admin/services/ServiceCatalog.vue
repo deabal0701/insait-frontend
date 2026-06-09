@@ -21,6 +21,7 @@ import { shortCmd } from '@/utils/metaUtils';
 import { SERVICE_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import screenHelp from './ServiceCatalog.help.js';   // ★ (2026-06-09, dspark): 화면 도움말(실행 SQL+업무주의)
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
@@ -305,6 +306,7 @@ onMounted(() => list.reload());
     :subtitle="`FRM_SERVICE_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :help="screenHelp"
     row-key="svDefNm"
     :active-filters="activeFilters"
     :selected-row="selected"

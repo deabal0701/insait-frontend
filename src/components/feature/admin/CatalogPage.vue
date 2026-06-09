@@ -34,7 +34,7 @@
  *   - filter-remove(key)
  *   - retry()
  */
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import InTable from '@/components/ui/InTable.vue';
 import InPagination from '@/components/ui/InPagination.vue';
 import InPageSizeSelect from '@/components/ui/InPageSizeSelect.vue';
@@ -42,6 +42,7 @@ import InChip from '@/components/ui/InChip.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InCard from '@/components/ui/InCard.vue';
 import InEmptyState from '@/components/ui/InEmptyState.vue';
+import ScreenHelpDrawer from '@/components/feature/admin/ScreenHelpDrawer.vue';
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -51,7 +52,13 @@ const props = defineProps({
   rowKey: { type: String, default: undefined },
   activeFilters: { type: Array, default: () => [] },
   selectedRow: { type: [String, Number, Object], default: null },
+  // ★ (2026-06-09, dspark): 화면 도움말 — { object, title, table, asOf, operations[], businessNotes[] }.
+  //   전달되면 제목 옆 [?]도움말 버튼 + 우측 ScreenHelpDrawer 렌더. 미전달 시 0 영향.
+  help: { type: Object, default: null },
 });
+
+// ★ (2026-06-09, dspark): 도움말 드로어 open 상태 (로컬). 행 클릭 편집 드로어와 별개 오버레이.
+const helpOpen = ref(false);
 
 const emit = defineEmits(['row-click', 'filter-remove', 'retry']);
 
@@ -92,7 +99,13 @@ function onSizeChange(s) { props.list.setSize?.(s); }
     <!-- 상단 헤더 -->
     <header class="catalog-page__header">
       <div class="catalog-page__title-area">
-        <h1 class="catalog-page__title">{{ title }}</h1>
+        <div class="catalog-page__title-row">
+          <h1 class="catalog-page__title">{{ title }}</h1>
+          <!-- ★ (2026-06-09, dspark): 화면 도움말 (실행 SQL + 조건 + 업무주의). help prop 있을 때만. -->
+          <button v-if="help" type="button" class="catalog-page__help-btn" title="이 화면이 실행하는 SQL·업무 도움말" @click="helpOpen = true">
+            <span aria-hidden="true">?</span> 도움말
+          </button>
+        </div>
         <p v-if="subtitle" class="catalog-page__subtitle">{{ subtitle }}</p>
       </div>
       <div class="catalog-page__actions">
@@ -215,6 +228,9 @@ function onSizeChange(s) { props.list.setSize?.(s); }
 
     <!-- Drawer (행 선택 시) -->
     <slot name="drawer" />
+
+    <!-- ★ (2026-06-09, dspark): 화면 도움말 드로어 (실행 SQL + 조건 + 업무주의) -->
+    <ScreenHelpDrawer v-if="help" :help="help" :open="helpOpen" @update:open="(v) => { helpOpen = v; }" />
   </div>
 </template>
 
@@ -233,12 +249,39 @@ function onSizeChange(s) { props.list.setSize?.(s); }
   justify-content: space-between;
   gap: 16px;
 }
+.catalog-page__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .catalog-page__title {
   margin: 0;
   font-size: 22px;
   line-height: 28px;
   font-weight: var(--in-font-weight-medium);
   color: var(--in-text-default);
+}
+.catalog-page__help-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  cursor: pointer;
+  background: var(--in-bg-white);
+  color: var(--in-text-subtle);
+  border: 1px solid var(--in-border-default);
+  border-radius: 999px;
+  font-size: var(--in-font-size-sm);
+  font-family: var(--in-font-family-body);
+}
+.catalog-page__help-btn:hover {
+  border-color: var(--in-border-input);
+  color: var(--in-text-accent);
+}
+.catalog-page__help-btn > span {
+  font-weight: var(--in-font-weight-bold);
 }
 .catalog-page__subtitle {
   margin: 4px 0 0;
