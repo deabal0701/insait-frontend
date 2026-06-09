@@ -73,6 +73,15 @@ function onTitleClick() {
     try { sessionStorage.setItem(HELP_UNLOCK_KEY, '1'); } catch (e) { /* sessionStorage 불가 환경 무시 */ }
   }
 }
+// ★ (2026-06-09, dspark): 도움말 드로어를 닫으면 버튼도 다시 숨김(잠금) — 재노출하려면 제목 5클릭.
+function onHelpOpenChange(v) {
+  helpOpen.value = v;
+  if (!v) {
+    helpRevealed.value = false;
+    helpClickCount = 0;
+    try { sessionStorage.removeItem(HELP_UNLOCK_KEY); } catch (e) { /* noop */ }
+  }
+}
 onMounted(() => {
   try { if (sessionStorage.getItem(HELP_UNLOCK_KEY) === '1') helpRevealed.value = true; } catch (e) { /* noop */ }
 });
@@ -249,7 +258,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
     <slot name="drawer" />
 
     <!-- [DEV-HELP] 화면 도움말 드로어 (실행 SQL + 조건 + 업무주의 + 컬럼정보) — 제거 시 이 줄 삭제 -->
-    <ScreenHelpDrawer v-if="help" :help="help" :open="helpOpen" @update:open="(v) => { helpOpen = v; }" />
+    <ScreenHelpDrawer v-if="help" :help="help" :open="helpOpen" @update:open="onHelpOpenChange" />
   </div>
 </template>
 
