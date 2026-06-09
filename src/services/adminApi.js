@@ -104,11 +104,12 @@ export const adminApi = {
     },
     // ★ TEMP (2026-06-09, dspark): 발령확정 전 "테스트 계정" 생성/조회/삭제 — 추후 제거. grep 키 "TEMP (2026-06-09".
     //   AS-IS 발령 체인(P_CAM_EMP_NO_CREATE→P_FRM_USER_CREATE) 재사용. 백엔드 com.win.insait.admin.access.user.TestAccount*.
+    //   경로 = /api/admin/access/test-accounts (★ /users/{userId} 충돌 회피 위해 분리, 2026-06-09).
     testAccounts: {
-      list() { return http.get('/api/admin/access/users/provision-test'); },
-      create(payload) { return http.post('/api/admin/access/users/provision-test', payload || {}); },
-      remove(empId) { return http.delete(`/api/admin/access/users/provision-test/${encodeURIComponent(empId)}`); },
-      removeAll() { return http.delete('/api/admin/access/users/provision-test'); },
+      list() { return http.get('/api/admin/access/test-accounts'); },
+      create(payload) { return http.post('/api/admin/access/test-accounts', payload || {}); },
+      remove(empId) { return http.delete(`/api/admin/access/test-accounts/${encodeURIComponent(empId)}`); },
+      removeAll() { return http.delete('/api/admin/access/test-accounts'); },
     },
     // 후속: userGroups / authItems / orgAuth / externalUsers / menus / authCriteria
   },
