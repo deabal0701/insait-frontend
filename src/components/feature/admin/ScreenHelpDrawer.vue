@@ -59,6 +59,15 @@ function close() { emit('update:open', false); }
         <span v-if="help.asOf" class="help__asof">· 현재 구현 기준 {{ help.asOf }}</span>
       </p>
 
+      <!-- ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE) — 강조 배너 -->
+      <div
+        v-for="(c, i) in (help.callouts || [])"
+        :key="i"
+        class="help__callout"
+        :class="`help__callout--${c.tone || 'warn'}`"
+        v-html="'※ ' + c.text"
+      />
+
       <!-- 실행 SQL (동작별) -->
       <section class="help__sec">
         <h3 class="help__h">▸ 이 화면이 실행하는 SQL (동작별)</h3>
@@ -124,6 +133,27 @@ function close() { emit('update:open', false); }
 <style scoped>
 .help { display: flex; flex-direction: column; gap: 20px; }
 .help__meta { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+
+/* 꼭 알아야 할 / 암기 필요 강조 배너 (이슈·TO-BE) */
+.help__callout {
+  margin: 0; padding: 10px 12px; border-radius: var(--in-radius-xs, 4px);
+  font-size: var(--in-font-size-sm); line-height: 1.5; color: var(--in-text-default);
+}
+.help__callout :deep(strong) { color: var(--in-text-accent); }
+.help__callout--warn {
+  background: var(--in-bg-warning-subtle, #fff8e1);
+  border: 1px solid var(--in-border-warning, #f0d68a);
+}
+.help__callout--warn :deep(strong) { color: var(--in-text-accent, #8a6d00); }
+.help__callout--info {
+  background: var(--in-surface-accent-success, #f0f9ff);
+  border: 1px solid var(--in-border-default);
+}
+.help__callout--danger {
+  background: var(--in-surface-accent-error, #fef2f2);
+  border: 1px solid var(--in-text-info-error, #f0a8a8);
+}
+.help__callout--danger :deep(strong) { color: var(--in-text-info-error, #dc2626); }
 .help__table { font-family: var(--in-font-family-mono, ui-monospace); color: var(--in-text-accent); }
 .help__asof { margin-left: 6px; }
 

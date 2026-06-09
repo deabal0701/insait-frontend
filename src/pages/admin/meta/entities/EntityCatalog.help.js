@@ -9,6 +9,12 @@ export default {
   table: 'FRM_ENTITY (엔터티) + FRM_ENTITY_COLUMN (컬럼) + FRM_ENTITY_COLUMN_MAPPING (DB 매핑)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE)
+  callouts: [
+    { tone: 'warn', text: '엔터티는 <strong>MultiSave(저장) Command 의 저장 대상</strong> 메타다. 컬럼의 <strong>KEY_YN=Y</strong> 가 저장 시 INSERT/UPDATE 판별 기준 — 잘못 지정하면 중복 INSERT/미갱신이 발생한다.' },
+    { tone: 'info', text: '엔터티 편집 시 캐시 evict 대상 = <strong>DBModelPool + BusinessEntityProvider</strong> (서비스·메시지와 달리 엔터티는 풀에 적재되므로 evict 필요). 3계층(엔터티→컬럼→DB매핑) 구조.' },
+  ],
+
   operations: [
     {
       key: 'list', label: '목록 조회 (검색·필터)',

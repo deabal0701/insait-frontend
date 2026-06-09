@@ -10,6 +10,12 @@ export default {
   table: 'FRM_SERVICE_DEF (정의) + FRM_SERVICE_FUNC_MAP (함수매핑) + FRM_SERVICE_ATTR (속성/메시지 슬롯)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE)
+  callouts: [
+    { tone: 'warn', text: '<strong>3중 동명 규칙</strong> — type=sql 매핑일 때 <strong>sv_def_nm = func_nm = query_name</strong> 이 일치해야 framework 자동 바인딩이 정상 동작한다. 어긋나면 <strong>조회 0건</strong>이 나온다(원인 추적 1순위 함정).' },
+    { tone: 'info', text: 'ELA(전자결재) 서비스는 envelope serviceId 가 실제로 <strong>ELA0010_SAVE_0N</strong>(1=상신 / 2=임시저장 / 3=승인 / 4=반려) 으로 sub-Command dispatch 된다. objectId 가 NULL 이면 OBJECT 14건 인프라 누락 의심.' },
+  ],
+
   operations: [
     // ───────────────────────── 목록 조회 ─────────────────────────
     {

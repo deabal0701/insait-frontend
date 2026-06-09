@@ -9,6 +9,12 @@ export default {
   table: 'FRM_EXECUTABLE_OBJECT (정의) + FRM_OBJECT_ATTRIBUTE (속성) + FRM_OBJECT_RELATION (자기참조 관계)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE)
+  callouts: [
+    { tone: 'warn', text: '실제 오브젝트 <strong>계층은 FRM_OBJECT_RELATION</strong>(PARENT_OBJ_ID/CHILD_OBJ_ID)으로 표현된다. 테이블의 <strong>PARENT_ID 컬럼은 거의 미사용</strong> — 계층 판단·검색에 쓰지 말 것.' },
+    { tone: 'info', text: 'ELA(전자결재) 도메인은 이 OBJECT 의 속성(<strong>appl_cd 등 14건 인프라</strong>)이 등록돼야 dispatch 가 정상 동작 — IST0050 서비스관리의 ELA 인프라 진단과 연계.' },
+  ],
+
   operations: [
     {
       key: 'list', label: '목록 조회 (검색·필터)',

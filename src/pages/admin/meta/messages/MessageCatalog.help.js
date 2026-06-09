@@ -9,6 +9,12 @@ export default {
   table: 'FRM_MSG_DEF (메시지 정의) + FRM_MSG_COL_DEF (컬럼 정의)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE)
+  callouts: [
+    { tone: 'danger', text: '<strong>USE_ENC_YN = 암호화 / USE_YN = 사용</strong> 이 DB 의 참된 의미다. AS-IS JSP 는 헤더↔바디 <strong>스왑 버그</strong>로 화면만 반전 표시했으나, 본 Vue 관리자는 참된 의미로 환원해 표시한다. (TO-BE 메타 SSOT 격상 시 운영데이터 일괄 정정 검토 대상)' },
+    { tone: 'info', text: 'MSG_DEF_ID 는 업무키(<strong>MT_&lt;화면7자&gt;_NN</strong>, 수정 불가). TYPE_CD=<strong>TREE</strong> 는 PARENT_ID 자기참조 + CHILD/PARENT_COL_ID 로 트리 구성. 컬럼은 "SQL→컬럼 자동채움"(describe)으로 생성 가능.' },
+  ],
+
   operations: [
     {
       key: 'list', label: '목록 조회 (검색·필터)',

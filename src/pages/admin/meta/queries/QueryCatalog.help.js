@@ -9,6 +9,12 @@ export default {
   table: 'FRM_QUERY_DEF (정의) + FRM_QUERY_DEF_BODY (본문 CLOB) + FRM_QUERY_DEF_PARAM (파라미터)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE)
+  callouts: [
+    { tone: 'warn', text: '<strong>3중 동명 규칙</strong> — query_name = func_nm = sv_def_nm 이 일치해야 framework 자동 바인딩이 정상 동작(서비스관리 참조).' },
+    { tone: 'warn', text: '<strong>BIZ_AUTH_YN / ORG_AUTH_YN / DECORATORS</strong>(Waffle 런타임 데코레이터·매크로)가 걸린 SQL 은 "SQL→컬럼 자동채움(describe)"을 <strong>지원하지 않는다</strong> → 그런 SQL 은 수동 입력해야 한다. 본문은 정의당 1행 정규화(저장 시 DELETE 후 재INSERT).' },
+  ],
+
   operations: [
     {
       key: 'list', label: '목록 조회 (검색·필터)',

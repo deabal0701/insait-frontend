@@ -9,6 +9,12 @@ export default {
   table: 'FRM_USER (계정) + FRM_USER_EMP_MAP (계정↔사원) + FRM_USER_OPTION (옵션) ⋈ VI_FRM_PHM_EMP (재직뷰)',
   asOf: '2026-06-09',
 
+  // ★ 꼭 알아야 할 / 암기 필요 (이슈·TO-BE) — 도움말 상단 강조 배너. <strong> 허용.
+  callouts: [
+    { tone: 'warn', text: 'AS-IS 에서 <strong>로그인ID(=사번)</strong>는 <strong>인사운영 ▸ 발령관리 ▸ 채용발령관리(CAM0050)</strong> 의 <strong>발령 확정</strong> 시 사번으로 <strong>자동 생성</strong>됩니다 (P_CAM_EMP_NO_CREATE → P_FRM_USER_CREATE). 본 [신규]는 <strong>편의상 제공하는 로그인ID 등록</strong>입니다 (임시 기능 — 추후 삭제 예정).' },
+    { tone: 'danger', text: '<strong>PASSWORD·주민번호(CTZ_NO)는 화면·응답에 절대 미노출.</strong> 비번은 F_SHAENCRYPTOR(SHA) 저장이며, 비번초기화는 랜덤 임시비번 발급(S2 — 주민번호 기반 초기비번 폐기).' },
+  ],
+
   operations: [
     {
       key: 'list', label: '목록 조회 (검색·필터)',
