@@ -30,8 +30,12 @@ import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
+import TestAccountPanel from './TestAccountPanel.vue';   // ★ TEMP (2026-06-09) — 제거 시 이 줄 + 버튼 + 패널 삭제
 
 const toast = useToast();
+
+// ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성 패널 토글.
+const testPanelOpen = ref(false);
 
 const list = usePagedList({
   fetcher: adminApi.access.users.list,
@@ -191,6 +195,8 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #header-actions>
+      <!-- ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성 — 추후 이 버튼만 삭제 -->
+      <InButton variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="testPanelOpen = true">🧪 테스트 계정</InButton>
       <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
     </template>
 
@@ -293,6 +299,9 @@ onMounted(() => list.reload());
         @cancel="confirmDelete = false"
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
+
+      <!-- ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성/관리 패널 -->
+      <TestAccountPanel v-model="testPanelOpen" @changed="list.reload()" />
 
       <!-- 임시비번 표시 (1회) -->
       <InModal
