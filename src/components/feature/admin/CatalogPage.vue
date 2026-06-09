@@ -34,7 +34,7 @@
  *   - filter-remove(key)
  *   - retry()
  */
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import InTable from '@/components/ui/InTable.vue';
 import InPagination from '@/components/ui/InPagination.vue';
 import InPageSizeSelect from '@/components/ui/InPageSizeSelect.vue';
@@ -59,6 +59,24 @@ const props = defineProps({
 
 // ★ (2026-06-09, dspark): 도움말 드로어 open 상태 (로컬). 행 클릭 편집 드로어와 별개 오버레이.
 const helpOpen = ref(false);
+
+// ★ (2026-06-09, dspark): 도움말 버튼은 평소 숨김 — 제목을 5번 클릭해야 노출 (관리자 본인 전용).
+//   한 번 풀면 sessionStorage 로 해당 세션 내 모든 카탈로그 화면에서 유지. (탭 닫으면 다시 숨김)
+const HELP_UNLOCK_KEY = 'insait.adminHelp.revealed';
+const helpRevealed = ref(false);
+let helpClickCount = 0;
+function onTitleClick() {
+  if (!props.help || helpRevealed.value) return;
+  helpClickCount += 1;
+  if (helpClickCount >= 5) {
+    helpRevealed.value = true;
+    helpClickCount = 0;
+    try { sessionStorage.setItem(HELP_UNLOCK_KEY, '1'); } catch (e) { /* sessionStorage 불가 환경 무시 */ }
+  }
+}
+onMounted(() => {
+  try { if (sessionStorage.getItem(HELP_UNLOCK_KEY) === '1') helpRevealed.value = true; } catch (e) { /* noop */ }
+});
 
 const emit = defineEmits(['row-click', 'filter-remove', 'retry']);
 
@@ -100,9 +118,10 @@ function onSizeChange(s) { props.list.setSize?.(s); }
     <header class="catalog-page__header">
       <div class="catalog-page__title-area">
         <div class="catalog-page__title-row">
-          <h1 class="catalog-page__title">{{ title }}</h1>
-          <!-- ★ (2026-06-09, dspark): 화면 도움말 (실행 SQL + 조건 + 업무주의). help prop 있을 때만. -->
-          <button v-if="help" type="button" class="catalog-page__help-btn" title="이 화면이 실행하는 SQL·업무 도움말" @click="helpOpen = true">
+          <!-- ★ (2026-06-09, dspark): 제목 5연타 시 숨은 도움말 버튼 활성화 (관리자 본인 전용). -->
+          <h1 class="catalog-page__title" @click="onTitleClick">{{ title }}</h1>
+          <!-- ★ (2026-06-09, dspark): 화면 도움말 (실행 SQL + 조건 + 업무주의). help 있고 + 5연타로 잠금 해제 시에만 노출. -->
+          <button v-if="help && helpRevealed" type="button" class="catalog-page__help-btn" title="이 화면이 실행하는 SQL·업무 도움말" @click="helpOpen = true">
             <span aria-hidden="true">?</span> 도움말
           </button>
         </div>
@@ -260,6 +279,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
   line-height: 28px;
   font-weight: var(--in-font-weight-medium);
   color: var(--in-text-default);
+  user-select: none;   /* ★ (2026-06-09, dspark): 5연타 시 텍스트 선택 방지 (도움말 비밀 활성화) */
 }
 .catalog-page__help-btn {
   flex: 0 0 auto;
