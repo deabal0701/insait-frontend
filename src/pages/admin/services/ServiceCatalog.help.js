@@ -221,4 +221,54 @@ DELETE FROM FRM_SERVICE_DEF      WHERE SV_DEF_ID = 23919350;`,
     'objectId 는 대부분 NULL 이 정상. 단 ELA Command 인데 NULL 이면 OBJECT 메타 14건 인프라 등록 누락을 의심해야 한다.',
     '우측 패널의 진단 dot/배지(메시지 미등록·SQL 미등록·use_yn=N·SQL bind 미매칭·ELA 인프라 누락)는 위 ④⑤⑥ expand 조회 결과로 자동 계산된다.',
   ],
+
+  // 테이블 컬럼 정보 (출처: 01-asis/database/extracts/columns.csv + constraints.csv 실측). 드로어 하단 접이식.
+  //   key: PK = 기본키 / FK(논리) = 논리 외래키(DB 미강제, NULL 허용). nn = NOT NULL.
+  tables: [
+    {
+      name: 'FRM_SERVICE_DEF', label: '서비스 정의 (부모)',
+      columns: [
+        { col: 'SV_DEF_ID',     type: 'NUMBER',        nn: true,  key: 'PK', desc: '서비스 정의 ID (시퀀스 S_FRM_SEQUENCE)' },
+        { col: 'SV_DEF_NM',     type: 'VARCHAR2(300)', nn: true,  key: 'UK(논리)', desc: '서비스명 = 업무키 = envelope/JSP serviceId' },
+        { col: 'CMD_CLASS_NM',  type: 'VARCHAR2(300)', nn: true,  key: '',   desc: 'Command 클래스 FQCN (MultiQuery/MultiSave/Procedure/ElaService …)' },
+        { col: 'TX_SUPPORT_YN', type: 'CHAR(1)',       nn: false, key: '',   desc: '트랜잭션 지원 Y/N' },
+        { col: 'VERSION',       type: 'VARCHAR2(60)',  nn: false, key: '',   desc: '버전 (선택)' },
+        { col: 'NOTE',          type: 'VARCHAR2(750)', nn: false, key: '',   desc: '비고' },
+        { col: 'MOD_USER_ID',   type: 'NUMBER',        nn: true,  key: '',   desc: '최종 수정자 ID (JWT uid 주입)' },
+        { col: 'MOD_DATE',      type: 'DATE',          nn: true,  key: '',   desc: '최종 수정일시 (SYSDATE)' },
+        { col: 'ASYNC_YN',      type: 'CHAR(1)',       nn: false, key: '',   desc: '비동기 실행 Y/N' },
+        { col: 'OBJECT_ID',     type: 'VARCHAR2(80)',  nn: false, key: '',   desc: '소속 오브젝트 (대부분 NULL)' },
+        { col: 'USE_LOG_YN',    type: 'CHAR(1)',       nn: false, key: '',   desc: '실행 로그 적재 Y/N' },
+      ],
+    },
+    {
+      name: 'FRM_SERVICE_FUNC_MAP', label: '함수 매핑 (자식)',
+      columns: [
+        { col: 'SV_MAP_ID',       type: 'NUMBER',       nn: true,  key: 'PK',      desc: '매핑 ID (시퀀스)' },
+        { col: 'SV_DEF_ID',       type: 'NUMBER',       nn: false, key: 'FK(논리)', desc: '부모 서비스 정의 ID' },
+        { col: 'SV_MAP_TYPE_CD',  type: 'VARCHAR2(50)', nn: true,  key: '',        desc: '매핑 타입 — sql(쿼리) / entity(엔터티)' },
+        { col: 'FUNC_NM',         type: 'VARCHAR2(60)', nn: true,  key: '',        desc: '쿼리명 또는 엔터티명' },
+        { col: 'SEQ_ORDER',       type: 'NUMBER',       nn: true,  key: '',        desc: '실행 순서' },
+        { col: 'REQ_MSG_NM',      type: 'VARCHAR2(60)', nn: false, key: '',        desc: '요청 메시지명' },
+        { col: 'RES_MSG_NM',      type: 'VARCHAR2(60)', nn: false, key: '',        desc: '응답 메시지명' },
+        { col: 'MOD_DATE',        type: 'DATE',         nn: true,  key: '',        desc: '최종 수정일시' },
+        { col: 'MOD_USER_ID',     type: 'NUMBER',       nn: true,  key: '',        desc: '최종 수정자 ID' },
+        { col: 'USE_TREE_RESULT', type: 'CHAR(1)',      nn: false, key: '',        desc: '트리 결과 사용 Y/N' },
+      ],
+    },
+    {
+      name: 'FRM_SERVICE_ATTR', label: '속성 / 메시지 슬롯 (자식)',
+      columns: [
+        { col: 'SV_ATTR_ID',    type: 'NUMBER',        nn: true,  key: 'PK',      desc: '속성 ID (시퀀스)' },
+        { col: 'SV_DEF_ID',     type: 'NUMBER',        nn: false, key: 'FK(논리)', desc: '부모 서비스 정의 ID' },
+        { col: 'SV_ATTR_NM',    type: 'VARCHAR2(60)',  nn: true,  key: '',        desc: '속성명 (메시지 인스턴스 ME_*)' },
+        { col: 'NOTE',          type: 'VARCHAR2(750)', nn: false, key: '',        desc: '비고' },
+        { col: 'SV_ATTR_TYPE',  type: 'VARCHAR2(60)',  nn: true,  key: '',        desc: '슬롯 종류 — IN_MSG(요청) / OUT_MSG(응답)' },
+        { col: 'DEFAULT_VALUE', type: 'VARCHAR2(750)', nn: false, key: '',        desc: '기본값 (= VALUE_TYPE 와 자동 정합)' },
+        { col: 'MOD_USER_ID',   type: 'NUMBER',        nn: true,  key: '',        desc: '최종 수정자 ID' },
+        { col: 'MOD_DATE',      type: 'DATE',          nn: true,  key: '',        desc: '최종 수정일시' },
+        { col: 'VALUE_TYPE',    type: 'VARCHAR2(750)', nn: false, key: '',        desc: '메시지 타입 (MT_<화면7자>_NN)' },
+      ],
+    },
+  ],
 };

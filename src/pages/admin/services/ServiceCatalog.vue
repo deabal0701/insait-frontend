@@ -21,7 +21,7 @@ import { shortCmd } from '@/utils/metaUtils';
 import { SERVICE_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
-import screenHelp from './ServiceCatalog.help.js';   // ★ (2026-06-09, dspark): 화면 도움말(실행 SQL+업무주의)
+import screenHelp from './ServiceCatalog.help.js';   // [DEV-HELP] 화면 도움말(실행 SQL+업무주의+컬럼정보) — 제거 시 이 줄 + 아래 :help prop 삭제
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';

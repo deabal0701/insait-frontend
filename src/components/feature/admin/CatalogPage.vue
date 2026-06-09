@@ -42,7 +42,7 @@ import InChip from '@/components/ui/InChip.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InCard from '@/components/ui/InCard.vue';
 import InEmptyState from '@/components/ui/InEmptyState.vue';
-import ScreenHelpDrawer from '@/components/feature/admin/ScreenHelpDrawer.vue';
+import ScreenHelpDrawer from '@/components/feature/admin/ScreenHelpDrawer.vue';   // [DEV-HELP] 제거 대상 (임시 개발 도움말)
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -52,16 +52,15 @@ const props = defineProps({
   rowKey: { type: String, default: undefined },
   activeFilters: { type: Array, default: () => [] },
   selectedRow: { type: [String, Number, Object], default: null },
-  // ★ (2026-06-09, dspark): 화면 도움말 — { object, title, table, asOf, operations[], businessNotes[] }.
-  //   전달되면 제목 옆 [?]도움말 버튼 + 우측 ScreenHelpDrawer 렌더. 미전달 시 0 영향.
+  // [DEV-HELP] ★ (2026-06-09, dspark): 화면 도움말 — { object, title, table, asOf, operations[], businessNotes[], tables[] }.
+  //   전달되면 제목 옆 [?]도움말 버튼 + 우측 ScreenHelpDrawer 렌더. 미전달 시 0 영향. (제거 시 이 prop 삭제)
   help: { type: Object, default: null },
 });
 
-// ★ (2026-06-09, dspark): 도움말 드로어 open 상태 (로컬). 행 클릭 편집 드로어와 별개 오버레이.
+// ════════ [DEV-HELP] 도움말(임시 개발 편의용) 상태·로직 — 제거 시 이 블록 통째 삭제 ════════
+// ★ (2026-06-09, dspark): 도움말 드로어 open + 제목 5클릭 비밀 활성화 (관리자 본인 전용).
+//   한 번 풀면 sessionStorage 로 세션 내 모든 카탈로그 화면에서 유지. (탭 닫으면 다시 숨김)
 const helpOpen = ref(false);
-
-// ★ (2026-06-09, dspark): 도움말 버튼은 평소 숨김 — 제목을 5번 클릭해야 노출 (관리자 본인 전용).
-//   한 번 풀면 sessionStorage 로 해당 세션 내 모든 카탈로그 화면에서 유지. (탭 닫으면 다시 숨김)
 const HELP_UNLOCK_KEY = 'insait.adminHelp.revealed';
 const helpRevealed = ref(false);
 let helpClickCount = 0;
@@ -77,6 +76,7 @@ function onTitleClick() {
 onMounted(() => {
   try { if (sessionStorage.getItem(HELP_UNLOCK_KEY) === '1') helpRevealed.value = true; } catch (e) { /* noop */ }
 });
+// ════════ [DEV-HELP] 끝 ════════
 
 const emit = defineEmits(['row-click', 'filter-remove', 'retry']);
 
@@ -118,9 +118,9 @@ function onSizeChange(s) { props.list.setSize?.(s); }
     <header class="catalog-page__header">
       <div class="catalog-page__title-area">
         <div class="catalog-page__title-row">
-          <!-- ★ (2026-06-09, dspark): 제목 5연타 시 숨은 도움말 버튼 활성화 (관리자 본인 전용). -->
+          <!-- [DEV-HELP] @click="onTitleClick" 는 도움말 비밀 활성화 트리거 — 제거 시 @click 만 떼면 됨 -->
           <h1 class="catalog-page__title" @click="onTitleClick">{{ title }}</h1>
-          <!-- ★ (2026-06-09, dspark): 화면 도움말 (실행 SQL + 조건 + 업무주의). help 있고 + 5연타로 잠금 해제 시에만 노출. -->
+          <!-- [DEV-HELP] 화면 도움말 버튼 (제목 5클릭으로 노출) — 제거 시 이 button 삭제 -->
           <button v-if="help && helpRevealed" type="button" class="catalog-page__help-btn" title="이 화면이 실행하는 SQL·업무 도움말" @click="helpOpen = true">
             <span aria-hidden="true">?</span> 도움말
           </button>
@@ -248,7 +248,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
     <!-- Drawer (행 선택 시) -->
     <slot name="drawer" />
 
-    <!-- ★ (2026-06-09, dspark): 화면 도움말 드로어 (실행 SQL + 조건 + 업무주의) -->
+    <!-- [DEV-HELP] 화면 도움말 드로어 (실행 SQL + 조건 + 업무주의 + 컬럼정보) — 제거 시 이 줄 삭제 -->
     <ScreenHelpDrawer v-if="help" :help="help" :open="helpOpen" @update:open="(v) => { helpOpen = v; }" />
   </div>
 </template>
@@ -279,8 +279,9 @@ function onSizeChange(s) { props.list.setSize?.(s); }
   line-height: 28px;
   font-weight: var(--in-font-weight-medium);
   color: var(--in-text-default);
-  user-select: none;   /* ★ (2026-06-09, dspark): 5연타 시 텍스트 선택 방지 (도움말 비밀 활성화) */
+  user-select: none;   /* [DEV-HELP] 5클릭 시 텍스트 선택 방지 (도움말 비밀 활성화) — 제거 시 이 줄만 삭제 */
 }
+/* ════════ [DEV-HELP] 도움말 버튼 스타일 — 제거 시 이 블록 통째 삭제 ════════ */
 .catalog-page__help-btn {
   flex: 0 0 auto;
   display: inline-flex;
@@ -303,6 +304,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
 .catalog-page__help-btn > span {
   font-weight: var(--in-font-weight-bold);
 }
+/* ════════ [DEV-HELP] 끝 ════════ */
 .catalog-page__subtitle {
   margin: 4px 0 0;
   font-size: var(--in-font-size-sm);
