@@ -12,7 +12,7 @@
  *   - 'S9' 공용사번 + PRIVATE_GROUP 기본권한 자동. 비번 = 더미 주민번호 뒷 7자리(1회 표시).
  *   - 삭제: 9개 인사/계정 테이블 한 번에 정리. [전체 삭제] = 모든 테스트 계정 일괄.
  */
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
 import { adminErrMsg } from '@/composables/useMetaEditor';
@@ -30,6 +30,26 @@ const toast = useToast();
 const name = ref('테스트계정');
 const creating = ref(false);
 const result = ref(null);          // { empId, loginId, password, message }
+const createdName = ref('');       // 방금 생성한 이름 (생성 내역 표시용)
+
+// 발령 체인이 실제로 만든 9개 자원 (어디에 무엇이) — result 의 실제 값으로 구성.
+const resources = computed(() => {
+  if (!result.value) return [];
+  const id = result.value.loginId;
+  const eid = result.value.empId;
+  const nm = createdName.value || '테스트계정';
+  return [
+    { t: 'FRM_USER',            d: '로그인 계정',          v: `LOGIN_ID=${id} · 상태 사용(Y) · 비번 SHA(주민뒷7)` },
+    { t: 'FRM_USER_EMP_MAP',    d: '계정 ↔ 사원 연결',     v: `USER_ID=${eid} · BINDING_TYPE=EMP` },
+    { t: 'FRM_USER_GROUP_MAP',  d: '권한 그룹(기본)',       v: `PRIVATE_GROUP (개인 메뉴 기본권한)` },
+    { t: 'PHM_EMP',             d: '인사기본 · 재직중',     v: `사번=${id} · IN_OFFI_YN=Y · 부서/직위/직급 차용` },
+    { t: 'PHM_PRIVATE',         d: '인적사항',             v: `더미 주민(ARIA 암호화)·성별·생년월일·국적 KR` },
+    { t: 'PHM_NAME',            d: '이름',                v: `${nm} (성/이름 분리)` },
+    { t: 'PHM_EMP_LOCALE',      d: '지역(한글)명',         v: nm },
+    { t: 'CAM_PRE',             d: '발령대상자',           v: `발령유형=채용(A00) · 발령일=오늘` },
+    { t: 'CAM_EMP_NO',          d: '발령 임시(표식 TEST)', v: `사번=${id} · NOTE='TEST' (삭제 가드 키)` },
+  ];
+});
 const accounts = ref([]);
 const loading = ref(false);
 const busyId = ref(null);          // 삭제 중인 empId
