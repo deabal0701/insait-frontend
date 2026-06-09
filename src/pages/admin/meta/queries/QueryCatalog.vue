@@ -16,6 +16,7 @@ import { shortCmd } from '@/utils/metaUtils';
 import { SQL_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import screenHelp from './QueryCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaCodeEditor from '@/components/feature/admin/MetaCodeEditor.vue';
@@ -162,6 +163,7 @@ onMounted(() => list.reload());
     :subtitle="`FRM_QUERY_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :help="screenHelp"
     row-key="queryName"
     :active-filters="activeFilters"
     :selected-row="selected"

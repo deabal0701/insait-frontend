@@ -14,6 +14,7 @@ import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import screenHelp from './ObjectCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
@@ -178,6 +179,7 @@ onMounted(() => list.reload());
     :subtitle="`FRM_EXECUTABLE_OBJECT · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :help="screenHelp"
     row-key="objectNm"
     :active-filters="activeFilters"
     :selected-row="selected"
