@@ -15,6 +15,7 @@ import InSelect from '@/components/ui/InSelect.vue';
 
 const props = defineProps({
   list: { type: Array, required: true },
+  readOnly: { type: Boolean, default: false },   // 조회 모드: 체크박스 비활성(바인딩 상태만 표시)
 });
 
 const menuGroup = ref('SYS_ADMIN');
@@ -25,7 +26,7 @@ const groupOptions = [
 const treeKey = ref(0);   // 메뉴그룹 변경 시 트리 remount
 function onGroupChange(v) { menuGroup.value = v; treeKey.value += 1; }
 
-const treeProps = { label: 'menuNm', children: 'children', isLeaf: 'leaf' };
+const treeProps = { label: 'menuNm', children: 'children', isLeaf: 'leaf', disabled: 'disabled' };
 
 // 현재 바인딩된 메뉴ID (rowStatus !== 'D') — 트리 초기 체크 + 카운트
 const checkedKeys = computed(() =>
@@ -38,7 +39,7 @@ async function loadNode(node, resolve) {
   try {
     const res = await adminApi.access.menus.children(parentId);
     const rows = res?.data ?? res ?? [];
-    resolve(rows.map((r) => ({ ...r, leaf: !r.hasChildren })));
+    resolve(rows.map((r) => ({ ...r, leaf: !r.hasChildren, disabled: props.readOnly })));
   } catch {
     resolve([]);
   }
@@ -69,7 +70,11 @@ function onCheckChange(data, checked) {
       <InSelect :model-value="menuGroup" :options="groupOptions" size="sm" @update:model-value="onGroupChange" />
       <span class="mbt__count">연결된 메뉴 <b>{{ boundCount }}</b></span>
     </div>
-    <p class="mbt__hint">트리를 펼쳐 메뉴를 체크하면 이 권한에 바인딩됩니다 (저장 시 감사 로그 AUTHMENU GRANT/REVOKE).</p>
+    <p class="mbt__hint">
+      {{ readOnly
+        ? '체크된 메뉴가 이 권한에 바인딩되어 있습니다 (트리를 펼쳐 확인).'
+        : '트리를 펼쳐 메뉴를 체크하면 이 권한에 바인딩됩니다 (저장 시 감사 로그 AUTHMENU GRANT/REVOKE).' }}
+    </p>
     <div class="mbt__tree">
       <ElTree
         :key="treeKey"

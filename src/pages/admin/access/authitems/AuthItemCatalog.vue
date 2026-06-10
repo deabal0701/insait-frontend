@@ -51,7 +51,7 @@ function typeText(cd) { return cd === '01' ? '01 (메뉴접근)' : (cd || '—')
 // ── 바인딩 공통 설정 (RelationEditor 주입) ──
 const groupCols = [{ key: 'usergroupId', label: '그룹ID', code: true }, { key: 'usergroupNm', label: '그룹명' }];
 const userCols  = [{ key: 'loginId', label: '로그인ID', code: true }, { key: 'empNm', label: '성명' }];
-const menuCols  = [{ key: 'menuId', label: '메뉴ID', code: true }, { key: 'menuNm', label: '메뉴명' }];
+// 메뉴 탭은 MenuBindingTree(트리) — menuCols 불요.
 
 const mapGroup = (g) => ({ usergroupId: g.usergroupId, usergroupNm: g.usergroupNm });
 const mapUser  = (u) => ({ userId: u.userId, loginId: u.loginId, empNm: u.userNm || u.empNm });
@@ -216,9 +216,9 @@ onMounted(() => list.reload());
           </template>
         </section>
 
-        <!-- 메뉴 바인딩 — 보기=목록 / 편집=트리+체크박스(AS-IS aut0040_03_w 정합) -->
+        <!-- 메뉴 바인딩 — 보기/편집 모두 트리+체크박스(AS-IS aut0040_03_w 정합). 보기=읽기전용. -->
         <section v-else-if="drawerTab === 'menus'" class="section">
-          <RelationEditor v-if="mode === 'view'" :list="detail.menuBindings || []" id-field="menuId" :columns="menuCols" read-only empty-text="연결된 메뉴가 없습니다." />
+          <MenuBindingTree v-if="mode === 'view'" :list="detail.menuBindings || []" read-only />
           <MenuBindingTree v-else :list="form.menuBindings" />
         </section>
       </MetaDetailEditor>
