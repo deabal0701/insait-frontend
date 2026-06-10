@@ -84,11 +84,13 @@ export function useMetaEditor(opts) {
   }
 
   function cancelEdit() {
-    if (mode.value === 'edit') {
+    // ★ (2026-06-10, dspark) 일반 edit = 보기 복귀 / create·바로편집(openInEdit) = 닫기.
+    //   바로편집은 조회 단계가 없으므로 [취소]가 "권한 상세"로 가지 않고 패널을 닫는다.
+    if (mode.value === 'edit' && !openInEdit) {
       mode.value = 'view';           // 폼 폐기, 보기 복귀 (detail 유지)
       drawerTab.value = defaultTab;
     } else {
-      closePanel();                  // create 취소 → 닫기
+      closePanel();                  // create / 바로편집 취소 → 닫기
     }
   }
 
@@ -116,8 +118,14 @@ export function useMetaEditor(opts) {
       // ★ (2026-06-07, dspark): api 응답이 {def,...} 가 아닐 수 있어 방어 — selected/detail 오염 방지
       selected.value = saved?.def ?? saved ?? selected.value;
       detail.value = saved ?? detail.value;
-      mode.value = 'view';
-      drawerTab.value = defaultTab;
+      // ★ (2026-06-10, dspark) 바로편집(openInEdit)은 저장 후에도 "조회(권한 상세)"로 가지 않고
+      //   편집 유지(폼을 저장본으로 갱신). 그 외 화면은 기존대로 보기 복귀.
+      if (openInEdit && detail.value) {
+        enterEdit();
+      } else {
+        mode.value = 'view';
+        drawerTab.value = defaultTab;
+      }
     } catch (e) {
       toast.error?.(adminErrMsg(e));
     } finally {
