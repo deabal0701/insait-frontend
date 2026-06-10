@@ -102,6 +102,14 @@ export const adminApi = {
         return http.post(`/api/admin/access/users/${encodeURIComponent(userId)}/password-reset`);
       },
     },
+    // ★ (2026-06-10, dspark): AUT0100 외부사용자 관리 (직접 REST). 단일 폼(서브컬렉션 없음).
+    //   ★ 응답에 PASSWORD_VIEW(평문)·CTZ_NO 미포함(S1/S3). create/update body = flat(ExtUserWrite). 비번초기화 = 랜덤(S2).
+    externalUsers: {
+      ...makeDomain('/api/admin/access/external-users'),   // AUT0100
+      passwordReset(extUserId) {
+        return http.post(`/api/admin/access/external-users/${encodeURIComponent(extUserId)}/password-reset`);
+      },
+    },
     // ★ (2026-06-10, dspark): AUT0020 사용자그룹 관리 (직접 REST). def + members(rowStatus I/D) 단일 호출.
     userGroups: {
       ...makeDomain('/api/admin/access/user-groups'),    // AUT0020

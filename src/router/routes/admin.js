@@ -21,8 +21,10 @@ const VIEWS = {
   E2ETest:            () => import('@/pages/admin/meta/E2ETest.vue'),
   // ★ (2026-06-08, dspark): 「사용자와 접근제어」 카탈로그 — AUT0010 파일럿(직접 REST).
   UserCatalog:        () => import('@/pages/admin/access/users/UserCatalog.vue'),
-  // ★ (2026-06-10, dspark): AUT0020 사용자그룹 관리 (직접 REST + 멤버 picker).
+  // ★ (2026-06-10, dspark): AUT0020 사용자그룹 관리 (직접 REST + 멤버 인라인 검색).
   GroupCatalog:       () => import('@/pages/admin/access/groups/GroupCatalog.vue'),
+  // ★ (2026-06-10, dspark): AUT0100 외부사용자 관리 (직접 REST, 단일 폼 + 비번초기화).
+  ExtUserCatalog:     () => import('@/pages/admin/access/externalusers/ExtUserCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -45,7 +47,7 @@ const ADMIN_SCREENS = [
   { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'Placeholder' },
   { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'Placeholder' },
   { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'Placeholder' },
-  { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'Placeholder' },
+  { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'ExtUserCatalog' },
   { object: 'AUT0050', path: 'aut0050', menuId: 'SA_MENU',  title: 'AUT0050 메뉴 관리',       view: 'Placeholder' },
   { object: 'FRM0090', path: 'frm0090', menuId: 'SD_PDS',   title: 'FRM0090 파일자료실',   view: 'Placeholder' },
   { object: 'SETTINGS', path: 'settings', menuId: '',       title: '환경 설정',            view: 'SettingsPage' },
