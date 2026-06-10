@@ -120,6 +120,7 @@ const editor = useMetaEditor({
   expand: ['msg', 'query', 'object', 'msgColumns', 'health', 'paramDiff', 'elaInfra'],
   defaultTab: 'def',
   createTab: 'def',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 방식1: 행 클릭 시 바로 편집 모드(진단 콘텐츠는 합집합 탭으로 항상 노출)
   reload: () => list.reload(),
   blankForm: () => ({
     def: { svDefNm: '', cmdClassNm: 'h5.biz.command.common.MultiQueryCommand', txSupportYn: 'N', asyncYn: 'N', useLogYn: 'N', version: '', objectId: '', note: '' },
@@ -274,25 +275,33 @@ const objectIdInterpretation = computed(() => {
   };
 });
 
-// ─── 탭 / 타이틀 (mode 분기) ───────────────────────────────────────────────
+// ─── 탭 (합집합 단일 목록 — 바로편집이라도 진단 콘텐츠 항상 노출) ──────────────
+// ★ (2026-06-10, dspark) mode 분기 제거. def/attrs/funcMaps 는 편집 컨트롤,
+//   health/object/elaInfra 는 detail 기반 읽기전용. count 는 편집 중이면 form, 아니면 detail 기준.
+//   create 모드엔 detail 이 없어 진단/소속오브젝트/ELA 가 무의미 → 그 탭만 제외.
 const tabItems = computed(() => {
-  if (isEditing.value) {
-    return [
-      { name: 'def',      tabLabel: '정의' },
-      { name: 'funcMaps', tabLabel: `함수 매핑 (${(form.value.funcMaps || []).filter((f) => f.rowStatus !== 'D').length})` },
-      { name: 'attrs',    tabLabel: `속성 (${(form.value.attrs || []).filter((a) => a.rowStatus !== 'D').length})` },
-    ];
-  }
   const d = detail.value;
+  // 메시지 슬롯·함수 매핑 카운트: 편집 중(form 존재)이면 미삭제 행 수, 아니면 detail 길이
+  const attrCount = isEditing.value
+    ? (form.value.attrs || []).filter((a) => a.rowStatus !== 'D').length
+    : (d?.attrs?.length || 0);
+  const funcCount = isEditing.value
+    ? (form.value.funcMaps || []).filter((f) => f.rowStatus !== 'D').length
+    : (d?.funcMaps?.length || 0);
+
   const items = [
     { name: 'def',      tabLabel: '정의' },
-    { name: 'health',   tabLabel: `진단 ${d?.compatibility?.reasons?.length ? `(${d.compatibility.reasons.length})` : ''}` },
-    { name: 'attrs',    tabLabel: `메시지 슬롯 (${d?.attrs?.length || 0})` },
-    { name: 'funcMaps', tabLabel: `함수 매핑 (${d?.funcMaps?.length || 0})` },
-    { name: 'object',   tabLabel: '소속 오브젝트' },
+    { name: 'attrs',    tabLabel: `메시지 슬롯 (${attrCount})` },
+    { name: 'funcMaps', tabLabel: `함수 매핑 (${funcCount})` },
   ];
-  if (d?.elaInfra) {
-    items.push({ name: 'elaInfra', tabLabel: `ELA 인프라 (${d.elaInfra.summary.missingCount > 0 ? d.elaInfra.summary.okCount + '/' + (d.elaInfra.summary.okCount + d.elaInfra.summary.missingCount) : d.elaInfra.items.length})` });
+
+  // 진단 콘텐츠 탭 — create 에선 detail 이 없으므로 제외, 그 외(view/edit)는 항상 포함.
+  if (mode.value !== 'create') {
+    items.push({ name: 'health', tabLabel: `진단 ${d?.compatibility?.reasons?.length ? `(${d.compatibility.reasons.length})` : ''}` });
+    items.push({ name: 'object', tabLabel: '소속 오브젝트' });
+    if (d?.elaInfra) {
+      items.push({ name: 'elaInfra', tabLabel: `ELA 인프라 (${d.elaInfra.summary.missingCount > 0 ? d.elaInfra.summary.okCount + '/' + (d.elaInfra.summary.okCount + d.elaInfra.summary.missingCount) : d.elaInfra.items.length})` });
+    }
   }
   return items;
 });
@@ -375,6 +384,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="940"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
@@ -382,8 +392,8 @@ onMounted(() => list.reload());
         @cancel="cancelEdit"
         @close="closePanel"
       >
-        <!-- 진단 배지 (view 전용) -->
-        <div v-if="mode === 'view' && detail" class="svc-drawer-head">
+        <!-- 진단 배지 — 바로편집이라도 항상 표시 (detail 존재 시. create 엔 detail 없어 자연히 안 뜸) -->
+        <div v-if="detail" class="svc-drawer-head">
           <InTag v-if="detail.compatibility"
                  :label="detail.compatibility.level === 'ok' ? '진단 OK' : detail.compatibility.level === 'error' ? '운영 위험' : '주의'"
                  :variant="detail.compatibility.level === 'ok' ? 'success' : detail.compatibility.level === 'error' ? 'error' : 'warning'" size="sm" />

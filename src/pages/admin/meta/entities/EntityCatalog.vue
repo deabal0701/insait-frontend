@@ -95,6 +95,7 @@ const editor = useMetaEditor({
   api: adminApi.meta.entities,
   keyField: 'entityNm',
   domainLabel: '엔터티',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집(조회 단계 생략). usages 는 편집 패널에서도 읽기전용 노출.
   expand: ['mappings', 'services'],
   defaultTab: 'columns',
   createTab: 'def',
@@ -160,10 +161,14 @@ const defFields = computed(() => [
   { key: 'note', type: 'text', label: '비고', input: '(선택)' },
 ]);
 
+// ★ (2026-06-10, dspark) 바로편집(openInEdit) — mode 분기 제거, 단일 목록.
+//   '컬럼' 탭은 편집 2단 그리드(컬럼 마스터 + 매핑 디테일)로 컬럼/매핑 정보를 모두 보여주므로
+//   view 'children' 읽기전용은 그리드로 대체됨(탭명은 'columns' 단일 유지).
+//   '사용처(usages)'는 역참조=정보성이라 보기/편집 모두 노출(create 만 제외). 카운트는 detail 보존.
 const tabItems = computed(() => {
-  const editingCount = visibleCols.value.length;
+  const colCount = isEditing.value ? visibleCols.value.length : (detail.value?.columns?.length || 0);
   const items = [
-    { name: 'columns', tabLabel: `컬럼 (${isEditing.value ? editingCount : (detail.value?.columns?.length || 0)})` },
+    { name: 'columns', tabLabel: `컬럼 (${colCount})` },
     { name: 'def',     tabLabel: '정의' },
   ];
   if (mode.value !== 'create') items.push({ name: 'usages', tabLabel: `사용처 (${detail.value?.usages?.length || 0})` });
@@ -226,6 +231,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="1040"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
@@ -302,7 +308,7 @@ onMounted(() => list.reload());
           <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
-        <!-- 사용처 (view) -->
+        <!-- 사용처 (역참조=정보성, 항상 읽기전용 — 바로편집 모드에서도 노출) -->
         <section v-else-if="drawerTab === 'usages'" class="section">
           <p class="muted">이 엔터티를 사용하는 서비스 (MultiSaveCommand)</p>
           <ul class="resource-list">

@@ -83,6 +83,7 @@ const editor = useMetaEditor({
   keyField: 'queryName',
   domainLabel: 'SQL',
   expand: ['body', 'params', 'services'],
+  openInEdit: true,
   defaultTab: 'def',
   reload: () => list.reload(),
   blankForm: () => ({
@@ -218,6 +219,7 @@ onMounted(() => list.reload());
     <template #drawer>
       <MetaDetailEditor
         :mode="mode"
+        deletable-in-edit
         :title="modalTitle"
         :loading="detailLoading"
         :saving="saving"

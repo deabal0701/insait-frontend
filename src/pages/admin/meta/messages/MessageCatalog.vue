@@ -103,6 +103,7 @@ const editor = useMetaEditor({
   api: adminApi.meta.messages,
   keyField: 'msgDefId',
   domainLabel: '메시지',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집(조회 단계 생략). children/usages 는 편집 패널에서도 읽기전용 노출.
   expand: ['children', 'services'],
   defaultTab: 'columns',
   createTab: 'def',
@@ -288,6 +289,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="980"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"

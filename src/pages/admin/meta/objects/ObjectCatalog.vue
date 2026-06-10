@@ -96,6 +96,7 @@ const editor = useMetaEditor({
   keyField: 'objectNm',
   domainLabel: '오브젝트',
   expand: ['attributes', 'children'],
+  openInEdit: true,
   defaultTab: 'def',
   createTab: 'def',
   reload: () => list.reload(),
@@ -153,19 +154,20 @@ const defFields = computed(() => [
   { key: 'note', type: 'text', label: '비고', input: '(선택)' },
 ]);
 
+// ★ (2026-06-10, dspark) 바로편집(openInEdit) — mode 분기 제거, 단일 목록.
+//   편집 그리드가 보기 리스트를 대체하므로 탭 이름은 편집 표준('relations')으로 통일.
+//   카운트는 편집 중이면 form(rowStatus≠'D'), 아니면 detail 로 보존.
 const tabItems = computed(() => {
-  if (isEditing.value) {
-    return [
-      { name: 'def',        tabLabel: '정의' },
-      { name: 'attributes', tabLabel: `속성 (${(form.value.attributes || []).filter((a) => a.rowStatus !== 'D').length})` },
-      { name: 'relations',  tabLabel: `하위 관계 (${(form.value.relations || []).filter((r) => r.rowStatus !== 'D').length})` },
-    ];
-  }
-  const d = detail.value;
+  const attrCount = isEditing.value
+    ? (form.value.attributes || []).filter((a) => a.rowStatus !== 'D').length
+    : (detail.value?.attributes?.length || 0);
+  const relCount = isEditing.value
+    ? (form.value.relations || []).filter((r) => r.rowStatus !== 'D').length
+    : (detail.value?.children?.length || 0);
   return [
     { name: 'def',        tabLabel: '정의' },
-    { name: 'attributes', tabLabel: `속성 (${d?.attributes?.length || 0})` },
-    { name: 'children',   tabLabel: `자식 (${d?.children?.length || 0})` },
+    { name: 'attributes', tabLabel: `속성 (${attrCount})` },
+    { name: 'relations',  tabLabel: `하위 관계 (${relCount})` },
   ];
 });
 
@@ -222,6 +224,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="940"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
@@ -231,6 +234,7 @@ onMounted(() => list.reload());
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
+          <!-- 순수 보기(폴백): 전체 읽기전용 dl -->
           <dl v-if="mode === 'view'" class="kv">
             <dt>OBJECT_ID</dt><dd>{{ detail.def.objectId }}</dd>
             <dt>OBJECT_NM</dt><dd>{{ detail.def.objectNm }}</dd>
@@ -242,7 +246,18 @@ onMounted(() => list.reload());
             <dt>비고</dt><dd>{{ detail.def.note || '—' }}</dd>
           </dl>
 
-          <MetaDefForm v-else :model="form.def" :fields="defFields" />
+          <template v-else>
+            <!-- ★ (2026-06-10, dspark) 바로편집 — 시스템 관리(읽기전용) 정보성 컬럼은 편집 패널에서도 보존.
+                 OBJECT_ID/부모/Company 는 폼에 없고 수정 불가라 editor 위에 읽기전용 dl 로 항상 노출.
+                 detail(=상세 로드본)에서 직접 읽어 저장 payload(form.def)에는 끼어들지 않음. 신규(create)에는 미표기. -->
+            <dl v-if="mode === 'edit' && detail" class="kv kv--ro">
+              <dt>OBJECT_ID</dt><dd>{{ detail.def.objectId }}</dd>
+              <dt>부모 (PARENT_ID)</dt><dd>{{ detail.def.parentId || '—' }}</dd>
+              <dt>Company (COMPANY_CD)</dt><dd>{{ detail.def.companyCd || '—' }}</dd>
+            </dl>
+
+            <MetaDefForm :model="form.def" :fields="defFields" />
+          </template>
         </section>
 
         <!-- 속성 -->
@@ -266,8 +281,8 @@ onMounted(() => list.reload());
           </ul>
         </section>
 
-        <!-- 하위 관계 (편집) / 자식 (보기) -->
-        <section v-else-if="drawerTab === 'relations' || drawerTab === 'children'" class="section">
+        <!-- 하위 관계 (편집 그리드) / 자식 (보기 리스트, 폴백) -->
+        <section v-else-if="drawerTab === 'relations'" class="section">
           <MetaChildGrid
             v-if="isEditing"
             :rows="form.relations"
@@ -320,6 +335,8 @@ onMounted(() => list.reload());
 .form-row { display: flex; flex-direction: column; gap: 4px; }
 .hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; }
+/* ★ (2026-06-10) 바로편집 시 editor 위 읽기전용 정보 블록 — 폼과 시각 구분 */
+.kv--ro { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--in-border-subtle, var(--in-bg-default)); }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; word-break: break-all; }
 .resource-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
