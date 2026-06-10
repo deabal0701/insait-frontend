@@ -11,8 +11,6 @@ import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
 import InLNB from '@/components/ui/InLNB.vue';
-import InButton from '@/components/ui/InButton.vue';
-import InIcon from '@/components/ui/InIcon.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -52,6 +50,7 @@ const ADMIN_PARENT = {
   COMPONENTS: 'env',
   // ★ (2026-06-02, dspark): Grid 카탈로그 → 시스템관리 > Playground 그룹
   DevGridGallery: 'playground',
+  DevTestGridPage: 'playground',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -331,6 +330,7 @@ const items = computed(() => {
           expanded: settingsExpanded.value.playground,
           children: [
             { key: 'DevGridGallery', label: 'Grid 카탈로그', active: current === 'DevGridGallery' },
+            { key: 'DevTestGridPage', label: 'Grid 테스트 페이지', active: current === 'DevTestGridPage' },
           ],
         },
       ],
@@ -382,17 +382,6 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
 
 const displayName = computed(() => auth.loginId || auth.empId || 'user');
 const currentTitle = computed(() => route.meta?.title || '');
-
-// ★ (2026-06-04, dspark): banner 좌측 [<] 버튼 — route.meta.backTo (라우트명) 시 표시.
-//   클릭: router.back() 우선 + meta.backTo push fallback (직접 URL 진입 시).
-const backTo = computed(() => route.meta?.backTo || null);
-function onBackClick() {
-  if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
-    router.back();
-  } else if (backTo.value) {
-    router.push({ name: backTo.value });
-  }
-}
 </script>
 
 <template>
@@ -534,36 +523,6 @@ function onBackClick() {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-/* ★ (2026-06-04, dspark): banner 좌측 [<] 원형 버튼 — route.meta.backTo 시 표시.
-   일반 button + InIcon — InButton only-icon 의 filter 충돌 회피.
-   chevron-left.svg path fill #666666 → 자연스러운 회색, hover 시 brand. */
-.main-layout__back-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--in-border-default, #d0d5dd);
-  background: var(--in-surface-default, #fff);
-  color: var(--in-text-default, #565656);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  cursor: pointer;
-  flex: 0 0 auto;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
-}
-.main-layout__back-btn:hover {
-  background: var(--in-bg-accent-subtle, #e1f5fc);
-  border-color: var(--in-brand, #0090e7);
-  box-shadow: 0 1px 3px rgba(0, 144, 231, 0.18);
-}
-.main-layout__back-btn:focus-visible {
-  outline: 2px solid var(--in-brand, #0090e7);
-  outline-offset: 2px;
-}
-.main-layout__back-btn :deep(.in-icon) {
-  display: inline-flex;
 }
 .main-layout__user {
   display: inline-flex;
