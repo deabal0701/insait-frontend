@@ -18,6 +18,7 @@ import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 import RelationEditor from '@/components/feature/access/RelationEditor.vue';
+import MenuBindingTree from '@/components/feature/access/MenuBindingTree.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InButton from '@/components/ui/InButton.vue';
@@ -54,7 +55,7 @@ const menuCols  = [{ key: 'menuId', label: '메뉴ID', code: true }, { key: 'men
 
 const mapGroup = (g) => ({ usergroupId: g.usergroupId, usergroupNm: g.usergroupNm });
 const mapUser  = (u) => ({ userId: u.userId, loginId: u.loginId, empNm: u.userNm || u.empNm });
-const mapMenu  = (m) => ({ menuId: m.menuId, menuNm: m.menuNm, useYn: 'Y' });
+// 메뉴 탭은 트리(MenuBindingTree)로 처리 — 평면 검색(searchMenus/mapMenu) 불요.
 
 async function searchGroups(q) {
   const res = await adminApi.access.userGroups.list({ q, size: 100, page: 1 });
@@ -63,10 +64,6 @@ async function searchGroups(q) {
 async function searchUsers(q) {
   const res = await adminApi.access.users.list({ q, size: 100, page: 1 });
   return (res?.data ?? res ?? {}).content ?? [];
-}
-async function searchMenus(q) {
-  const res = await adminApi.access.menus.search(q);
-  return res?.data ?? res ?? [];
 }
 
 // ── 편집 상태기계 (def + 3 바인딩) ──
@@ -219,16 +216,10 @@ onMounted(() => list.reload());
           </template>
         </section>
 
-        <!-- 메뉴 바인딩 -->
+        <!-- 메뉴 바인딩 — 보기=목록 / 편집=트리+체크박스(AS-IS aut0040_03_w 정합) -->
         <section v-else-if="drawerTab === 'menus'" class="section">
           <RelationEditor v-if="mode === 'view'" :list="detail.menuBindings || []" id-field="menuId" :columns="menuCols" read-only empty-text="연결된 메뉴가 없습니다." />
-          <template v-else>
-            <p class="bind-note">추가/제거는 저장 시 감사 로그(AUTHMENU GRANT/REVOKE)가 기록됩니다.</p>
-            <RelationEditor :list="form.menuBindings" id-field="menuId" :columns="menuCols"
-              :search="searchMenus" :map-result="mapMenu"
-              add-section-label="메뉴 추가 — 메뉴 검색" search-placeholder="메뉴ID 또는 메뉴명 (Enter)"
-              list-label="연결된 메뉴" empty-text="연결된 메뉴가 없습니다. 위에서 검색해 [+ 추가] 하세요." />
-          </template>
+          <MenuBindingTree v-else :list="form.menuBindings" />
         </section>
       </MetaDetailEditor>
 
