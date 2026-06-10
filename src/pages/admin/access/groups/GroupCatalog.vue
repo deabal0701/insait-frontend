@@ -17,7 +17,7 @@ import { useMetaEditor } from '@/composables/useMetaEditor';
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
-import UserPickerModal from '@/components/feature/access/UserPickerModal.vue';
+import UserSearchInline from '@/components/feature/access/UserSearchInline.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
@@ -126,22 +126,19 @@ const tabItems = computed(() => {
   ];
 });
 
-// 사용자 picker
-const pickerOpen = ref(false);
+// 멤버 추가 — 인라인 검색(UserSearchInline)에서 행별 [+ 추가] 시 호출 (팝업 없음)
 const memberExcludeIds = computed(() => visibleMembers.value.map((m) => m.userId));
 
-function addMembers(users) {
-  for (const u of users) {
-    const dup = form.value.members.find((m) => String(m.userId) === String(u.userId));
-    if (dup) {
-      if (dup.rowStatus === 'D') dup.rowStatus = '';   // 되살림
-      continue;                                        // 이미 멤버
-    }
-    form.value.members.push({
-      rowStatus: 'I', userId: u.userId, loginId: u.loginId,
-      empNm: u.userNm || u.empNm, orgNm: u.orgNm,
-    });
+function addOneMember(u) {
+  const dup = form.value.members.find((m) => String(m.userId) === String(u.userId));
+  if (dup) {
+    if (dup.rowStatus === 'D') dup.rowStatus = '';   // 되살림
+    return;                                          // 이미 멤버
   }
+  form.value.members.push({
+    rowStatus: 'I', userId: u.userId, loginId: u.loginId,
+    empNm: u.userNm || u.empNm, orgNm: u.orgNm,
+  });
 }
 function removeMember(m) {
   if (m.rowStatus === 'I') {
@@ -244,24 +241,31 @@ onMounted(() => list.reload());
             <p v-else class="muted">멤버가 없습니다.</p>
           </template>
 
-          <!-- 편집 -->
+          <!-- 편집 (인라인 검색·추가 — 팝업 없음) -->
           <template v-else>
-            <div class="member-actions">
-              <InButton variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="pickerOpen = true">+ 멤버 추가</InButton>
-              <span class="hint">추가/제거는 저장 시 감사 로그(GRANT/REVOKE)가 함께 기록됩니다.</span>
+            <div class="member-block">
+              <div class="member-block__label">멤버 추가 — 사용자 검색</div>
+              <UserSearchInline :exclude-ids="memberExcludeIds" @add="addOneMember" />
             </div>
-            <table v-if="visibleMembers.length" class="member-table">
-              <thead><tr><th>로그인ID</th><th>성명</th><th>소속</th><th></th></tr></thead>
-              <tbody>
-                <tr v-for="m in visibleMembers" :key="m.userId" :class="{ 'member--new': m.rowStatus === 'I' }">
-                  <td><code>{{ m.loginId }}</code><span v-if="m.rowStatus === 'I'" class="member-tag">신규</span></td>
-                  <td>{{ m.empNm || '—' }}</td>
-                  <td class="muted">{{ m.orgNm || '—' }}</td>
-                  <td><button type="button" class="member-del" @click="removeMember(m)">제거</button></td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="muted">멤버가 없습니다. [+ 멤버 추가] 로 사용자를 선택하세요.</p>
+
+            <div class="member-block">
+              <div class="member-block__label">
+                현재 멤버 ({{ visibleMembers.length }})
+                <span class="hint">— 추가/제거는 저장 시 감사 로그(GRANT/REVOKE)가 기록됩니다.</span>
+              </div>
+              <table v-if="visibleMembers.length" class="member-table">
+                <thead><tr><th>로그인ID</th><th>성명</th><th>소속</th><th class="member-table__act"></th></tr></thead>
+                <tbody>
+                  <tr v-for="m in visibleMembers" :key="m.userId" :class="{ 'member--new': m.rowStatus === 'I' }">
+                    <td><code>{{ m.loginId }}</code><span v-if="m.rowStatus === 'I'" class="member-tag">신규</span></td>
+                    <td>{{ m.empNm || '—' }}</td>
+                    <td class="muted">{{ m.orgNm || '—' }}</td>
+                    <td class="member-table__act"><button type="button" class="member-del" @click="removeMember(m)">제거</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else class="muted">멤버가 없습니다. 위에서 검색해 [+ 추가] 하세요.</p>
+            </div>
           </template>
         </section>
       </MetaDetailEditor>
@@ -279,14 +283,6 @@ onMounted(() => list.reload());
         @cancel="confirmDelete = false"
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
-
-      <!-- 사용자 picker -->
-      <UserPickerModal
-        v-model="pickerOpen"
-        title="그룹 멤버 추가 — 사용자 선택"
-        :exclude-ids="memberExcludeIds"
-        @confirm="addMembers"
-      />
     </template>
   </CatalogPage>
 </template>
@@ -302,8 +298,10 @@ onMounted(() => list.reload());
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
 
-.member-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+.member-block { margin-bottom: 18px; }
+.member-block__label { font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-medium); color: var(--in-text-default); margin-bottom: 8px; }
+.hint { font-weight: 400; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
+.member-table__act { width: 64px; text-align: center; }
 .member-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); }
 .member-table th, .member-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--in-border-subtle, #f0f0f0); }
 .member-table th { color: var(--in-text-subtle); font-weight: var(--in-font-weight-medium); background: var(--in-bg-default); }
