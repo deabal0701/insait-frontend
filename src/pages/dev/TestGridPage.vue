@@ -1,5 +1,7 @@
 <script setup>
   import { ref } from 'vue';
+  import { reactive }  from 'vue'
+
   import InSearchField from '@/components/ui/InSearchField.vue';
   import InButton from '@/components/ui/InButton.vue'
   import InDataTable from '@/components/ui/InDataTable.vue'
@@ -23,16 +25,24 @@
 
   const keyword = ref('') // 검색어
   const rows = ref([...MOCK_GROUPS])
-  
-  function search(){
+  const searchCount = ref(0)   // 검색 실행 횟수
+  const searchState = reactive({
+    lastKeyword: '', // 마지막으로 검색한 단어,
+    resultCount: rows.value.length, // 마지막 결과 건수 
+  })
 
+
+  function search(){
+    searchCount.value++;
     const kw = keyword.value.trim();
-    if(kw === '') {
-      rows.value = [...MOCK_GROUPS]
-    }else{
-      rows.value = MOCK_GROUPS.filter((g)  => g.groupNm.includes(kw) || g.groupId.includes(kw)
-    );
+      if(kw === '') {
+        rows.value = [...MOCK_GROUPS]
+      }else{
+        rows.value = MOCK_GROUPS.filter((g)  => g.groupNm.includes(kw) || g.groupId.includes(kw)
+      );
     }
+    searchState.lastKeyword = kw;
+    searchState.resultCount = rows.value.length;
   }
 
 
@@ -50,7 +60,9 @@
 
     <p>현재 검색어: "{{ keyword }}"</p>    
     <p>조회건수: {{rows.length }}</p>
-    <InDataTable :columns="columns" :data= rows :height="320" />
+    <p>검색실행횟수: {{  searchCount  }}</p>
+    <p>마지막 검색어: "{{ searchState.lastKeyword }}" / 결과 {{ searchState.resultCount }}건</p>
+    <InDataTable :columns="columns" :data= "rows" :height="320" />
 
    </div>
 </template>
