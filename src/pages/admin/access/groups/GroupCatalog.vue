@@ -71,6 +71,7 @@ const editor = useMetaEditor({
   domainLabel: '사용자그룹',
   expand: ['members'],
   defaultTab: 'def',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집
   reload: () => list.reload(),
   blankForm: () => ({
     def: { usergroupId: '', usergroupNm: '', groupType: '', companyCd: '', bigo: '' },
@@ -200,6 +201,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="860"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"

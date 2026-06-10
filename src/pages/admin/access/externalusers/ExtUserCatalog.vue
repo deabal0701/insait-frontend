@@ -55,6 +55,7 @@ const editor = useMetaEditor({
   keyField: 'extUserId',
   domainLabel: '외부사용자',
   defaultTab: 'def',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집
   reload: () => list.reload(),
   blankForm: () => ({
     def: {
@@ -165,6 +166,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="820"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
@@ -186,7 +188,7 @@ onMounted(() => list.reload());
           </dl>
           <MetaDefForm v-else :model="form.def" :fields="defFields" />
 
-          <div v-if="mode === 'view'" class="pw-actions">
+          <div v-if="mode !== 'create'" class="pw-actions">
             <InButton variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetPw">비밀번호 초기화</InButton>
             <span class="hint">랜덤 임시비번 발급(S2). 연결 로그인 계정(FRM_USER)이 없으면 실패합니다.</span>
           </div>

@@ -96,6 +96,7 @@ const editor = useMetaEditor({
   domainLabel: '사용자',
   expand: ['options'],
   defaultTab: 'def',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집(조회 단계 생략)
   reload: () => list.reload(),
   blankForm: () => ({
     def: {
@@ -146,6 +147,8 @@ const defFields = computed(() => [
   { key: 'email', type: 'text', label: 'E-Mail', input: 'name@company.com' },
   { key: 'empId', type: 'text', label: '사원ID(empId)', input: '신규 사원 연결 시 (선택)',
     hint: mode.value === 'create' ? '신규 계정을 사원과 연결하려면 EMP_ID 입력' : undefined },
+  // ★ (2026-06-10, dspark) 비번초기화 상태 — 정보성(읽기전용), 바로편집 패널에서도 보존
+  { key: 'initYn', type: 'text', label: '비번초기화', disabled: true, hint: 'Y=초기비번(최초 로그인 변경 강제) / N=정상' },
 ]);
 
 const tabItems = computed(() => {
@@ -244,6 +247,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="880"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
@@ -267,7 +271,7 @@ onMounted(() => list.reload());
 
           <MetaDefForm v-else :model="form.def" :fields="defFields" />
 
-          <div v-if="mode === 'view'" class="pw-actions">
+          <div v-if="mode !== 'create'" class="pw-actions">
             <InButton variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetPw">비밀번호 초기화</InButton>
             <span class="hint">랜덤 임시비번 발급 + 최초 로그인 강제 변경 (주민번호 기반 폐기 — S2)</span>
           </div>
