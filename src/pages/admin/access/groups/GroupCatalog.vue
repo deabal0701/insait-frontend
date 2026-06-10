@@ -17,7 +17,7 @@ import { useMetaEditor } from '@/composables/useMetaEditor';
 import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
-import UserSearchInline from '@/components/feature/access/UserSearchInline.vue';
+import RelationEditor from '@/components/feature/access/RelationEditor.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
@@ -126,26 +126,20 @@ const tabItems = computed(() => {
   ];
 });
 
-// 멤버 추가 — 인라인 검색(UserSearchInline)에서 행별 [+ 추가] 시 호출 (팝업 없음)
-const memberExcludeIds = computed(() => visibleMembers.value.map((m) => m.userId));
-
-function addOneMember(u) {
-  const dup = form.value.members.find((m) => String(m.userId) === String(u.userId));
-  if (dup) {
-    if (dup.rowStatus === 'D') dup.rowStatus = '';   // 되살림
-    return;                                          // 이미 멤버
-  }
-  form.value.members.push({
-    rowStatus: 'I', userId: u.userId, loginId: u.loginId,
-    empNm: u.userNm || u.empNm, orgNm: u.orgNm,
-  });
+// 멤버 = 관계편집 공통부품(RelationEditor) 으로 처리. 컬럼/검색소스/매핑만 주입.
+const memberColumns = [
+  { key: 'loginId', label: '로그인ID', code: true },
+  { key: 'empNm',   label: '성명' },
+  { key: 'orgNm',   label: '소속', muted: true },
+];
+// 검색결과(UserRow: userId/loginId/userNm/orgNm) → 멤버 항목(empNm 사용)으로 정규화.
+function memberMapResult(u) {
+  return { userId: u.userId, loginId: u.loginId, empNm: u.userNm || u.empNm, orgNm: u.orgNm };
 }
-function removeMember(m) {
-  if (m.rowStatus === 'I') {
-    form.value.members = form.value.members.filter((x) => x !== m);   // 신규 추가분은 제거
-  } else {
-    m.rowStatus = 'D';                                                // 기존분은 D 표시
-  }
+async function memberSearch(q) {
+  const res = await adminApi.access.users.list({ q, size: 100, page: 1 });
+  const data = res?.data ?? res ?? {};
+  return data.content ?? [];
 }
 
 onMounted(() => list.reload());
@@ -224,48 +218,29 @@ onMounted(() => list.reload());
           <MetaDefForm v-else :model="form.def" :fields="defFields" />
         </section>
 
-        <!-- 멤버 -->
+        <!-- 멤버 (관계편집 공통부품 RelationEditor — 보기/편집 동일 부품) -->
         <section v-else-if="drawerTab === 'members'" class="section">
-          <!-- 보기 -->
-          <template v-if="mode === 'view'">
-            <table v-if="detail.members?.length" class="member-table">
-              <thead><tr><th>로그인ID</th><th>성명</th><th>소속</th></tr></thead>
-              <tbody>
-                <tr v-for="m in detail.members" :key="m.userId">
-                  <td><code>{{ m.loginId }}</code></td>
-                  <td>{{ m.empNm || '—' }}</td>
-                  <td class="muted">{{ m.orgNm || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="muted">멤버가 없습니다.</p>
-          </template>
-
-          <!-- 편집 (인라인 검색·추가 — 팝업 없음) -->
+          <RelationEditor
+            v-if="mode === 'view'"
+            :list="detail.members || []"
+            id-field="userId"
+            :columns="memberColumns"
+            read-only
+            empty-text="멤버가 없습니다."
+          />
           <template v-else>
-            <div class="member-block">
-              <div class="member-block__label">멤버 추가 — 사용자 검색</div>
-              <UserSearchInline :exclude-ids="memberExcludeIds" @add="addOneMember" />
-            </div>
-
-            <div class="member-block">
-              <div class="member-block__label">
-                현재 멤버 ({{ visibleMembers.length }})
-                <span class="hint">— 추가/제거는 저장 시 감사 로그(GRANT/REVOKE)가 기록됩니다.</span>
-              </div>
-              <table v-if="visibleMembers.length" class="member-table">
-                <thead><tr><th>로그인ID</th><th>성명</th><th>소속</th><th class="member-table__act"></th></tr></thead>
-                <tbody>
-                  <tr v-for="m in visibleMembers" :key="m.userId" :class="{ 'member--new': m.rowStatus === 'I' }">
-                    <td><code>{{ m.loginId }}</code><span v-if="m.rowStatus === 'I'" class="member-tag">신규</span></td>
-                    <td>{{ m.empNm || '—' }}</td>
-                    <td class="muted">{{ m.orgNm || '—' }}</td>
-                    <td class="member-table__act"><button type="button" class="member-del" @click="removeMember(m)">제거</button></td>
-                  </tr>
-                </tbody>
-              </table>
-              <p v-else class="muted">멤버가 없습니다. 위에서 검색해 [+ 추가] 하세요.</p>
-            </div>
+            <p class="member-note">추가/제거는 저장 시 감사 로그(GRANT/REVOKE)가 함께 기록됩니다.</p>
+            <RelationEditor
+              :list="form.members"
+              id-field="userId"
+              :columns="memberColumns"
+              :search="memberSearch"
+              :map-result="memberMapResult"
+              add-section-label="멤버 추가 — 사용자 검색"
+              search-placeholder="로그인ID 또는 성명으로 검색 (Enter)"
+              list-label="현재 멤버"
+              empty-text="멤버가 없습니다. 위에서 검색해 [+ 추가] 하세요."
+            />
           </template>
         </section>
       </MetaDetailEditor>
@@ -298,16 +273,6 @@ onMounted(() => list.reload());
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
 
-.member-block { margin-bottom: 18px; }
-.member-block__label { font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-medium); color: var(--in-text-default); margin-bottom: 8px; }
-.hint { font-weight: 400; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
-.member-table__act { width: 64px; text-align: center; }
-.member-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); }
-.member-table th, .member-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--in-border-subtle, #f0f0f0); }
-.member-table th { color: var(--in-text-subtle); font-weight: var(--in-font-weight-medium); background: var(--in-bg-default); }
-.member-table code { font-family: var(--in-font-family-mono, ui-monospace); color: var(--in-text-accent); }
-.member--new { background: color-mix(in srgb, var(--in-brand) 6%, transparent); }
-.member-tag { margin-left: 6px; font-size: var(--in-font-size-xs, 11px); color: var(--in-brand, #2b6); }
-.member-del { background: transparent; border: 1px solid #e6b3ad; color: #c0392b; border-radius: var(--in-radius-xs); cursor: pointer; font-size: var(--in-font-size-sm); padding: 3px 8px; }
-.member-del:hover { background: #fdecea; }
+/* 멤버 목록·검색은 RelationEditor(공통부품)가 담당 — 화면 고유 스타일은 안내문만 */
+.member-note { margin: 0 0 10px; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 </style>
