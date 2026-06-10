@@ -21,7 +21,8 @@ const VIEWS = {
   E2ETest:            () => import('@/pages/admin/meta/E2ETest.vue'),
   // ★ (2026-06-08, dspark): 「사용자와 접근제어」 카탈로그 — AUT0010 파일럿(직접 REST).
   UserCatalog:        () => import('@/pages/admin/access/users/UserCatalog.vue'),
-  // ★ (2026-06-09, dspark): GroupCatalog(AUT0020) 미개발 → Placeholder 사용. (파일 부재로 import 실패하던 참조 제거)
+  // ★ (2026-06-10, dspark): AUT0020 사용자그룹 관리 (직접 REST + 멤버 picker).
+  GroupCatalog:       () => import('@/pages/admin/access/groups/GroupCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -40,7 +41,7 @@ const ADMIN_SCREENS = [
   // ★ (2026-06-07, dspark): 「사용자와 접근제어」 7 화면 메뉴 구성 — 라우트 골격(Placeholder).
   //   설계서 = 02-tobe/04-admin-lane/access-control/01~07. 화면 본체는 차수로 교체 예정.
   { object: 'AUT0010', path: 'aut0010', menuId: 'SA_USER',  title: 'AUT0010 사용자 관리',     view: 'UserCatalog' },
-  { object: 'AUT0020', path: 'aut0020', menuId: 'SA_GROUP', title: 'AUT0020 사용자그룹 관리', view: 'Placeholder' },   // ★ (2026-06-09, dspark): 미개발 → Placeholder
+  { object: 'AUT0020', path: 'aut0020', menuId: 'SA_GROUP', title: 'AUT0020 사용자그룹 관리', view: 'GroupCatalog' },
   { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'Placeholder' },
   { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'Placeholder' },
   { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'Placeholder' },

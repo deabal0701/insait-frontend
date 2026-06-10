@@ -102,6 +102,14 @@ export const adminApi = {
         return http.post(`/api/admin/access/users/${encodeURIComponent(userId)}/password-reset`);
       },
     },
+    // ★ (2026-06-10, dspark): AUT0020 사용자그룹 관리 (직접 REST). def + members(rowStatus I/D) 단일 호출.
+    userGroups: {
+      ...makeDomain('/api/admin/access/user-groups'),    // AUT0020
+      // exists 는 /{key}/exists 가 아니라 ?usergroupId 쿼리 (백엔드 계약).
+      exists(usergroupId) {
+        return http.get('/api/admin/access/user-groups/exists', { params: { usergroupId } });
+      },
+    },
     // ★ TEMP (2026-06-09, dspark): 발령확정 전 "테스트 계정" 생성/조회/삭제 — 추후 제거. grep 키 "TEMP (2026-06-09".
     //   AS-IS 발령 체인(P_CAM_EMP_NO_CREATE→P_FRM_USER_CREATE) 재사용. 백엔드 com.win.insait.admin.access.user.TestAccount*.
     //   경로 = /api/admin/access/test-accounts (★ /users/{userId} 충돌 회피 위해 분리, 2026-06-09).
