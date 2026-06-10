@@ -71,18 +71,17 @@ const routes = ADMIN_SCREENS.map((s) => ({
 // ★ (2026-05-29, dspark): 서비스 테스터 — optional path param 으로 (param 없이 진입하면 빈 폼).
 //   Catalog 에서 행 [▶ 테스트] 클릭 시 router.push({ name: 'SERVICE_TESTER', params: { serviceId } })
 routes.push(
-  // ★ (2026-06-04, dspark): meta.backTo — banner 의 [<] 버튼이 라우트 fallback 으로 사용.
   {
     path: 'admin/services/test',
     name: 'SERVICE_TESTER_HOME',
     component: VIEWS.ServiceTester,
-    meta: { requiresAuth: true, objectId: 'SERVICE_TESTER', menuId: '', title: '서비스 테스터', backTo: 'META_SERVICES' },
+    meta: { requiresAuth: true, objectId: 'SERVICE_TESTER', menuId: '', title: '서비스 테스터' },
   },
   {
     path: 'admin/services/test/:serviceId',
     name: 'SERVICE_TESTER',
     component: VIEWS.ServiceTester,
-    meta: { requiresAuth: true, objectId: 'SERVICE_TESTER', menuId: '', title: '서비스 테스터', backTo: 'META_SERVICES' },
+    meta: { requiresAuth: true, objectId: 'SERVICE_TESTER', menuId: '', title: '서비스 테스터' },
   },
 );
 

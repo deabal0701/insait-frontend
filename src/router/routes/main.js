@@ -24,6 +24,12 @@ const routes = [
         name: 'DevGridGallery',
         component: () => import('@/pages/dev/GridGallery.vue'),
         meta: { requiresAuth: true, title: 'Grid 기능 카탈로그 (dev)' },
+      },
+       {
+        path: 'dev/grid-test-page',
+        name: 'DevTestGridPage',
+        component: () => import('@/pages/dev/TestGridPage.vue'),
+        meta: { requiresAuth: true, title: 'Grid 테스트' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
