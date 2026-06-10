@@ -25,6 +25,8 @@ const VIEWS = {
   GroupCatalog:       () => import('@/pages/admin/access/groups/GroupCatalog.vue'),
   // ★ (2026-06-10, dspark): AUT0100 외부사용자 관리 (직접 REST, 단일 폼 + 비번초기화).
   ExtUserCatalog:     () => import('@/pages/admin/access/externalusers/ExtUserCatalog.vue'),
+  // ★ (2026-06-10, dspark): AUT0040 권한 관리 (직접 REST, def + 3바인딩 RelationEditor 재사용).
+  AuthItemCatalog:    () => import('@/pages/admin/access/authitems/AuthItemCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -44,7 +46,7 @@ const ADMIN_SCREENS = [
   //   설계서 = 02-tobe/04-admin-lane/access-control/01~07. 화면 본체는 차수로 교체 예정.
   { object: 'AUT0010', path: 'aut0010', menuId: 'SA_USER',  title: 'AUT0010 사용자 관리',     view: 'UserCatalog' },
   { object: 'AUT0020', path: 'aut0020', menuId: 'SA_GROUP', title: 'AUT0020 사용자그룹 관리', view: 'GroupCatalog' },
-  { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'Placeholder' },
+  { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'AuthItemCatalog' },
   { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'Placeholder' },
   { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'Placeholder' },
   { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'ExtUserCatalog' },

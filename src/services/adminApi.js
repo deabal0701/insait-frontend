@@ -102,6 +102,18 @@ export const adminApi = {
         return http.post(`/api/admin/access/users/${encodeURIComponent(userId)}/password-reset`);
       },
     },
+    // ★ (2026-06-10, dspark): AUT0040 권한 관리 (직접 REST). def + 3종 바인딩(groups/users/menus) rowStatus I/D.
+    authItems: {
+      ...makeDomain('/api/admin/access/auth-items'),     // AUT0040
+      exists(authItemName) {
+        return http.get('/api/admin/access/auth-items/exists', { params: { authItemName } });
+      },
+    },
+    // ★ (2026-06-10, dspark): AUT0050 메뉴 — 평면 검색(권한 메뉴바인딩 picker용). lazy 트리(children)는 AUT0050 에서.
+    menus: {
+      search(q) { return http.get('/api/admin/access/menus/search', { params: { q } }); },
+      children(parentId) { return http.get('/api/admin/access/menus', { params: { parentId } }); },
+    },
     // ★ (2026-06-10, dspark): AUT0100 외부사용자 관리 (직접 REST). 단일 폼(서브컬렉션 없음).
     //   ★ 응답에 PASSWORD_VIEW(평문)·CTZ_NO 미포함(S1/S3). create/update body = flat(ExtUserWrite). 비번초기화 = 랜덤(S2).
     externalUsers: {
