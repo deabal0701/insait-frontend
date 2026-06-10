@@ -28,6 +28,7 @@ export function useMetaEditor(opts) {
     api, keyField, expand, blankForm, toForm, toPayload,
     validate, defaultTab = 'def', createTab, reload,
     domainLabel = '항목',   // ★ (2026-06-05) modalTitle 공통화용 도메인 라벨 (예: 'SQL'·'메시지')
+    openInEdit = false,     // ★ (2026-06-10, dspark) 방식1: 행 클릭 시 조회 건너뛰고 바로 편집(클릭 수 축소). opt-in.
   } = opts;
 
   const toast = useToast();
@@ -59,6 +60,7 @@ export function useMetaEditor(opts) {
     detailLoading.value = true;
     try {
       detail.value = await api.detail(keyOf(row), { expand });
+      if (openInEdit && detail.value) enterEdit();   // ★ 방식1: 로드 후 바로 편집 모드
     } catch (e) {
       toast.error?.(adminErrMsg(e));
     } finally {

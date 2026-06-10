@@ -23,6 +23,7 @@ const props = defineProps({
   activeTab: { type: String, default: '' },
   width: { type: Number, default: 900 },
   hasContent: { type: Boolean, default: false },     // create 또는 detail 로드 완료
+  deletableInEdit: { type: Boolean, default: false }, // ★ (2026-06-10) 바로편집(openInEdit) 화면용 — 편집 푸터에도 [삭제]
 });
 
 const emit = defineEmits(['update:activeTab', 'edit', 'delete', 'save', 'cancel', 'close']);
@@ -56,6 +57,7 @@ const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit
 
     <template #footer>
       <template v-if="isEditing">
+        <InButton v-if="deletableInEdit && mode === 'edit'" variant="default" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('delete')">삭제</InButton>
         <InButton variant="default" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('cancel')">취소</InButton>
         <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('save')">{{ saving ? '저장 중…' : '저장' }}</InButton>
       </template>

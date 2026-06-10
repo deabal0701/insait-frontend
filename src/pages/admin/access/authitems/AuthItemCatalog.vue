@@ -73,6 +73,7 @@ const editor = useMetaEditor({
   domainLabel: '권한',
   expand: ['groups', 'users', 'menus'],
   defaultTab: 'def',
+  openInEdit: true,   // ★ (2026-06-10, dspark) 방식1: 행 클릭 시 바로 편집(조회 단계 생략, 클릭 수 축소)
   reload: () => list.reload(),
   blankForm: () => ({
     def: { authItemName: '', note: '', authItemType: '01', etcNote: '', companyCd: '' },
@@ -174,6 +175,7 @@ onMounted(() => list.reload());
         :active-tab="drawerTab"
         :has-content="mode === 'create' || !!detail"
         :width="880"
+        deletable-in-edit
         @update:active-tab="(t) => { drawerTab = t; }"
         @edit="enterEdit"
         @delete="confirmDelete = true"
