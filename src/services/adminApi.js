@@ -109,10 +109,20 @@ export const adminApi = {
         return http.get('/api/admin/access/auth-items/exists', { params: { authItemName } });
       },
     },
-    // ★ (2026-06-10, dspark): AUT0050 메뉴 — 평면 검색(권한 메뉴바인딩 picker용). lazy 트리(children)는 AUT0050 에서.
+    // ★ (2026-06-10, dspark): AUT0050 메뉴 — 평면 검색(권한 메뉴바인딩 picker용) + ★ 2026-06-11 lazy 트리 CRUD.
     menus: {
       search(q) { return http.get('/api/admin/access/menus/search', { params: { q } }); },
-      children(parentId) { return http.get('/api/admin/access/menus', { params: { parentId } }); },
+      // lazy 트리 직계자식 (parentId 미지정 = 루트). menuGroup 필터(SYS_ADMIN/PRIVATE_GROUP).
+      children(parentId, menuGroup) {
+        return http.get('/api/admin/access/menus', {
+          params: { ...(parentId ? { parentId } : {}), ...(menuGroup ? { menuGroup } : {}) },
+        });
+      },
+      detail(menuId) { return http.get(`/api/admin/access/menus/${encodeURIComponent(menuId)}`); },
+      exists(menuId) { return http.get('/api/admin/access/menus/exists', { params: { menuId } }); },
+      create(payload) { return http.post('/api/admin/access/menus', payload); },
+      update(menuId, payload) { return http.put(`/api/admin/access/menus/${encodeURIComponent(menuId)}`, payload); },
+      remove(menuId) { return http.delete(`/api/admin/access/menus/${encodeURIComponent(menuId)}`); },
     },
     // ★ (2026-06-10, dspark): AUT0100 외부사용자 관리 (직접 REST). 단일 폼(서브컬렉션 없음).
     //   ★ 응답에 PASSWORD_VIEW(평문)·CTZ_NO 미포함(S1/S3). create/update body = flat(ExtUserWrite). 비번초기화 = 랜덤(S2).

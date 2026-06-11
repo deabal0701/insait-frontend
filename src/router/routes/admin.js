@@ -31,6 +31,8 @@ const VIEWS = {
   CriteriaCatalog:    () => import('@/pages/admin/access/criteria/CriteriaCatalog.vue'),
   // ★ (2026-06-11, dspark): AUT0060 조직권한 관리 (직접 REST, 조직트리 lazy + 그룹/사원 2그리드 + 사원 picker).
   OrgAuthCatalog:     () => import('@/pages/admin/access/orgauth/OrgAuthCatalog.vue'),
+  // ★ (2026-06-11, dspark): AUT0050 메뉴 관리 (직접 REST, 메뉴 lazy 트리 + 편집 폼 + 오브젝트 picker).
+  MenuCatalog:        () => import('@/pages/admin/access/menus/MenuCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -54,7 +56,7 @@ const ADMIN_SCREENS = [
   { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'OrgAuthCatalog' },
   { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'CriteriaCatalog' },
   { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'ExtUserCatalog' },
-  { object: 'AUT0050', path: 'aut0050', menuId: 'SA_MENU',  title: 'AUT0050 메뉴 관리',       view: 'Placeholder' },
+  { object: 'AUT0050', path: 'aut0050', menuId: 'SA_MENU',  title: 'AUT0050 메뉴 관리',       view: 'MenuCatalog' },
   { object: 'FRM0090', path: 'frm0090', menuId: 'SD_PDS',   title: 'FRM0090 파일자료실',   view: 'Placeholder' },
   { object: 'SETTINGS', path: 'settings', menuId: '',       title: '환경 설정',            view: 'SettingsPage' },
   { object: 'COMPONENTS', path: 'components', menuId: '',   title: '컴포넌트 카탈로그',     view: 'ComponentsCatalog' },
