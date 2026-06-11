@@ -11,6 +11,7 @@ import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
 
 import MenuTreeNode from '@/components/feature/access/MenuTreeNode.vue';
+import SearchPickerModal from '@/components/feature/admin/SearchPickerModal.vue';
 import InButton from '@/components/ui/InButton.vue';
 
 const toast = useToast();
@@ -38,11 +39,16 @@ const isCreate = ref(false);
 const hasForm = ref(false);
 const saving = ref(false);
 
-// 오브젝트 picker
+// 오브젝트 picker (공통 SearchPickerModal)
 const pickerOpen = ref(false);
-const pickerQuery = ref('');
-const pickerResults = ref([]);
-const pickerLoading = ref(false);
+const objPickerColumns = [
+  { key: 'objectNm', label: '오브젝트ID', width: 160 },
+  { key: 'objectDisplayNm', label: '화면표시명', width: 200 },
+  { key: 'objectType', label: '유형', width: 80 },
+];
+function fetchObjects(q) {
+  return adminApi.meta.objects.list({ q, size: 50, page: 1 }).then((r) => r.content || []);
+}
 
 const menuGroupLabel = computed(() => MENU_GROUPS.find((g) => g.value === menuGroup.value)?.label || menuGroup.value);
 
@@ -121,17 +127,7 @@ async function remove() {
 }
 
 // ── 오브젝트 picker ──
-function openPicker() { pickerOpen.value = true; pickerQuery.value = ''; pickerResults.value = []; }
-async function runPicker() {
-  if (!pickerQuery.value.trim()) return;
-  pickerLoading.value = true;
-  try {
-    const resp = await adminApi.meta.objects.list({ q: pickerQuery.value.trim(), size: 50, page: 1 });
-    pickerResults.value = resp.content || [];
-  } catch (e) {
-    toast.error('오브젝트 검색 실패: ' + (e?.response?.data?.error?.message || e?.message || e));
-  } finally { pickerLoading.value = false; }
-}
+function openPicker() { pickerOpen.value = true; }
 function pickObject(o) {
   form.objectId = o.objectNm;          // FRM_MENU.OBJECT_ID 에는 OBJECT_NM 저장 (매뉴얼 06 §2)
   form.objectNmDisplay = o.objectDisplayNm || o.objectNm;
@@ -241,28 +237,17 @@ onMounted(loadRoots);
       </section>
     </div>
 
-    <!-- 오브젝트 검색 picker -->
-    <div v-if="pickerOpen" class="menu__modal-mask" @click.self="pickerOpen = false">
-      <div class="menu__modal">
-        <div class="menu__modal-head"><span>오브젝트 검색</span><button type="button" class="menu__modal-x" @click="pickerOpen=false">✕</button></div>
-        <div class="menu__modal-search">
-          <input v-model="pickerQuery" type="text" placeholder="오브젝트ID 또는 화면명" class="menu__modal-input" @keyup.enter="runPicker" />
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" :disabled="pickerLoading" @click="runPicker">검색</InButton>
-        </div>
-        <div class="menu__modal-results">
-          <table class="menu__modal-table">
-            <thead><tr><th>오브젝트ID</th><th>화면표시명</th><th>유형</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="o in pickerResults" :key="o.objectId">
-                <td>{{ o.objectNm }}</td><td>{{ o.objectDisplayNm }}</td><td>{{ o.objectType }}</td>
-                <td><button type="button" class="menu__pick" @click="pickObject(o)">선택</button></td>
-              </tr>
-              <tr v-if="!pickerResults.length"><td colspan="4" class="menu__modal-empty">검색 결과 없음 (ID/화면명 입력 후 검색)</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <!-- 오브젝트 검색 picker (공통) -->
+    <SearchPickerModal
+      :open="pickerOpen"
+      @update:open="pickerOpen = $event"
+      title="오브젝트 검색"
+      placeholder="오브젝트ID 또는 화면명"
+      :columns="objPickerColumns"
+      :fetcher="fetchObjects"
+      row-key="objectId"
+      @select="pickObject"
+    />
   </div>
 </template>
 
@@ -295,17 +280,5 @@ onMounted(loadRoots);
 .menu__obj { display: flex; gap: 6px; align-items: center; }
 .menu__obj .menu__in { flex: 1; }
 
-.menu__modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 9000; }
-.menu__modal { width: 560px; max-width: 92vw; background: var(--in-bg-white); border-radius: var(--in-radius-md); box-shadow: 0 12px 40px rgba(0,0,0,.2); overflow: hidden; }
-.menu__modal-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--in-border-default); font-weight: var(--in-font-weight-bold); }
-.menu__modal-x { border: none; background: transparent; cursor: pointer; font-size: 16px; color: var(--in-text-subtle); }
-.menu__modal-search { display: flex; gap: 8px; padding: 12px 16px; }
-.menu__modal-input { flex: 1; padding: 6px 10px; border: 1px solid var(--in-border-input); border-radius: var(--in-radius-xs); font-size: var(--in-font-size-sm); }
-.menu__modal-results { max-height: 360px; overflow: auto; padding: 0 16px 16px; }
-.menu__modal-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); }
-.menu__modal-table th, .menu__modal-table td { border-bottom: 1px solid var(--in-border-default); padding: 6px 8px; text-align: left; }
-.menu__modal-table th { color: var(--in-text-subtle); }
-.menu__pick { border: 1px solid var(--in-border-default); background: var(--in-bg-white); border-radius: var(--in-radius-xs); padding: 3px 10px; cursor: pointer; font-size: var(--in-font-size-sm); }
-.menu__pick:hover { background: var(--in-bg-brand-subtle, var(--in-bg-default)); }
-.menu__modal-empty { text-align: center; color: var(--in-text-subtle); padding: 16px; }
+/* ★ (2026-06-11, dspark): 오브젝트 검색 모달 CSS 제거 — 공통 SearchPickerModal 로 추출. */
 </style>

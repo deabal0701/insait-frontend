@@ -14,6 +14,7 @@ import { useToast } from '@/composables/useToast';
 
 import OrgTreeNode from '@/components/feature/access/OrgTreeNode.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
+import SearchPickerModal from '@/components/feature/admin/SearchPickerModal.vue';
 import InButton from '@/components/ui/InButton.vue';
 
 const toast = useToast();
@@ -32,11 +33,14 @@ const userGroupOptions = ref([]);
 const loadingAuth = ref(false);
 const saving = ref(false);
 
-// 사원 검색 picker
+// 사원 검색 picker (공통 SearchPickerModal)
 const pickerOpen = ref(false);
-const pickerQuery = ref('');
-const pickerResults = ref([]);
-const pickerLoading = ref(false);
+const empPickerColumns = [
+  { key: 'empNo', label: '사번', width: 100 },
+  { key: 'empNm', label: '성명', width: 120 },
+  { key: 'orgNm', label: '소속' },
+];
+function fetchEmployees(q) { return adminApi.access.orgAuth.employees(q); }
 
 const groupColumns = computed(() => [
   { key: 'usergroupId', label: '사용자그룹', kind: 'select', width: 260, options: userGroupOptions.value },
@@ -113,20 +117,11 @@ async function save() {
 // ── 사원 검색 picker ──
 function openPicker() {
   if (!selectedOrg.value) { toast.info('조직을 먼저 선택하세요.'); return; }
-  pickerOpen.value = true; pickerQuery.value = ''; pickerResults.value = [];
-}
-async function runPicker() {
-  if (!pickerQuery.value.trim()) return;
-  pickerLoading.value = true;
-  try {
-    pickerResults.value = await adminApi.access.orgAuth.employees(pickerQuery.value.trim());
-  } catch (e) {
-    toast.error('사원 검색 실패: ' + (e?.response?.data?.error?.message || e?.message || e));
-  } finally { pickerLoading.value = false; }
+  pickerOpen.value = true;
 }
 function pickEmp(emp) {
   if (empRows.value.some((r) => String(r.empId) === String(emp.empId) && r.rowStatus !== 'D')) {
-    toast.info('이미 추가된 사원입니다.'); return;
+    toast.info('이미 추가된 사원입니다.'); return;   // 중복 — 모달 열어둠
   }
   empRows.value.push({ rowStatus: 'I', ormAuthId: null, empId: emp.empId, empNo: emp.empNo, empNm: emp.empNm, note: '' });
   pickerOpen.value = false;
@@ -208,31 +203,17 @@ onMounted(async () => { await Promise.all([loadRoots(), loadUserGroups()]); });
       </section>
     </div>
 
-    <!-- 사원 검색 picker 모달 -->
-    <div v-if="pickerOpen" class="orgauth__modal-mask" @click.self="pickerOpen = false">
-      <div class="orgauth__modal">
-        <div class="orgauth__modal-head">
-          <span>사원 검색</span>
-          <button type="button" class="orgauth__modal-x" @click="pickerOpen = false">✕</button>
-        </div>
-        <div class="orgauth__modal-search">
-          <input v-model="pickerQuery" type="text" placeholder="사번 또는 성명" class="orgauth__modal-input" @keyup.enter="runPicker" />
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" :disabled="pickerLoading" @click="runPicker">검색</InButton>
-        </div>
-        <div class="orgauth__modal-results">
-          <table class="orgauth__modal-table">
-            <thead><tr><th>사번</th><th>성명</th><th>소속</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="e in pickerResults" :key="e.empId">
-                <td>{{ e.empNo }}</td><td>{{ e.empNm }}</td><td>{{ e.orgNm }}</td>
-                <td><button type="button" class="orgauth__pick" @click="pickEmp(e)">선택</button></td>
-              </tr>
-              <tr v-if="!pickerResults.length"><td colspan="4" class="orgauth__modal-empty">검색 결과 없음 (사번/성명 입력 후 검색)</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <!-- 사원 검색 picker (공통) -->
+    <SearchPickerModal
+      :open="pickerOpen"
+      @update:open="pickerOpen = $event"
+      title="사원 검색"
+      placeholder="사번 또는 성명"
+      :columns="empPickerColumns"
+      :fetcher="fetchEmployees"
+      row-key="empId"
+      @select="pickEmp"
+    />
   </div>
 </template>
 
@@ -258,18 +239,5 @@ onMounted(async () => { await Promise.all([loadRoots(), loadUserGroups()]); });
 .orgauth__grid-title { font-weight: var(--in-font-weight-bold); color: var(--in-text-default); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
 .orgauth__count { font-size: var(--in-font-size-sm); color: var(--in-text-subtle); font-weight: var(--in-font-weight-regular); }
 .orgauth__empty { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); padding: 24px; text-align: center; }
-
-.orgauth__modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 9000; }
-.orgauth__modal { width: 520px; max-width: 92vw; background: var(--in-bg-white); border-radius: var(--in-radius-md); box-shadow: 0 12px 40px rgba(0,0,0,.2); overflow: hidden; }
-.orgauth__modal-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--in-border-default); font-weight: var(--in-font-weight-bold); }
-.orgauth__modal-x { border: none; background: transparent; cursor: pointer; font-size: 16px; color: var(--in-text-subtle); }
-.orgauth__modal-search { display: flex; gap: 8px; padding: 12px 16px; }
-.orgauth__modal-input { flex: 1; padding: 6px 10px; border: 1px solid var(--in-border-input); border-radius: var(--in-radius-xs); font-size: var(--in-font-size-sm); }
-.orgauth__modal-results { max-height: 360px; overflow: auto; padding: 0 16px 16px; }
-.orgauth__modal-table { width: 100%; border-collapse: collapse; font-size: var(--in-font-size-sm); }
-.orgauth__modal-table th, .orgauth__modal-table td { border-bottom: 1px solid var(--in-border-default); padding: 6px 8px; text-align: left; }
-.orgauth__modal-table th { color: var(--in-text-subtle); }
-.orgauth__pick { border: 1px solid var(--in-border-default); background: var(--in-bg-white); border-radius: var(--in-radius-xs); padding: 3px 10px; cursor: pointer; font-size: var(--in-font-size-sm); }
-.orgauth__pick:hover { background: var(--in-bg-brand-subtle, var(--in-bg-default)); }
-.orgauth__modal-empty { text-align: center; color: var(--in-text-subtle); padding: 16px; }
+/* ★ (2026-06-11, dspark): 사원 검색 모달 CSS 제거 — 공통 SearchPickerModal 로 추출. */
 </style>
