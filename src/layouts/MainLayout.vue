@@ -28,7 +28,7 @@ function onUserCommand(cmd) {
 // ★ (2026-05-27, dspark): 각 1depth 카테고리별 2depth 그룹 펼침 상태 (사용자 toggle 보존).
 //   Figma 진본 정합으로 모든 1depth 에 placeholder submenu 트리 (router 진입은 시스템관리만,
 //   그 외 카테고리는 click 시 '준비 중' 토스트).
-const settingsExpanded = ref({ meta: true, auth: false, pds: false, env: false, playground: false });
+const settingsExpanded = ref({ meta: true, auth: false, sysenv: false, pds: false, env: false, playground: false });
 const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
 const operationExpanded = ref({ attendance: true, leave: false, dispatch: false, order: false });
 const performanceExpanded = ref({ eval: true, meeting: false, config: false });
@@ -41,10 +41,12 @@ const bentoExpanded = ref({ all: true });
 
 // admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
 const ADMIN_PARENT = {
-  CCD0020: 'meta', IST0050: 'meta', IST0030: 'meta', IST0020: 'meta', IST0010: 'meta',
-  AUT0030: 'meta',
+  // ★ (2026-06-11, dspark): 메타관리(SYS_DEV) = AS-IS active 5 화면 (공통코드는 시스템환경으로 이동).
+  AUT0030: 'meta', IST0030: 'meta', IST0020: 'meta', IST0050: 'meta', IST0010: 'meta',
   // ★ (2026-06-07, dspark): 「사용자와 접근제어」(auth) 그룹 = AS-IS SYS_ACCESS 7 화면.
   AUT0010: 'auth', AUT0020: 'auth', AUT0040: 'auth', AUT0060: 'auth', AUT0070: 'auth', AUT0100: 'auth', AUT0050: 'auth',
+  // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) = AS-IS 공통코드/기준/레지스트리 등 (TO-BE 필수 5).
+  CCD0040: 'sysenv', CCD0010: 'sysenv', CCD0050: 'sysenv', CCD0020: 'sysenv', CCD0070: 'sysenv',
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
@@ -276,34 +278,45 @@ const items = computed(() => {
           label: '메타관리',
           expanded: settingsExpanded.value.meta,
           children: [
-            // ★ (2026-06-03, dspark): 메타관리 LNB 순서 — TO-BE 04-admin-lane/README.md §2 의
-            //   빌드 워크플로우 정합 + 사용자 명시 순서 (서비스→오브젝트→SQL→메시지→엔터티).
-            //   AUT prefix(AUT0030)는 OBJECT_ID 잔재이며 AS-IS frm_menu SD_OBJ = SYS_DEV 그룹.
-            //   ★ (2026-06-04, dspark): META_HUB / META_NEW 항목 제거 — 5 카탈로그 순차 CRUD 완성 후
-            //   재구축 예정. envelope 직접 호출 패턴 폐기.
-            { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
+            // ★ (2026-06-11, dspark): 메타관리 LNB 순서 = AS-IS 개발 및 수정작업(SYS_DEV) active 순서
+            //   (SD_OBJ → SD_MSG → SD_ENT → SD_MSG1 → SD_SQL). 공통코드(CCD)는 시스템환경(SYS_ENV)으로 이동.
             { key: 'AUT0030',  label: '오브젝트 관리',    active: current === 'AUT0030' },
-            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
             { key: 'IST0030',  label: '메시지 관리',      active: current === 'IST0030' },
             { key: 'IST0020',  label: '엔터티 관리',      active: current === 'IST0020' },
-            { key: 'CCD0020',  label: '공통코드',         active: current === 'CCD0020' },
+            { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
+            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
           ],
         },
         {
-          // ★ (2026-06-07, dspark): AS-IS 「사용자와 접근제어」(SYS_ACCESS) 7 화면 정합.
-          //   순서 = 논리 흐름(주체→부여→기준→외부→대상): 사용자·그룹 → 권한·조직권한·권한기준
-          //   → 외부사용자 → 메뉴. 설계서 = 04-admin-lane/access-control/01~07. 현재 전부 Placeholder.
+          // ★ (2026-06-11, dspark): AS-IS 「사용자와 접근제어」(SYS_ACCESS) active 순서 정합 (frm_menu seq).
+          //   사용자(10) → 메뉴(13) → 권한기준(15) → 사용자그룹(20) → 권한(25) → 외부사용자(30) → 조직권한(60).
           key: 'auth',
           label: '사용자와 접근제어',
           expanded: settingsExpanded.value.auth,
           children: [
             { key: 'AUT0010', label: '사용자 관리',     active: current === 'AUT0010' },
+            { key: 'AUT0050', label: '메뉴 관리',       active: current === 'AUT0050' },
+            { key: 'AUT0070', label: '권한기준 관리',   active: current === 'AUT0070' },
             { key: 'AUT0020', label: '사용자그룹 관리', active: current === 'AUT0020' },
             { key: 'AUT0040', label: '권한 관리',       active: current === 'AUT0040' },
-            { key: 'AUT0060', label: '조직권한 관리',   active: current === 'AUT0060' },
-            { key: 'AUT0070', label: '권한기준 관리',   active: current === 'AUT0070' },
             { key: 'AUT0100', label: '외부사용자 관리', active: current === 'AUT0100' },
-            { key: 'AUT0050', label: '메뉴 관리',       active: current === 'AUT0050' },
+            { key: 'AUT0060', label: '조직권한 관리',   active: current === 'AUT0060' },
+          ],
+        },
+        {
+          // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) 그룹 신설 — TO-BE 개발 필수 항목만 우선 추가.
+          //   AS-IS active 순서: 인사영역(1)·단위업무(2)·공통코드(3)·옵션(4)·…·업무기준(8)·MAX값(9).
+          //   필수 5: 공통코드(전 콤보)·옵션관리/업무기준관리(기준 프레임워크, AUT0070 엔진)·인사영역(COMPANY_CD)·MAX값(채번).
+          //   ⚠️ 미구현(Placeholder). "두 얼굴"(런타임 읽기=envelope) 주의 — 착수 전 AS-IS 분석.
+          key: 'sysenv',
+          label: '시스템환경',
+          expanded: settingsExpanded.value.sysenv,
+          children: [
+            { key: 'CCD0040', label: '인사영역관리',   active: current === 'CCD0040' },
+            { key: 'CCD0010', label: '공통코드관리',   active: current === 'CCD0010' },
+            { key: 'CCD0050', label: '옵션관리',       active: current === 'CCD0050' },
+            { key: 'CCD0020', label: '업무기준관리',   active: current === 'CCD0020' },
+            { key: 'CCD0070', label: 'MAX값관리',      active: current === 'CCD0070' },
           ],
         },
         {
