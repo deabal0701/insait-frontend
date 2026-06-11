@@ -197,6 +197,11 @@ export const adminApi = {
       list(q) { return http.get('/api/admin/system/companies', { params: { ...(q ? { q } : {}) } }); },
       save(rows) { return http.put('/api/admin/system/companies', { rows }); },
     },
+    // 단위업무(FRM_BIZ_UNIT) 단일 그리드 — 업무기준의 UNIT_CD 마스터
+    units: {
+      list(q) { return http.get('/api/admin/system/units', { params: { ...(q ? { q } : {}) } }); },
+      save(rows) { return http.put('/api/admin/system/units', { rows }); },
+    },
     // 공통코드: 코드분류(FRM_CODE_KIND) 마스터 + 코드(FRM_CODE) 디테일
     codeKinds: {
       list(q) { return http.get('/api/admin/system/code-kinds', { params: { ...(q ? { q } : {}) } }); },

@@ -36,6 +36,7 @@ const VIEWS = {
   // ★ (2026-06-11, dspark): 시스템환경 — CCD0040 인사영역 + CCD0010 공통코드 (직접 REST).
   CompanyCatalog:     () => import('@/pages/admin/system/company/CompanyCatalog.vue'),
   CommonCodeCatalog:  () => import('@/pages/admin/system/code/CommonCodeCatalog.vue'),
+  UnitCatalog:        () => import('@/pages/admin/system/unit/UnitCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -48,7 +49,7 @@ const ADMIN_SCREENS = [
   // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) — TO-BE 개발 필수 5 화면 (미구현 Placeholder).
   //   AS-IS: CCD0040 인사영역 / CCD0010 공통코드 / CCD0050 옵션관리 / CCD0020 업무기준관리 / CCD0070 MAX값.
   { object: 'CCD0040', path: 'ccd0040', menuId: 'SE_COM',    title: 'CCD0040 인사영역관리',     view: 'CompanyCatalog' },
-  { object: 'CCD0080', path: 'ccd0080', menuId: 'SE_UNIT',   title: 'CCD0080 단위업무관리',     view: 'Placeholder' },
+  { object: 'CCD0080', path: 'ccd0080', menuId: 'SE_UNIT',   title: 'CCD0080 단위업무관리',     view: 'UnitCatalog' },
   { object: 'CCD0010', path: 'ccd0010', menuId: 'SE_CODE',   title: 'CCD0010 공통코드관리',     view: 'CommonCodeCatalog' },
   { object: 'CCD0050', path: 'ccd0050', menuId: 'SE_OPTION', title: 'CCD0050 옵션관리',         view: 'Placeholder' },
   { object: 'CCD0030', path: 'ccd0030', menuId: 'SE_BIZ',    title: 'CCD0030 레지스트리관리',   view: 'Placeholder' },
