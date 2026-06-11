@@ -155,7 +155,30 @@ export const adminApi = {
         return http.put('/api/admin/access/auth-criteria/grid', body, { params: params || {} });
       },
     },
-    // 후속: orgAuth / menus (lazy tree)
+    // ★ (2026-06-11, dspark): AUT0060 조직권한 관리 (직접 REST). 조직트리(lazy) + 그룹/사원 권한 2그리드.
+    //   find/save = org_id 스코프 2 entity(rowStatus I/U/D). orgTree = ORM_ORG lazy. employees = 사원검색 picker.
+    //   설계: 02-tobe/04-admin-lane/access-control/04_org-auth-aut0060.md.
+    orgAuth: {
+      find(orgId, companyCd) {
+        return http.get('/api/admin/access/org-auth', {
+          params: { orgId, ...(companyCd ? { companyCd } : {}) },
+        });
+      },
+      save(orgId, body, companyCd) {
+        return http.put('/api/admin/access/org-auth', body, {
+          params: { orgId, ...(companyCd ? { companyCd } : {}) },
+        });
+      },
+      orgTree(parentOrgId, baseYmd) {
+        return http.get('/api/admin/access/org-auth/org-tree', {
+          params: { ...(parentOrgId != null ? { parentOrgId } : {}), baseYmd },
+        });
+      },
+      employees(q) {
+        return http.get('/api/admin/access/org-auth/employees', { params: { q } });
+      },
+    },
+    // 후속: menus (lazy tree)
   },
   // system:  { commonCodes: ..., options: ..., logs: ... },
 };

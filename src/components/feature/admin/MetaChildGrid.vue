@@ -34,6 +34,8 @@ const props = defineProps({
   // ★ (2026-06-11, dspark): 번호(순서)·상태 컬럼 옵션 (기본 off — 기존 화면 영향 없음). AUT0070 정합.
   showSeq: { type: Boolean, default: false },
   showStatus: { type: Boolean, default: false },
+  // ★ (2026-06-11, dspark): 내장 [행 추가] 버튼 숨김 (AUT0060 사원 그리드처럼 picker 로 외부 추가 시).
+  hideAdd: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['row-select']);
@@ -92,7 +94,7 @@ function statusLabel(r) {
 
 <template>
   <div class="meta-grid">
-    <div class="meta-grid__toolbar">
+    <div v-if="!hideAdd" class="meta-grid__toolbar">
       <InButton size="sm" variant="default" :left-icon-show="false" :right-icon-show="false" @click="addRow">{{ addLabel }}</InButton>
     </div>
     <table class="meta-grid__table">
@@ -134,6 +136,7 @@ function statusLabel(r) {
               :checked="r[c.key] === 'Y'"
               @change="(e) => setCheckbox(r, c.key, e.target.checked)"
             />
+            <span v-else-if="c.kind === 'readonly'" class="meta-grid__readonly">{{ r[c.key] }}</span>
             <select
               v-else-if="c.kind === 'select'"
               v-model="r[c.key]"
@@ -200,6 +203,7 @@ function statusLabel(r) {
 .meta-grid__seq-col { width: 44px; text-align: center; }
 .meta-grid__status-col { width: 56px; text-align: center; }
 .meta-grid__seq { color: var(--in-text-subtle); }
+.meta-grid__readonly { display: inline-block; padding: 5px 6px; color: var(--in-text-default); font-size: var(--in-font-size-sm); }
 .meta-grid__status { display: inline-block; padding: 1px 6px; border-radius: var(--in-radius-xs); font-size: var(--in-font-size-xs); }
 .meta-grid__status.is-i { background: var(--in-bg-success-subtle, #e6f4ea); color: var(--in-text-success, #1a7f37); }
 .meta-grid__status.is-u { background: var(--in-bg-warning-subtle, #fff4e5); color: var(--in-text-warning, #b54708); }

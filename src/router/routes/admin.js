@@ -29,6 +29,8 @@ const VIEWS = {
   AuthItemCatalog:    () => import('@/pages/admin/access/authitems/AuthItemCatalog.vue'),
   // ★ (2026-06-11, dspark): AUT0070 권한기준 관리 (직접 REST, 미니 트리 + 직책코드기준 그리드).
   CriteriaCatalog:    () => import('@/pages/admin/access/criteria/CriteriaCatalog.vue'),
+  // ★ (2026-06-11, dspark): AUT0060 조직권한 관리 (직접 REST, 조직트리 lazy + 그룹/사원 2그리드 + 사원 picker).
+  OrgAuthCatalog:     () => import('@/pages/admin/access/orgauth/OrgAuthCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -49,7 +51,7 @@ const ADMIN_SCREENS = [
   { object: 'AUT0010', path: 'aut0010', menuId: 'SA_USER',  title: 'AUT0010 사용자 관리',     view: 'UserCatalog' },
   { object: 'AUT0020', path: 'aut0020', menuId: 'SA_GROUP', title: 'AUT0020 사용자그룹 관리', view: 'GroupCatalog' },
   { object: 'AUT0040', path: 'aut0040', menuId: 'SA_AUTH',  title: 'AUT0040 권한 관리',       view: 'AuthItemCatalog' },
-  { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'Placeholder' },
+  { object: 'AUT0060', path: 'aut0060', menuId: 'SA_ORG',   title: 'AUT0060 조직권한 관리',   view: 'OrgAuthCatalog' },
   { object: 'AUT0070', path: 'aut0070', menuId: 'SA_CRIT',  title: 'AUT0070 권한기준 관리',   view: 'CriteriaCatalog' },
   { object: 'AUT0100', path: 'aut0100', menuId: 'SA_EXT',   title: 'AUT0100 외부사용자 관리', view: 'ExtUserCatalog' },
   { object: 'AUT0050', path: 'aut0050', menuId: 'SA_MENU',  title: 'AUT0050 메뉴 관리',       view: 'Placeholder' },
