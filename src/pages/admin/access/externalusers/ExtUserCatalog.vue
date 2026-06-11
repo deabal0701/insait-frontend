@@ -22,6 +22,8 @@ import InSearchField from '@/components/ui/InSearchField.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InModal from '@/components/ui/InModal.vue';
 
+import screenHelp from './ExtUserCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+
 const toast = useToast();
 
 const list = usePagedList({
@@ -125,6 +127,7 @@ onMounted(() => list.reload());
   <CatalogPage
     title="외부사용자 관리"
     :subtitle="`FRM_EXT_USER_INFO · ` + (list.total.value || 0).toLocaleString() + `명`"
+    :help="screenHelp"
     :list="list"
     :columns="columns"
     row-key="extUserId"

@@ -24,6 +24,8 @@ import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InModal from '@/components/ui/InModal.vue';
 
+import screenHelp from './GroupCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+
 const toast = useToast();
 
 const list = usePagedList({
@@ -155,6 +157,7 @@ onMounted(() => list.reload());
     row-key="usergroupId"
     :active-filters="activeFilters"
     :selected-row="selected"
+    :help="screenHelp"
     @row-click="openDetail"
     @filter-remove="removeFilter"
     @retry="list.reload()"

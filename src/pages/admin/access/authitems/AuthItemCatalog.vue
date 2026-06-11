@@ -24,6 +24,8 @@ import InSearchField from '@/components/ui/InSearchField.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InModal from '@/components/ui/InModal.vue';
 
+import screenHelp from './AuthItemCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+
 const toast = useToast();
 
 const list = usePagedList({
@@ -138,6 +140,7 @@ onMounted(() => list.reload());
     row-key="authItemId"
     :active-filters="activeFilters"
     :selected-row="selected"
+    :help="screenHelp"
     @row-click="openDetail"
     @filter-remove="removeFilter"
     @retry="list.reload()"
