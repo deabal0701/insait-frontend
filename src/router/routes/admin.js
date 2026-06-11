@@ -33,6 +33,9 @@ const VIEWS = {
   OrgAuthCatalog:     () => import('@/pages/admin/access/orgauth/OrgAuthCatalog.vue'),
   // ★ (2026-06-11, dspark): AUT0050 메뉴 관리 (직접 REST, 메뉴 lazy 트리 + 편집 폼 + 오브젝트 picker).
   MenuCatalog:        () => import('@/pages/admin/access/menus/MenuCatalog.vue'),
+  // ★ (2026-06-11, dspark): 시스템환경 — CCD0040 인사영역 + CCD0010 공통코드 (직접 REST).
+  CompanyCatalog:     () => import('@/pages/admin/system/company/CompanyCatalog.vue'),
+  CommonCodeCatalog:  () => import('@/pages/admin/system/code/CommonCodeCatalog.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -44,11 +47,14 @@ const VIEWS = {
 const ADMIN_SCREENS = [
   // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) — TO-BE 개발 필수 5 화면 (미구현 Placeholder).
   //   AS-IS: CCD0040 인사영역 / CCD0010 공통코드 / CCD0050 옵션관리 / CCD0020 업무기준관리 / CCD0070 MAX값.
-  { object: 'CCD0040', path: 'ccd0040', menuId: 'SE_COM',   title: 'CCD0040 인사영역관리', view: 'Placeholder' },
-  { object: 'CCD0010', path: 'ccd0010', menuId: 'SE_CODE',  title: 'CCD0010 공통코드관리', view: 'Placeholder' },
-  { object: 'CCD0050', path: 'ccd0050', menuId: 'SE_OPTION',title: 'CCD0050 옵션관리',     view: 'Placeholder' },
-  { object: 'CCD0020', path: 'ccd0020', menuId: 'SE_REGISTRY', title: 'CCD0020 업무기준관리', view: 'CCD0020Placeholder' },
-  { object: 'CCD0070', path: 'ccd0070', menuId: 'SE_MAX',   title: 'CCD0070 MAX값관리',    view: 'Placeholder' },
+  { object: 'CCD0040', path: 'ccd0040', menuId: 'SE_COM',    title: 'CCD0040 인사영역관리',     view: 'CompanyCatalog' },
+  { object: 'CCD0080', path: 'ccd0080', menuId: 'SE_UNIT',   title: 'CCD0080 단위업무관리',     view: 'Placeholder' },
+  { object: 'CCD0010', path: 'ccd0010', menuId: 'SE_CODE',   title: 'CCD0010 공통코드관리',     view: 'CommonCodeCatalog' },
+  { object: 'CCD0050', path: 'ccd0050', menuId: 'SE_OPTION', title: 'CCD0050 옵션관리',         view: 'Placeholder' },
+  { object: 'CCD0030', path: 'ccd0030', menuId: 'SE_BIZ',    title: 'CCD0030 레지스트리관리',   view: 'Placeholder' },
+  { object: 'CCD0220', path: 'ccd0220', menuId: 'SE_OPTION_SETTING', title: 'CCD0220 업무기준설정관리', view: 'Placeholder' },
+  { object: 'CCD0020', path: 'ccd0020', menuId: 'SE_REGISTRY', title: 'CCD0020 업무기준관리',   view: 'CCD0020Placeholder' },
+  { object: 'CCD0070', path: 'ccd0070', menuId: 'SE_MAX',    title: 'CCD0070 MAX값관리',        view: 'Placeholder' },
   { object: 'IST0010', path: 'ist0010', menuId: 'SD_SQL',   title: 'IST0010 SQL 관리',    view: 'QueryCatalog' },
   { object: 'IST0020', path: 'ist0020', menuId: '',         title: 'IST0020 엔터티 관리',  view: 'EntityCatalog' },
   { object: 'IST0030', path: 'ist0030', menuId: 'SD_MSG',   title: 'IST0030 메시지 관리',  view: 'MessageCatalog' },

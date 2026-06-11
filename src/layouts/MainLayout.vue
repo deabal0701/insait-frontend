@@ -45,8 +45,9 @@ const ADMIN_PARENT = {
   AUT0030: 'meta', IST0030: 'meta', IST0020: 'meta', IST0050: 'meta', IST0010: 'meta',
   // ★ (2026-06-07, dspark): 「사용자와 접근제어」(auth) 그룹 = AS-IS SYS_ACCESS 7 화면.
   AUT0010: 'auth', AUT0020: 'auth', AUT0040: 'auth', AUT0060: 'auth', AUT0070: 'auth', AUT0100: 'auth', AUT0050: 'auth',
-  // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) = AS-IS 공통코드/기준/레지스트리 등 (TO-BE 필수 5).
-  CCD0040: 'sysenv', CCD0010: 'sysenv', CCD0050: 'sysenv', CCD0020: 'sysenv', CCD0070: 'sysenv',
+  // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) = AS-IS 공통코드/기준/레지스트리 등 (TO-BE 토대 8).
+  CCD0040: 'sysenv', CCD0080: 'sysenv', CCD0010: 'sysenv', CCD0050: 'sysenv',
+  CCD0030: 'sysenv', CCD0220: 'sysenv', CCD0020: 'sysenv', CCD0070: 'sysenv',
   FRM0090: 'pds',
   SETTINGS: 'env',
   COMPONENTS: 'env',
@@ -312,11 +313,14 @@ const items = computed(() => {
           label: '시스템환경',
           expanded: settingsExpanded.value.sysenv,
           children: [
-            { key: 'CCD0040', label: '인사영역관리',   active: current === 'CCD0040' },
-            { key: 'CCD0010', label: '공통코드관리',   active: current === 'CCD0010' },
-            { key: 'CCD0050', label: '옵션관리',       active: current === 'CCD0050' },
-            { key: 'CCD0020', label: '업무기준관리',   active: current === 'CCD0020' },
-            { key: 'CCD0070', label: 'MAX값관리',      active: current === 'CCD0070' },
+            { key: 'CCD0040', label: '인사영역관리',     active: current === 'CCD0040' },
+            { key: 'CCD0080', label: '단위업무관리',     active: current === 'CCD0080' },
+            { key: 'CCD0010', label: '공통코드관리',     active: current === 'CCD0010' },
+            { key: 'CCD0050', label: '옵션관리',         active: current === 'CCD0050' },
+            { key: 'CCD0030', label: '레지스트리관리',   active: current === 'CCD0030' },
+            { key: 'CCD0220', label: '업무기준설정관리', active: current === 'CCD0220' },
+            { key: 'CCD0020', label: '업무기준관리',     active: current === 'CCD0020' },
+            { key: 'CCD0070', label: 'MAX값관리',        active: current === 'CCD0070' },
           ],
         },
         {

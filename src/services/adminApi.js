@@ -190,7 +190,25 @@ export const adminApi = {
     },
     // 후속: menus (lazy tree)
   },
-  // system:  { commonCodes: ..., options: ..., logs: ... },
+  // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) 직접 REST — CCD0040 인사영역 + CCD0010 공통코드.
+  system: {
+    // 인사영역(FRM_COMPANY) 단일 그리드
+    companies: {
+      list(q) { return http.get('/api/admin/system/companies', { params: { ...(q ? { q } : {}) } }); },
+      save(rows) { return http.put('/api/admin/system/companies', { rows }); },
+    },
+    // 공통코드: 코드분류(FRM_CODE_KIND) 마스터 + 코드(FRM_CODE) 디테일
+    codeKinds: {
+      list(q) { return http.get('/api/admin/system/code-kinds', { params: { ...(q ? { q } : {}) } }); },
+      save(rows) { return http.put('/api/admin/system/code-kinds', { rows }); },
+      codes(cdKind, params) {
+        return http.get(`/api/admin/system/code-kinds/${encodeURIComponent(cdKind)}/codes`, { params: params || {} });
+      },
+      saveCodes(cdKind, body) {
+        return http.put(`/api/admin/system/code-kinds/${encodeURIComponent(cdKind)}/codes`, body);
+      },
+    },
+  },
 };
 
 export { buildListParams, withExpand };
