@@ -139,7 +139,23 @@ export const adminApi = {
       remove(empId) { return http.delete(`/api/admin/access/test-accounts/${encodeURIComponent(empId)}`); },
       removeAll() { return http.delete('/api/admin/access/test-accounts'); },
     },
-    // 후속: userGroups / authItems / orgAuth / externalUsers / menus / authCriteria
+    // ★ (2026-06-11, dspark): AUT0070 권한기준 관리 (직접 REST). 좌 옵션트리(조회) + 우 직책코드기준 그리드(R/W).
+    //   tree = FRM_OPTION_ITEM(AUT_CAM_MANAGE) / grid = FRM_UNIT_STD_HIS(직책→부여권한, mgr 6615127) 동적컬럼+행.
+    //   설계: 02-tobe/04-admin-lane/access-control/07_auth-criteria-aut0070.md.
+    authCriteria: {
+      tree(groupTag, companyCd) {
+        return http.get('/api/admin/access/auth-criteria', {
+          params: { ...(groupTag ? { groupTag } : {}), ...(companyCd ? { companyCd } : {}) },
+        });
+      },
+      grid(params) {
+        return http.get('/api/admin/access/auth-criteria/grid', { params: params || {} });
+      },
+      saveGrid(body, params) {
+        return http.put('/api/admin/access/auth-criteria/grid', body, { params: params || {} });
+      },
+    },
+    // 후속: orgAuth / menus (lazy tree)
   },
   // system:  { commonCodes: ..., options: ..., logs: ... },
 };

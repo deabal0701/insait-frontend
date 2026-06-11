@@ -31,6 +31,9 @@ const props = defineProps({
   // ★ (2026-06-05, dspark): 마스터-디테일 (엔터티 컬럼 → 매핑). 선택 라디오 + 행 강조.
   selectable: { type: Boolean, default: false },
   selectedRow: { type: Object, default: null },   // 객체 동일성으로 비교
+  // ★ (2026-06-11, dspark): 번호(순서)·상태 컬럼 옵션 (기본 off — 기존 화면 영향 없음). AUT0070 정합.
+  showSeq: { type: Boolean, default: false },
+  showStatus: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['row-select']);
@@ -80,6 +83,11 @@ function setCheckbox(r, key, checked) {
   r[key] = checked ? 'Y' : 'N';
   touch(r);
 }
+
+// ★ (2026-06-11, dspark): 상태 라벨 (rowStatus → 표시). D 는 visibleRows 에서 숨김이라 신규/수정/''.
+function statusLabel(r) {
+  return r.rowStatus === 'I' ? '신규' : r.rowStatus === 'U' ? '수정' : r.rowStatus === 'D' ? '삭제' : '';
+}
 </script>
 
 <template>
@@ -91,7 +99,14 @@ function setCheckbox(r, key, checked) {
       <thead>
         <tr>
           <th v-if="selectable" class="meta-grid__sel-col" />
-          <th v-for="c in columns" :key="c.key" :class="c.kind === 'checkbox' ? 'ctr' : ''">{{ c.label }}</th>
+          <th v-if="showSeq" class="meta-grid__seq-col">번호</th>
+          <th v-if="showStatus" class="meta-grid__status-col">상태</th>
+          <th
+            v-for="c in columns"
+            :key="c.key"
+            :class="c.kind === 'checkbox' ? 'ctr' : ''"
+            :style="c.width ? { width: c.width + 'px' } : null"
+          >{{ c.label }}</th>
           <th class="meta-grid__del-col" />
         </tr>
       </thead>
@@ -99,6 +114,10 @@ function setCheckbox(r, key, checked) {
         <tr v-for="r in visibleRows" :key="rowKey(r)" :class="{ 'meta-grid__row--sel': selectable && r === selectedRow }">
           <td v-if="selectable" class="ctr">
             <input type="radio" :checked="r === selectedRow" @change="emit('row-select', r)" />
+          </td>
+          <td v-if="showSeq" class="ctr meta-grid__seq">{{ visibleRows.indexOf(r) + 1 }}</td>
+          <td v-if="showStatus" class="ctr">
+            <span v-if="r.rowStatus" :class="['meta-grid__status', `is-${r.rowStatus.toLowerCase()}`]">{{ statusLabel(r) }}</span>
           </td>
           <td v-for="c in columns" :key="c.key" :class="c.kind === 'checkbox' ? 'ctr' : ''">
             <input
@@ -125,6 +144,14 @@ function setCheckbox(r, key, checked) {
               <option v-for="o in (c.options || [])" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <input
+              v-else-if="c.kind === 'date'"
+              v-model="r[c.key]"
+              type="date"
+              class="meta-grid__cell"
+              :style="c.width ? { width: c.width + 'px' } : null"
+              @change="touch(r)"
+            />
+            <input
               v-else-if="c.kind === 'combo'"
               v-model="r[c.key]"
               type="text"
@@ -147,7 +174,7 @@ function setCheckbox(r, key, checked) {
           <td><button type="button" class="meta-grid__row-del" title="행 삭제" @click="removeRow(r)">✕</button></td>
         </tr>
         <tr v-if="!visibleRows.length">
-          <td :colspan="columns.length + (selectable ? 2 : 1)" class="meta-grid__empty">행 없음 — [{{ addLabel }}]</td>
+          <td :colspan="columns.length + 1 + (selectable ? 1 : 0) + (showSeq ? 1 : 0) + (showStatus ? 1 : 0)" class="meta-grid__empty">행 없음 — [{{ addLabel }}]</td>
         </tr>
       </tbody>
     </table>
@@ -170,6 +197,13 @@ function setCheckbox(r, key, checked) {
 .meta-grid__table td.ctr, .meta-grid__table th.ctr { text-align: center; }
 .meta-grid__del-col { width: 32px; }
 .meta-grid__sel-col { width: 32px; }
+.meta-grid__seq-col { width: 44px; text-align: center; }
+.meta-grid__status-col { width: 56px; text-align: center; }
+.meta-grid__seq { color: var(--in-text-subtle); }
+.meta-grid__status { display: inline-block; padding: 1px 6px; border-radius: var(--in-radius-xs); font-size: var(--in-font-size-xs); }
+.meta-grid__status.is-i { background: var(--in-bg-success-subtle, #e6f4ea); color: var(--in-text-success, #1a7f37); }
+.meta-grid__status.is-u { background: var(--in-bg-warning-subtle, #fff4e5); color: var(--in-text-warning, #b54708); }
+.meta-grid__status.is-d { background: var(--in-bg-error-subtle, #fde7e7); color: var(--in-text-error, #d33); }
 .meta-grid__row--sel { background: var(--in-bg-brand-subtle, var(--in-bg-default)); }
 .meta-grid__cell {
   width: 100%; box-sizing: border-box; padding: 5px 6px;
