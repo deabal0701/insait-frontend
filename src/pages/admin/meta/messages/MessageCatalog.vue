@@ -107,7 +107,7 @@ const editor = useMetaEditor({
   domainLabel: '메시지',
   openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집(조회 단계 생략). children/usages 는 편집 패널에서도 읽기전용 노출.
   expand: ['children', 'services'],
-  defaultTab: 'columns',
+  defaultTab: 'def',
   createTab: 'def',
   reload: () => list.reload(),
   blankForm: () => ({
@@ -222,9 +222,10 @@ const defFields = computed(() => [
 
 const tabItems = computed(() => {
   const editingCount = (form.value.columns || []).filter((c) => c.rowStatus !== 'D').length;
+  // ★ (2026-06-12, dspark): 정의 탭을 먼저 — 타 메타 화면(SQL/오브젝트/엔터티/서비스) 일관성. 사용자 피드백.
   const items = [
-    { name: 'columns', tabLabel: `컬럼 (${isEditing.value ? editingCount : (detail.value?.columns?.length || 0)})` },
     { name: 'def',     tabLabel: '정의' },
+    { name: 'columns', tabLabel: `컬럼 (${isEditing.value ? editingCount : (detail.value?.columns?.length || 0)})` },
   ];
   if (mode.value !== 'create') {
     items.push({ name: 'children', tabLabel: `자식 (${detail.value?.children?.length || 0})` });

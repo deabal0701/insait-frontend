@@ -230,6 +230,12 @@ function statusLabel(r) {
   border: 1px solid var(--in-border-input); border-radius: var(--in-radius-xs);
   font-size: var(--in-font-size-sm); background: var(--in-bg-white); color: var(--in-text-default);
 }
+/* ★ (2026-06-12, dspark): editcombo(el-select) 높이·테두리를 텍스트 셀과 동일하게 (size small 이 더 낮던 문제 — 사용자 피드백). */
+.meta-grid__editcombo { width: 100%; }
+.meta-grid__editcombo :deep(.el-select__wrapper) {
+  min-height: 30px; padding: 4px 8px; border-radius: var(--in-radius-xs);
+  box-shadow: 0 0 0 1px var(--in-border-input) inset; font-size: var(--in-font-size-sm);
+}
 .meta-grid__row-del { border: none; background: transparent; cursor: pointer; color: var(--in-text-subtle); font-size: 14px; padding: 4px 8px; }
 .meta-grid__row-del:hover { color: var(--in-text-error, #d33); }
 .meta-grid__empty { text-align: center; color: var(--in-text-subtle); }
