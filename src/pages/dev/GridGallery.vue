@@ -85,12 +85,13 @@ class ButtonCellRenderer {
 }
 // 컬럼 헤더 색상 (header custom renderer). ★ tui-grid header renderer 는 클래스를 직접 받음
 //   (cell 처럼 { type, options } 래핑 X → "not a constructor"). 색상은 컬럼명 맵으로.
-const HEADER_COLORS = { stock: '#ed6c02', status: '#37ae34' };
+// ★ (2026-06-12, dspark): hex → CSS 토큰 (inline style 의 var() 는 앱 문서에서 정상 해석. fallback 도 브랜드 토큰 = green 테마 추종)
+const HEADER_COLORS = { stock: 'var(--in-text-warning)', status: 'var(--in-text-success)' };
 class ColorHeaderRenderer {
   constructor(props) {
     const el = document.createElement('div');
     el.className = 'gg-colorhead';
-    el.style.background = HEADER_COLORS[props.columnInfo.name] || '#13a9e9';
+    el.style.background = HEADER_COLORS[props.columnInfo.name] || 'var(--in-brand)';
     el.textContent = props.columnInfo.header;
     this.el = el;
   }
@@ -331,19 +332,20 @@ const styleOptions = {
 .gg__tag { margin-left: auto; font-size: 11px; color: var(--in-text-subtle, #888); }
 
 /* 인셀 버튼 */
+/* ★ (2026-06-12, dspark): 잔존 hex(#fff/#e33131/#fdecec/#c0341d) → 시멘틱 토큰 (UI 일관성 검토 후속) */
 :deep(.gg-cellbtn) {
   padding: 2px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;
-  border: 1px solid var(--in-border-default, #d6d6d6); background: #fff; color: var(--in-text-default, #565656);
+  border: 1px solid var(--in-border-default, #d6d6d6); background: var(--in-bg-white); color: var(--in-text-default, #565656);
 }
 :deep(.gg-cellbtn--primary) { border-color: var(--in-brand, #13a9e9); color: var(--in-brand, #13a9e9); }
-:deep(.gg-cellbtn--danger) { border-color: #e33131; color: #e33131; }
+:deep(.gg-cellbtn--danger) { border-color: var(--in-border-error); color: var(--in-text-error); }
 
 /* 헤더 색상 렌더러 */
 :deep(.gg-colorhead) {
   height: 100%; display: flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 600; font-size: 13px;
+  color: var(--in-text-white); font-weight: 600; font-size: 13px;
 }
 
 /* 조건부 행 색상 — tui-grid 가 row className 을 각 td 에 적용 */
-.gg-style-scope :deep(.gg-danger-row) { background: #fdecec !important; color: #c0341d; font-weight: 600; }
+.gg-style-scope :deep(.gg-danger-row) { background: var(--in-surface-accent-error) !important; color: var(--in-text-error); font-weight: 600; }
 </style>

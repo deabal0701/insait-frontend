@@ -183,10 +183,11 @@ function resultVal(rawRow, c) {
 }
 .rel__add:hover:not(:disabled) { border-color: var(--in-bg-brand); }
 .rel__add:disabled { opacity: .5; cursor: default; color: var(--in-text-subtle); }
+/* ★ (2026-06-12, dspark): danger hex(#c0392b/#e6b3ad/#fdecea) → error 시멘틱 토큰 (TestAccountPanel .ta__del 과 정합) */
 .rel__del {
-  background: transparent; border: 1px solid #e6b3ad; color: #c0392b; border-radius: var(--in-radius-xs);
+  background: transparent; border: 1px solid color-mix(in srgb, var(--in-border-error) 40%, var(--in-bg-white)); color: var(--in-text-error); border-radius: var(--in-radius-xs);
   cursor: pointer; font-size: var(--in-font-size-sm); padding: 3px 8px;
 }
-.rel__del:hover { background: #fdecea; }
+.rel__del:hover { background: var(--in-surface-accent-error); }
 .rel__hint { margin: 6px 10px; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 </style>

@@ -915,8 +915,9 @@ function validate() {
 .demo__code {
   margin: 0;
   padding: 14px 16px;
-  background: #1e293b;
-  color: #e2e8f0;
+  /* ★ (2026-06-12, dspark): #1e293b/#e2e8f0 → 코드블록 토큰 (2026-06-07 audit 백로그 해소) */
+  background: var(--in-surface-code);
+  color: var(--in-text-code);
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 11px;
   line-height: 18px;

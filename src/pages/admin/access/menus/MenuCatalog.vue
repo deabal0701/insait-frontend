@@ -13,6 +13,7 @@ import { useToast } from '@/composables/useToast';
 import MenuTreeNode from '@/components/feature/access/MenuTreeNode.vue';
 import SearchPickerModal from '@/components/feature/admin/SearchPickerModal.vue';
 import InButton from '@/components/ui/InButton.vue';
+import InSelect from '@/components/ui/InSelect.vue'; // ★ (2026-06-12, dspark): raw <select> 5곳 → InSelect 전환 (In* 래퍼 정책, UI 일관성 검토 후속)
 
 const toast = useToast();
 
@@ -22,6 +23,11 @@ const MENU_GROUPS = [
 ];
 const YN = [{ value: 'Y', label: '사용' }, { value: 'N', label: '미사용' }];
 const YN2 = [{ value: 'Y', label: 'Y' }, { value: 'N', label: 'N' }];
+// ★ (2026-06-12, dspark): 편집 폼 메뉴그룹 InSelect 옵션 — "(없음)" + 라벨에 코드 병기 (기존 <option> 표기 보존)
+const MENU_GROUP_FORM_OPTIONS = [
+  { value: '', label: '(없음)' },
+  ...MENU_GROUPS.map((g) => ({ value: g.value, label: `${g.label} (${g.value})` })),
+];
 
 const menuGroup = ref('SYS_ADMIN');
 const roots = ref([]);
@@ -146,9 +152,14 @@ onMounted(loadRoots);
 
     <div class="menu__toolbar">
       <label>메뉴그룹</label>
-      <select v-model="menuGroup" class="menu__group" @change="onChangeGroup">
-        <option v-for="g in MENU_GROUPS" :key="g.value" :value="g.value">{{ g.label }}</option>
-      </select>
+      <!-- ★ (2026-06-12, dspark): raw <select> → InSelect (변경 시 그룹 전환 = update:model-value 에서 처리) -->
+      <InSelect
+        class="menu__group"
+        :model-value="menuGroup"
+        :options="MENU_GROUPS"
+        size="sm"
+        @update:model-value="(v) => { menuGroup = v; onChangeGroup(); }"
+      />
       <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="loadRoots">조회</InButton>
       <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="addRoot">＋ 루트메뉴</InButton>
     </div>
@@ -207,14 +218,12 @@ onMounted(loadRoots);
             </div>
             <div class="menu__field">
               <label>사용여부</label>
-              <select v-model="form.useYn" class="menu__in"><option v-for="o in YN" :key="o.value" :value="o.value">{{ o.label }}</option></select>
+              <!-- ★ (2026-06-12, dspark): 편집 폼 raw <select> 4곳 → InSelect -->
+              <InSelect v-model="form.useYn" :options="YN" size="sm" />
             </div>
             <div class="menu__field">
               <label>메뉴그룹</label>
-              <select v-model="form.menuGroup" class="menu__in">
-                <option value="">(없음)</option>
-                <option v-for="g in MENU_GROUPS" :key="g.value" :value="g.value">{{ g.label }} ({{ g.value }})</option>
-              </select>
+              <InSelect v-model="form.menuGroup" :options="MENU_GROUP_FORM_OPTIONS" size="sm" />
             </div>
             <div class="menu__field">
               <label>적용순서</label>
@@ -222,11 +231,11 @@ onMounted(loadRoots);
             </div>
             <div class="menu__field">
               <label>닫힘여부</label>
-              <select v-model="form.closeYn" class="menu__in"><option v-for="o in YN2" :key="o.value" :value="o.value">{{ o.label }}</option></select>
+              <InSelect v-model="form.closeYn" :options="YN2" size="sm" />
             </div>
             <div class="menu__field">
               <label>시즌메뉴</label>
-              <select v-model="form.seasonYn" class="menu__in"><option v-for="o in YN2" :key="o.value" :value="o.value">{{ o.label }}</option></select>
+              <InSelect v-model="form.seasonYn" :options="YN2" size="sm" />
             </div>
             <div class="menu__field menu__field--wide">
               <label>비고</label>
@@ -258,7 +267,8 @@ onMounted(loadRoots);
 .menu__desc { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .menu__toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .menu__toolbar label { font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
-.menu__group { padding: 5px 8px; border: 1px solid var(--in-border-input); border-radius: var(--in-radius-xs); font-size: var(--in-font-size-sm); }
+/* ★ (2026-06-12, dspark): raw select 박스 스타일 제거 — InSelect 전환에 따라 폭만 지정 */
+.menu__group { width: 180px; }
 .menu__body { display: flex; gap: 16px; align-items: flex-start; }
 
 .menu__tree { flex: 0 0 320px; border: 1px solid var(--in-border-default); border-radius: var(--in-radius-sm); padding: 12px; background: var(--in-bg-white); }

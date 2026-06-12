@@ -277,6 +277,8 @@ function printGrid(opts = {}) {
   const cols = (g.getColumns?.() || []).filter((c) => c && c.name && c.name !== '_number' && c.name !== '_checked');
   const data = g.getData?.() || [];
   const esc = (v) => String(v ?? '').replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+  // ★ (2026-06-12, dspark): 아래 hex 는 의도적 — window.open 새 문서에는 앱 :root 의 --in-* 토큰이
+  //   존재하지 않아 var() 해석 불가. 인쇄 전용 standalone HTML 이므로 토큰화 대상 아님.
   const html =
     `<html><head><title>${esc(opts.title || '인쇄')}</title><style>` +
     'table{border-collapse:collapse;width:100%;font-family:Pretendard,sans-serif;font-size:12px}' +

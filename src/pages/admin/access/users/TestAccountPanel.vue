@@ -288,8 +288,9 @@ watch(() => props.modelValue, (v) => {
   padding: 3px 8px; color: var(--in-text-default);
 }
 .ta__copy:hover, .ta__refresh:hover { border-color: var(--in-bg-brand); color: var(--in-text-accent); }
-.ta__del { color: #c0392b; border-color: #e6b3ad; }
-.ta__del:hover:not(:disabled) { background: #fdecea; }
+/* ★ (2026-06-12, dspark): danger hex(#c0392b/#e6b3ad/#fdecea) → error 시멘틱 토큰 (UI 일관성 검토 후속) */
+.ta__del { color: var(--in-text-error); border-color: color-mix(in srgb, var(--in-border-error) 40%, var(--in-bg-white)); }
+.ta__del:hover:not(:disabled) { background: var(--in-surface-accent-error); }
 .ta__del:disabled, .ta__refresh:disabled { opacity: .5; cursor: default; }
 .ta__result-hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 
@@ -309,8 +310,8 @@ watch(() => props.modelValue, (v) => {
 }
 .ta__btn--default { background: var(--in-bg-white); color: var(--in-text-default); border-color: var(--in-border-default); }
 .ta__btn--default:hover { border-color: var(--in-border-input); color: var(--in-text-accent); }
-.ta__btn--danger { background: #fff; color: #c0392b; border-color: #e6b3ad; margin-right: auto; }
-.ta__btn--danger:hover:not(:disabled) { background: #fdecea; }
+.ta__btn--danger { background: var(--in-bg-white); color: var(--in-text-error); border-color: color-mix(in srgb, var(--in-border-error) 40%, var(--in-bg-white)); margin-right: auto; }
+.ta__btn--danger:hover:not(:disabled) { background: var(--in-surface-accent-error); }
 .ta__btn--danger:disabled { opacity: .5; cursor: default; }
 
 /* ★ 하단 상세 내역 (어떤 테이블에 무엇이) */

@@ -91,6 +91,10 @@
   --in-surface-accent-success: #f0f9ff;
   --in-surface-accent-warning: #fffbeb;
   --in-surface-accent-error:   #fef2f2;
+  /* ★ (2026-06-12, dspark): 코드블록 다크 표면 — ComponentsCatalogPage 등 코드 샘플 영역의
+   *   #1e293b/#e2e8f0 하드코딩 제거용 (2026-06-07 audit Tier4 백로그). 다크 고정(테마 무관). */
+  --in-surface-code:       #1e293b;
+  --in-text-code:          #e2e8f0;
 
   /* === Border === */
   --in-border-default:        #e2e2e2; /* Figma Border/Default */

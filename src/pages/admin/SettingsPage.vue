@@ -119,11 +119,13 @@ const current = computed({
   flex-shrink: 0;
   border: 1px solid var(--in-border-default);
 }
+/* ★ (2026-06-12, dspark): hex → primitive 램프 토큰. 테마 선택 미리보기라 의도적으로 테마 고정
+ *   (semantic --in-brand 사용 시 두 카드가 같은 색이 되어 버림) — 값 1:1 동일, 시각 변화 0. */
 .settings__theme-swatch--white {
-  background: linear-gradient(135deg, #13a9e9 0%, #0488c7 100%);
+  background: linear-gradient(135deg, var(--in-iblue-500) 0%, var(--in-iblue-700) 100%);
 }
 .settings__theme-swatch--green {
-  background: linear-gradient(135deg, #1cac6f 0%, #06683e 100%);
+  background: linear-gradient(135deg, var(--in-green-500) 0%, var(--in-green-700) 100%);
 }
 .settings__theme-text {
   display: flex;

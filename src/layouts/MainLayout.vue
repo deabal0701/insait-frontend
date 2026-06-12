@@ -566,7 +566,7 @@ const currentTitle = computed(() => route.meta?.title || '');
   height: 26px;
   border-radius: 50%;
   background: var(--in-brand);
-  color: #fff;
+  color: var(--in-text-white); /* ★ (2026-06-12, dspark): #fff → 토큰 */
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0;
