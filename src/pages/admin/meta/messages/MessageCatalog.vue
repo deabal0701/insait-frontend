@@ -82,9 +82,9 @@ const colColumns = [
   // ★ (2026-06-12, dspark): datalist combo → editcombo(el-select filterable+allow-create). 클릭 시 전체 옵션 표시 + MT_* value-type 자유입력 둘 다(datalist 가 기존값으로 옵션 가리던 문제 해결). 사용자 피드백.
   { key: 'typeCd',      label: '타입',   kind: 'editcombo', width: 120, options: ['string', 'numeric', 'date', 'clob'], placeholder: 'string' },
   { key: 'labelCd',     label: '라벨',   kind: 'text',     width: 96 },
-  // ★ (2026-06-12, dspark): 포맷도 editcombo — 자주 쓰는 형식 10종 드롭다운 + 자유입력(allow-create). 타입과 일관. 사용자 피드백.
-  { key: 'formatText',  label: '포맷',   kind: 'editcombo', width: 150, placeholder: '예: yyyy-MM-dd',
-    options: ['yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss', 'yyyy.MM.dd', 'yyyy/MM/dd', 'HH:mm:ss', 'HH:mm', 'yyyyMMdd', '#,##0', '#,##0.00', '0.00%'] },
+  // ★ (2026-06-12, dspark): 포맷 editcombo 제안값 = AS-IS 실측 IBSheet 마스크(#=숫자자리). 운영 60건 표본: 날짜 ####.##.## · 숫자 #,###.### (yyyy-MM-dd 아님!). 자유입력 가능. 사용자 피드백 후 실 DB 조사 반영.
+  { key: 'formatText',  label: '포맷',   kind: 'editcombo', width: 160, placeholder: '예: ####.##.##',
+    options: ['####.##.##', '####.##.## ##:##:##', '##:##:##', '#,###', '#,###.###', '#,##0', '#,##0.00'] },
   { key: 'minLength',   label: '최소',   kind: 'number',   width: 56 },
   { key: 'maxLength',   label: '최대',   kind: 'number',   width: 56 },
   { key: 'mandatoryYn', label: '필수',   kind: 'checkbox' },
@@ -356,7 +356,7 @@ onMounted(() => list.reload());
               :columns="colColumns"
               key-field="msgColDefOid"
               :new-row="newCol"
-              hint="타입: string / numeric / date / clob (또는 value-type MT_*). 개인정보 컬럼은 암호화 체크. 포맷: 표시 형식 힌트(예 yyyy-MM-dd / #,##0) — 비우면 있는 그대로 표시(SQL에서 TO_CHAR 변환 시 불필요)."
+              hint="타입: string / numeric / date / clob (또는 value-type MT_*). 개인정보 컬럼은 암호화 체크. 포맷: AS-IS IBSheet 마스크(#=숫자) — 날짜 ####.##.## / 숫자 #,###.### . 비우면 있는 그대로(SQL TO_CHAR 변환 시 불필요)."
             />
           </template>
         </section>
