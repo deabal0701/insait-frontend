@@ -11,6 +11,7 @@ import { ref, computed, onMounted } from 'vue';
 import dayjs from 'dayjs';
 import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
+import { MSG } from '@/constants/messages'; // ★ (2026-06-12, dspark): 공통 문구 통일 (#6)
 
 import OrgTreeNode from '@/components/feature/access/OrgTreeNode.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
@@ -103,12 +104,12 @@ async function save() {
   const empAuths = empRows.value.filter((r) => r.rowStatus).map((r) => ({
     rowStatus: r.rowStatus, ormAuthId: r.ormAuthId, empId: r.empId, note: r.note,
   }));
-  if (!groupAuths.length && !empAuths.length) { toast.info('변경된 내용이 없습니다.'); return; }
+  if (!groupAuths.length && !empAuths.length) { toast.info(MSG.NO_CHANGES); return; }
   saving.value = true;
   try {
     const data = await adminApi.access.orgAuth.save(selectedOrg.value.orgId, { groupAuths, empAuths });
     mapResp(data);
-    toast.success('저장되었습니다.');
+    toast.success(MSG.SAVED);
   } catch (e) {
     toast.error('저장 실패: ' + (e?.response?.data?.error?.message || e?.message || e));
   } finally { saving.value = false; }
@@ -177,7 +178,7 @@ onMounted(async () => { await Promise.all([loadRoots(), loadUserGroups()]); });
               :columns="groupColumns"
               key-field="ormUsergroupAuthId"
               :new-row="newGroupRow"
-              add-label="입력"
+              add-label="+ 추가"
               show-seq
               show-status
             />

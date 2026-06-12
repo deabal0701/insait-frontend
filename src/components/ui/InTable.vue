@@ -33,6 +33,9 @@ const props = defineProps({
   rowKey: { type: String, default: undefined },
   clickableRow: { type: Boolean, default: false },
   selectedRow: { type: [String, Number, Object], default: null },
+  // ★ (2026-06-12, dspark): 지정 시 내부 스크롤 모드 — max-height + overflow-y:auto + 헤더 sticky.
+  //   미지정(기본) 시 기존 동작 100% 유지 (콘텐츠 높이만큼 늘어남). max-height 라 짧은 목록은 변화 없음.
+  maxHeight: { type: [Number, String], default: undefined },
 });
 
 const emit = defineEmits(['row-click']);
@@ -54,10 +57,17 @@ function onRowClick(row, i, e) {
   if (!props.clickableRow) return;
   emit('row-click', { row, index: i, event: e });
 }
+
+// ★ (2026-06-12, dspark): maxHeight 정규화 — number 는 px, string 은 그대로 (calc()/max() 허용)
+const maxHeightStyle = computed(() => {
+  if (props.maxHeight == null) return undefined;
+  const v = typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
+  return { maxHeight: v };
+});
 </script>
 
 <template>
-  <div class="in-table" role="table">
+  <div class="in-table" :class="{ 'in-table--scroll': maxHeight != null }" :style="maxHeightStyle" role="table">
     <table>
       <thead>
         <tr class="in-table__head-primary">
@@ -101,7 +111,8 @@ function onRowClick(row, i, e) {
         </tr>
         <tr v-if="!data.length">
           <td :colspan="columns.length" class="in-table__empty">
-            <slot name="empty">No data</slot>
+            <!-- ★ (2026-06-12, dspark): 기본 문구 한글화 ("No data" → 국문, slot 으로 덮는 호출처는 영향 0) -->
+            <slot name="empty">데이터가 없습니다</slot>
           </td>
         </tr>
       </tbody>
@@ -127,6 +138,16 @@ function onRowClick(row, i, e) {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--in-font-family-body);
+}
+
+/* ★ (2026-06-12, dspark): 내부 스크롤 모드 (maxHeight 지정 시에만) — 헤더 sticky 로 스크롤 중에도
+   컬럼명 유지. 미지정 시 본 블록 전체 비활성 = 기존 화면 영향 0. headerRows=2 는 현재 사용처 0건이라
+   1행 헤더만 sticky (2행 도입 시 top 보정 필요). */
+.in-table--scroll { overflow-y: auto; }
+.in-table--scroll .in-table__head-primary > th {
+  position: sticky;
+  top: 0;
+  z-index: 2; /* 셀 콘텐츠(배지 등) 위 — 컴포넌트 로컬 스택 */
 }
 
 .in-table__head-primary > th {

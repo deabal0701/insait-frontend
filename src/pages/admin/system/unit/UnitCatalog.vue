@@ -7,6 +7,7 @@
 import { ref, onMounted } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
+import { MSG } from '@/constants/messages'; // ★ (2026-06-12, dspark): 공통 문구 통일 (#6)
 
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import InButton from '@/components/ui/InButton.vue';
@@ -47,12 +48,12 @@ async function load() {
 
 async function save() {
   const dirty = rows.value.filter((r) => r.rowStatus);
-  if (!dirty.length) { toast.info('변경된 내용이 없습니다.'); return; }
+  if (!dirty.length) { toast.info(MSG.NO_CHANGES); return; }
   saving.value = true;
   try {
     const payload = dirty.map((r) => ({ ...r, staYmd: ymd(r.staYmd), endYmd: ymd(r.endYmd) }));
     rows.value = mapRows(await adminApi.system.units.save(payload));
-    toast.success('저장되었습니다.');
+    toast.success(MSG.SAVED);
   } catch (e) { toast.error('저장 실패: ' + (e?.response?.data?.error?.message || e?.message || e)); }
   finally { saving.value = false; }
 }
@@ -74,7 +75,7 @@ onMounted(load);
     </div>
     <div class="unit__panel">
       <div class="unit__count">Total {{ rows.filter(r => r.rowStatus !== 'D').length }}건</div>
-      <MetaChildGrid :rows="rows" :columns="columns" key-field="unitId" :new-row="newRow" add-label="입력" show-seq show-status />
+      <MetaChildGrid :rows="rows" :columns="columns" key-field="unitId" :new-row="newRow" add-label="+ 추가" show-seq show-status />
     </div>
   </div>
 </template>

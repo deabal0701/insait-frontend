@@ -6,9 +6,10 @@
  *   루트/하위 추가, 저장(create/update), 삭제(자식·바인딩 역참조 가드). 오브젝트 연결 = 오브젝트 검색 picker.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/menus (+ children/exists). 매뉴얼 06. Figma 노드 ID = TBD.
  */
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, nextTick, onMounted } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
+import { MSG } from '@/constants/messages'; // ★ (2026-06-12, dspark): 공통 문구 통일 (#6)
 
 import MenuTreeNode from '@/components/feature/access/MenuTreeNode.vue';
 import SearchPickerModal from '@/components/feature/admin/SearchPickerModal.vue';
@@ -96,18 +97,28 @@ function addChild() {
   setForm({ parentMenuId: selectedMenuId.value, menuGroup: menuGroup.value }, true);
 }
 
+// ★ (2026-06-12, dspark): 검증을 useMetaEditor validate 패턴으로 정리 (#8) —
+//   toast + 실패 필드 자동 포커스(data-field 마커). save() 본문과 검증 분리.
+function focusField(key) {
+  nextTick(() => document.querySelector(`.menu [data-field="${key}"]`)?.focus());
+}
+function validateForm() {
+  if (!form.menuId?.trim()) { toast.info('메뉴ID는 필수입니다.'); focusField('menuId'); return false; }
+  if (!form.menuNm?.trim()) { toast.info('메뉴이름은 필수입니다.'); focusField('menuNm'); return false; }
+  return true;
+}
+
 async function save() {
-  if (!form.menuId?.trim()) { toast.info('메뉴ID는 필수입니다.'); return; }
-  if (!form.menuNm?.trim()) { toast.info('메뉴이름은 필수입니다.'); return; }
+  if (!validateForm()) return;
   saving.value = true;
   try {
     const payload = { ...form, seqOrder: form.seqOrder === '' ? null : form.seqOrder };
     if (isCreate.value) {
       await adminApi.access.menus.create(payload);
-      toast.success('등록되었습니다.');
+      toast.success(MSG.SAVED);   // ★ (2026-06-12, dspark): '등록되었습니다' → '저장되었습니다' 통일 (#6)
     } else {
       await adminApi.access.menus.update(form.menuId, payload);
-      toast.success('저장되었습니다.');
+      toast.success(MSG.SAVED);
     }
     const savedId = form.menuId;
     await loadRoots(); refreshKey.value++;
@@ -124,7 +135,7 @@ async function remove() {
   saving.value = true;
   try {
     await adminApi.access.menus.remove(form.menuId);
-    toast.success('삭제되었습니다.');
+    toast.success(MSG.DELETED);
     hasForm.value = false; selectedMenuId.value = null;
     await loadRoots(); refreshKey.value++;
   } catch (e) {
@@ -198,7 +209,7 @@ onMounted(loadRoots);
           <div class="menu__form">
             <div class="menu__field">
               <label>메뉴ID *</label>
-              <input v-model="form.menuId" :disabled="!isCreate" type="text" class="menu__in" placeholder="예: SD_PDS" />
+              <input v-model="form.menuId" :disabled="!isCreate" type="text" class="menu__in" placeholder="예: SD_PDS" data-field="menuId" />
             </div>
             <div class="menu__field">
               <label>상위메뉴ID</label>
@@ -206,7 +217,7 @@ onMounted(loadRoots);
             </div>
             <div class="menu__field">
               <label>메뉴이름 *</label>
-              <input v-model="form.menuNm" type="text" class="menu__in" />
+              <input v-model="form.menuNm" type="text" class="menu__in" data-field="menuNm" />
             </div>
             <div class="menu__field">
               <label>오브젝트</label>
@@ -273,7 +284,9 @@ onMounted(loadRoots);
 
 .menu__tree { flex: 0 0 320px; border: 1px solid var(--in-border-default); border-radius: var(--in-radius-sm); padding: 12px; background: var(--in-bg-white); }
 .menu__tree-title { font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-bold); color: var(--in-text-subtle); margin-bottom: 6px; }
-.menu__tree-list { list-style: none; margin: 0; padding: 0; max-height: 620px; overflow: auto; }
+/* ★ (2026-06-12, dspark): 620px 고정 → 뷰포트 연동 (#9). 작은 화면(768h)에서도 잘리지 않고
+   큰 화면(1080h+)에선 더 많은 노드 표시. min 360px 가드. */
+.menu__tree-list { list-style: none; margin: 0; padding: 0; max-height: max(360px, calc(100vh - 320px)); overflow: auto; }
 .menu__tree-empty { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); padding: 8px; }
 
 .menu__panel { flex: 1 1 auto; min-width: 0; border: 1px solid var(--in-border-default); border-radius: var(--in-radius-sm); padding: 14px 16px; background: var(--in-bg-white); }

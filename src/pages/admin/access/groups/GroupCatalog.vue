@@ -57,7 +57,8 @@ const groupTypeEditOptions = [
   { value: '30', label: '30' },
   { value: '51', label: '51' },
 ];
-const groupTypeFilterOptions = [{ value: '', label: '전체 유형' }, ...groupTypeEditOptions];
+// ★ (2026-06-12, dspark): '전체 유형' → '전체' — 필터 전체옵션 라벨 통일 (#6, 셀렉트에 label="그룹유형" 있음)
+const groupTypeFilterOptions = [{ value: '', label: '전체' }, ...groupTypeEditOptions];
 
 const columns = [
   { field: 'usergroupId', label: '그룹ID',  sortable: true, sortKey: 'usergroup_id', width: 200 },
@@ -92,12 +93,13 @@ const editor = useMetaEditor({
     def: f.def,
     members: f.members.map((m) => ({ rowStatus: m.rowStatus, userId: m.userId })),
   }),
-  validate: (f, { mode, setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { mode, setTab, focusField }) => {
     if (mode === 'create' && !(f.def.usergroupId || '').trim()) {
-      toast.error?.('그룹ID는 필수입니다.'); setTab('def'); return false;
+      toast.error?.('그룹ID는 필수입니다.'); setTab('def'); focusField?.('usergroupId'); return false;
     }
     if (!(f.def.usergroupNm || '').trim()) {
-      toast.error?.('그룹명은 필수입니다.'); setTab('def'); return false;
+      toast.error?.('그룹명은 필수입니다.'); setTab('def'); focusField?.('usergroupNm'); return false;
     }
     return true;
   },

@@ -96,9 +96,10 @@ const editor = useMetaEditor({
     userBindings: f.userBindings,
     menuBindings: f.menuBindings,
   }),
-  validate: (f, { setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { setTab, focusField }) => {
     if (!(f.def.authItemName || '').trim()) {
-      toast.error?.('권한이름은 필수입니다.'); setTab('def'); return false;
+      toast.error?.('권한이름은 필수입니다.'); setTab('def'); focusField?.('authItemName'); return false;
     }
     return true;
   },

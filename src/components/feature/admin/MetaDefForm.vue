@@ -25,7 +25,9 @@ defineProps({
 
 <template>
   <div class="meta-def-form">
-    <div v-for="f in fields" :key="f.key" class="meta-def-form__row">
+    <!-- ★ (2026-06-12, dspark): data-field 마커 — useMetaEditor.focusField(key) 가 검증 실패 필드를
+         찾아 포커스하는 anchor. 마크업 시각 영향 0. -->
+    <div v-for="f in fields" :key="f.key" class="meta-def-form__row" :data-field="f.key">
       <slot :name="`field-${f.key}`" :field="f" :model="model">
         <InSelect
           v-if="f.type === 'select'"

@@ -55,15 +55,17 @@ const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit
       </div>
     </div>
 
+    <!-- ★ (2026-06-12, dspark): [삭제] = danger variant + 좌측 분리(margin-right:auto) — 닫기/수정 옆
+         오클릭 방지 + 위험 조작 시각 구분 (UI 일관성 검토 #1). 버튼 구성·이벤트는 기존 그대로. -->
     <template #footer>
       <template v-if="isEditing">
-        <InButton v-if="deletableInEdit && mode === 'edit'" variant="default" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('delete')">삭제</InButton>
+        <InButton v-if="deletableInEdit && mode === 'edit'" variant="danger" class="meta-editor__del" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('delete')">삭제</InButton>
         <InButton variant="default" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('cancel')">취소</InButton>
         <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" :disabled="saving" @click="emit('save')">{{ saving ? '저장 중…' : '저장' }}</InButton>
       </template>
       <template v-else>
+        <InButton variant="danger" class="meta-editor__del" :left-icon-show="false" :right-icon-show="false" @click="emit('delete')">삭제</InButton>
         <InButton variant="default" :left-icon-show="false" :right-icon-show="false" @click="emit('close')">닫기</InButton>
-        <InButton variant="default" :left-icon-show="false" :right-icon-show="false" @click="emit('delete')">삭제</InButton>
         <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" @click="emit('edit')">수정</InButton>
       </template>
     </template>
@@ -72,6 +74,8 @@ const isEditing = computed(() => props.mode === 'create' || props.mode === 'edit
 
 <style scoped>
 .meta-editor__loading { padding: 32px; text-align: center; color: var(--in-text-subtle); }
+/* ★ (2026-06-12, dspark): [삭제] 좌측 분리 — InModal 푸터(flex, flex-end)에서 auto margin 으로 밀어냄 */
+.meta-editor__del { margin-right: auto; }
 /* ★ (2026-06-05) 탭과 내용 사이 간격 — 배지/폼이 탭에 바로 붙던 문제. 5개 카탈로그 공통. */
 .meta-editor__body { padding-top: 16px; }
 </style>

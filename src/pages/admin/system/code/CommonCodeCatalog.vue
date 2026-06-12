@@ -135,7 +135,7 @@ onMounted(loadKinds);
           :columns="kindColumns"
           key-field="cdKindId"
           :new-row="newKind"
-          add-label="입력"
+          add-label="+ 추가"
           show-seq
           show-status
           selectable
@@ -164,7 +164,7 @@ onMounted(loadKinds);
           :columns="codeColumns"
           key-field="cdId"
           :new-row="newCode"
-          add-label="입력"
+          add-label="+ 추가"
           show-seq
           show-status
         />

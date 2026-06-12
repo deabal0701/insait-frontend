@@ -54,7 +54,7 @@ function onSearch(v) { staged.value.q = v; }
 function onStatus(v) { staged.value.statusCd = v; }
 
 const statusFilterOptions = [
-  { value: '', label: '전체 상태' },
+  { value: '', label: '전체' },   // ★ (2026-06-12, dspark): '전체 상태' → '전체' 통일 (#6)
   { value: 'Y', label: '사용 (Y)' },
   { value: 'N', label: '잠금 (N)' },
 ];
@@ -123,9 +123,10 @@ const editor = useMetaEditor({
     def: { ...f.def, tryCnt: f.def.tryCnt === '' || f.def.tryCnt == null ? null : Number(f.def.tryCnt) },
     options: f.options,
   }),
-  validate: (f, { mode, setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { mode, setTab, focusField }) => {
     if (mode === 'create' && !(f.def.loginId || '').trim()) {
-      toast.error?.('로그인ID는 필수입니다.'); setTab('def'); return false;
+      toast.error?.('로그인ID는 필수입니다.'); setTab('def'); focusField?.('loginId'); return false;
     }
     return true;
   },

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import StatusErrorIcon from '@/assets/icons/status-error.svg';
 import StatusWarningIcon from '@/assets/icons/status-warning.svg';
 import StatusSuccessIcon from '@/assets/icons/status-success.svg';
@@ -93,6 +93,11 @@ const statusIcon = computed(() => {
   if (props.status === 'success') return StatusSuccessIcon;
   return null;
 });
+
+// ★ (2026-06-12, dspark): label↔input 연결 (#7 a11y) — Vue 3.5 useId (SSR-safe 고유 id).
+//   el-input 은 비선언 attr(id/aria-*)를 내부 <input> 에 전달 → label for + SR 메시지 연계.
+const inputId = useId();
+const msgId = useId();
 </script>
 
 <template>
@@ -112,18 +117,20 @@ const statusIcon = computed(() => {
 
     <!-- 메인 라인: 라벨 + 인풋 + 보조 버튼 -->
     <div class="in-tf__row">
-      <div v-if="showLabel" class="in-tf__label">
+      <label v-if="showLabel" class="in-tf__label" :for="inputId">
         <span class="in-tf__label-text">{{ label }}</span>
         <span v-if="showRequired" class="in-tf__req" aria-hidden="true">*</span>
-      </div>
+      </label>
       <div class="in-tf__control">
         <el-input
+          :id="inputId"
           :model-value="modelValue"
           :placeholder="effectivePlaceholder"
           :size="elSize"
           :disabled="disabled"
           :readonly="readonly"
           :type="type"
+          :aria-describedby="statusMessage ? msgId : undefined"
           @update:model-value="(v) => $emit('update:modelValue', v)"
         >
           <template v-if="statusIcon" #suffix>
@@ -139,6 +146,7 @@ const statusIcon = computed(() => {
     </div>
     <span
       v-if="statusMessage"
+      :id="msgId"
       class="in-tf__msg"
       :class="`in-tf__msg--${status}`"
     >{{ statusMessage }}</span>
@@ -244,6 +252,14 @@ const statusIcon = computed(() => {
 }
 .in-tf :deep(.el-input__wrapper:focus-within) {
   border-bottom-color: var(--in-border-brand);
+}
+/* ★ (2026-06-12, dspark): 키보드 포커스 링 — --in-focus-ring-* 토큰(W6 표준).
+   텍스트 입력은 브라우저가 마우스 클릭 포커스에도 :focus-visible 을 매칭하므로
+   기존 밑줄 강조와 함께 링이 표시됨 (EP 기본 box-shadow 링을 제거했던 것의 a11y 보강). */
+.in-tf__control:has(:focus-visible) {
+  outline: var(--in-focus-ring-style) var(--in-focus-ring-width) var(--in-focus-ring-color);
+  outline-offset: 1px;
+  border-radius: var(--in-radius-xxs);
 }
 
 /* === Status === */

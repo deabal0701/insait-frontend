@@ -124,11 +124,12 @@ const editor = useMetaEditor({
     };
   },
   toPayload: (f) => ({ def: { ...f.def }, columns: f.columns }),
-  validate: (f, { setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { setTab, focusField }) => {
     const d = f.def;
-    if (!d.entityNm || !d.entityNm.trim()) { toast.error?.('테이블명은 필수입니다.'); setTab('def'); return false; }
-    if (!d.displayNm || !d.displayNm.trim()) { toast.error?.('한글명은 필수입니다.'); setTab('def'); return false; }
-    if (!d.unitCd || !d.unitCd.trim()) { toast.error?.('단위코드(Unit)는 필수입니다.'); setTab('def'); return false; }
+    if (!d.entityNm || !d.entityNm.trim()) { toast.error?.('테이블명은 필수입니다.'); setTab('def'); focusField?.('entityNm'); return false; }
+    if (!d.displayNm || !d.displayNm.trim()) { toast.error?.('한글명은 필수입니다.'); setTab('def'); focusField?.('displayNm'); return false; }
+    if (!d.unitCd || !d.unitCd.trim()) { toast.error?.('단위코드(Unit)는 필수입니다.'); setTab('def'); focusField?.('unitCd'); return false; }
     for (const c of (f.columns || []).filter((x) => x.rowStatus !== 'D')) {
       if (!c.columnNm || !c.columnNm.trim()) { toast.error?.('컬럼명이 빈 행이 있습니다.'); setTab('columns'); return false; }
       if (!c.displayNm || !c.displayNm.trim()) { toast.error?.(`컬럼 '${c.columnNm}'의 한글명은 필수입니다.`); setTab('columns'); return false; }

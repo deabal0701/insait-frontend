@@ -22,7 +22,8 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (v) => ['primary', 'default', 'rounded', 'text', 'link', 'only-icon', 'only-icon-primary'].includes(v),
+    // ★ (2026-06-12, dspark): 'danger' 추가 — 위험 조작(삭제) 시각 구분 (기존 7종 유지, additive)
+    validator: (v) => ['primary', 'default', 'rounded', 'text', 'link', 'only-icon', 'only-icon-primary', 'danger'].includes(v),
   },
   size: {
     type: String,
@@ -102,6 +103,13 @@ const classes = computed(() => [
 .in-btn:disabled { cursor: not-allowed; }
 .in-btn--block { width: 100%; }
 
+/* ★ (2026-06-12, dspark): 키보드 포커스 링 — --in-focus-ring-* 토큰(W6 표준) 적용.
+   버튼은 브라우저가 키보드 포커스에만 :focus-visible 매칭 → 마우스 클릭 시각 영향 0. */
+.in-btn:focus-visible {
+  outline: var(--in-focus-ring-style) var(--in-focus-ring-width) var(--in-focus-ring-color);
+  outline-offset: var(--in-focus-ring-offset);
+}
+
 /* Sizes (Figma 정합) */
 .in-btn--sm { height: 28px; padding: 0 12px; font-size: var(--in-font-size-sm); line-height: var(--in-line-height-sm); }
 .in-btn--md { height: 33px; padding: 0 14px; font-size: var(--in-font-size-md); line-height: var(--in-line-height-md); }
@@ -125,6 +133,7 @@ const classes = computed(() => [
 .in-btn--default .in-btn__icon img,
 .in-btn--rounded .in-btn__icon img,
 .in-btn--text .in-btn__icon img,
+.in-btn--danger .in-btn__icon img,
 .in-btn--only-icon .in-btn__icon img {
   filter: brightness(0) saturate(100%) invert(40%) sepia(0%) saturate(0%) hue-rotate(0deg);
 }
@@ -170,6 +179,27 @@ const classes = computed(() => [
   border-color: var(--in-text-state-active);
 }
 .in-btn--default:disabled {
+  background: var(--in-bg-state-disabled);
+  color: var(--in-text-state-disabled);
+  border-color: var(--in-border-state-disabled);
+}
+
+/* === Type=Danger === ★ (2026-06-12, dspark): 위험 조작(삭제) 전용 — TestAccountPanel/RelationEditor
+   의 danger 버튼 스타일을 컴포넌트로 격상 (error 시멘틱 토큰, 테마 무관 고정 적색 계열) */
+.in-btn--danger {
+  background: var(--in-bg-white);
+  color: var(--in-text-error);
+  border-color: color-mix(in srgb, var(--in-border-error) 40%, var(--in-bg-white));
+}
+.in-btn--danger:hover:not(:disabled) {
+  background: var(--in-surface-accent-error);
+  border-color: var(--in-border-error);
+}
+.in-btn--danger:active:not(:disabled) {
+  background: var(--in-surface-error);
+  border-color: var(--in-border-error);
+}
+.in-btn--danger:disabled {
   background: var(--in-bg-state-disabled);
   color: var(--in-text-state-disabled);
   border-color: var(--in-border-state-disabled);

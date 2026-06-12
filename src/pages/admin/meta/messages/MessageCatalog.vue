@@ -49,7 +49,7 @@ function onParent(v) { staged.value.hasParent = v; }
 // ★ (2026-06-08, dspark): #2 정합 — FRM_MSG_DEF.TYPE_CD 도메인은 DEFAULT/TREE 2종 (AS-IS 메뉴얼 03 §3.4).
 //   기존 MT/ME 옵션은 'ID 접두사'를 type_cd 로 혼동한 것 → 백엔드 WHERE TYPE_CD='MT' 는 항상 0건이라 제거.
 const typeOptions = [
-  { value: '',        label: '전체 type' },
+  { value: '',        label: '전체' },   // ★ (2026-06-12, dspark): '전체 type' → '전체' 통일 (#6)
   { value: 'DEFAULT', label: 'DEFAULT (평면)' },
   { value: 'TREE',    label: 'TREE (계층)' },
 ];
@@ -130,10 +130,11 @@ const editor = useMetaEditor({
     };
   },
   toPayload: (f) => ({ def: { ...f.def }, columns: f.columns }),
-  validate: (f, { setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { setTab, focusField }) => {
     const d = f.def;
-    if (!d.msgDefId || !d.msgDefId.trim()) { toast.error?.('메시지 ID는 필수입니다.'); setTab('def'); return false; }
-    if (!d.msgDefNm || !d.msgDefNm.trim()) { toast.error?.('한글명은 필수입니다.'); setTab('def'); return false; }
+    if (!d.msgDefId || !d.msgDefId.trim()) { toast.error?.('메시지 ID는 필수입니다.'); setTab('def'); focusField?.('msgDefId'); return false; }
+    if (!d.msgDefNm || !d.msgDefNm.trim()) { toast.error?.('한글명은 필수입니다.'); setTab('def'); focusField?.('msgDefNm'); return false; }
     for (const c of (f.columns || []).filter((x) => x.rowStatus !== 'D')) {
       if (!c.msgColDefId || !c.msgColDefId.trim()) { toast.error?.('컬럼 ID가 빈 행이 있습니다.'); setTab('columns'); return false; }
       if (!c.typeCd || !c.typeCd.trim()) { toast.error?.(`컬럼 '${c.msgColDefId}'의 타입은 필수입니다.`); setTab('columns'); return false; }

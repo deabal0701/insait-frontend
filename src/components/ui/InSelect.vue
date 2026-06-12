@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg';
 import StatusErrorIcon from '@/assets/icons/status-error.svg';
 
@@ -80,6 +80,11 @@ const statusMessage = computed(() => {
   if (props.status !== 'default' && props.message) return props.message;
   return props.helper;
 });
+
+// ★ (2026-06-12, dspark): 라벨 클릭 → 셀렉트 포커스 (#7) — el-select 내부 input 에 id 전달이
+//   EP 버전별로 불안정해 label[for] 대신 프로그램 포커스로 동등 UX 제공 (InTextField 는 label[for]).
+const selectRef = ref(null);
+function focusSelect() { selectRef.value?.focus?.(); }
 </script>
 
 <template>
@@ -96,12 +101,13 @@ const statusMessage = computed(() => {
     :style="layout === 'horizontal' ? { '--in-sel-label-width': labelWidthValue } : undefined"
   >
     <div class="in-sel__row">
-      <div v-if="showLabel && label" class="in-sel__label">
+      <div v-if="showLabel && label" class="in-sel__label" @click="focusSelect">
         <span class="in-sel__label-text">{{ label }}</span>
         <span v-if="showRequired" class="in-sel__req" aria-hidden="true">*</span>
       </div>
       <div class="in-sel__control">
         <el-select
+          ref="selectRef"
           :model-value="modelValue"
           :placeholder="input"
           :size="elSize"
@@ -218,6 +224,12 @@ const statusMessage = computed(() => {
 .in-sel :deep(.el-select__wrapper.is-focused) {
   border-bottom-color: var(--in-border-brand);
   background: var(--in-surface-accent-brand);   /* Figma 진본 Focused: 연한 brand bg */
+}
+/* ★ (2026-06-12, dspark): 키보드 포커스 링 — --in-focus-ring-* 토큰(W6 표준, InTextField 와 동일 패턴) */
+.in-sel__control:has(:focus-visible) {
+  outline: var(--in-focus-ring-style) var(--in-focus-ring-width) var(--in-focus-ring-color);
+  outline-offset: 1px;
+  border-radius: var(--in-radius-xxs);
 }
 
 /* === Arrow icon (Figma 자산 arrow-down.svg) === */

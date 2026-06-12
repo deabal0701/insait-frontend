@@ -16,8 +16,9 @@
  *
  * 반환 상태/액션을 페이지가 MetaDetailEditor 에 바인딩한다.
  */
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useToast } from '@/composables/useToast';
+import { MSG } from '@/constants/messages';
 
 export function adminErrMsg(e) {
   return e?.response?.data?.error?.message || e?.message || '요청 실패';
@@ -100,19 +101,29 @@ export function useMetaEditor(opts) {
     detail.value = null;
   }
 
+  // ★ (2026-06-12, dspark): 검증 실패 필드 자동 포커스 — MetaDefForm 의 data-field 마커를 찾아
+  //   내부 입력에 focus. setTab 으로 탭 전환 후 렌더 완료를 nextTick 으로 대기. 마커 없으면 no-op.
+  function focusField(key) {
+    nextTick(() => {
+      const host = document.querySelector(`.in-modal--detail [data-field="${key}"]`);
+      host?.querySelector('input, textarea, select')?.focus();
+    });
+  }
+
   async function save() {
     if (saving.value) return;   // ★ (2026-06-07, dspark): 재진입(엔터+버튼 중복 제출) 가드 — 중복 생성 방지
-    if (validate && !validate(form.value, { mode: mode.value, setTab: (t) => { drawerTab.value = t; } })) return;
+    // ★ (2026-06-12, dspark): validate ctx 에 focusField 추가 (additive — 기존 {mode,setTab} 구조분해 호출처 영향 0)
+    if (validate && !validate(form.value, { mode: mode.value, setTab: (t) => { drawerTab.value = t; }, focusField })) return;
     saving.value = true;
     try {
       const payload = toPayload(form.value);
       let saved;
       if (mode.value === 'create') {
         saved = await api.create(payload);
-        toast.success?.('등록되었습니다.');
+        toast.success?.(MSG.SAVED);   // ★ (2026-06-12, dspark): '등록/수정되었습니다' → '저장되었습니다' 통일 (#6)
       } else {
         saved = await api.update(keyOf(selected.value), payload);
-        toast.success?.('수정되었습니다.');
+        toast.success?.(MSG.SAVED);
       }
       if (reload) await reload();
       // ★ (2026-06-07, dspark): api 응답이 {def,...} 가 아닐 수 있어 방어 — selected/detail 오염 방지
@@ -138,7 +149,7 @@ export function useMetaEditor(opts) {
     saving.value = true;
     try {
       await api.remove(keyOf(selected.value));
-      toast.success?.('삭제되었습니다.');
+      toast.success?.(MSG.DELETED);
       confirmDelete.value = false;
       closePanel();
       if (reload) await reload();

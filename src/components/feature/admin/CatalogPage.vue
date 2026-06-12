@@ -52,6 +52,10 @@ const props = defineProps({
   rowKey: { type: String, default: undefined },
   activeFilters: { type: Array, default: () => [] },
   selectedRow: { type: [String, Number, Object], default: null },
+  // ★ (2026-06-12, dspark): 목록 내부 스크롤 한계 — 행이 많을 때 페이지 전체가 길어지며 헤더가
+  //   시야에서 사라지던 이중 스크롤 해소 (InTable sticky 헤더 + 내부 스크롤). max() 가드로 최소
+  //   360px 보장. 짧은 목록은 max-height 라 시각 변화 없음. null 전달 시 기존(무제한) 동작.
+  listMaxHeight: { type: [Number, String], default: 'max(360px, calc(100vh - 430px))' },
   // [DEV-HELP] ★ (2026-06-09, dspark): 화면 도움말 — { object, title, table, asOf, operations[], businessNotes[], tables[] }.
   //   전달되면 제목 옆 [?]도움말 버튼 + 우측 ScreenHelpDrawer 렌더. 미전달 시 0 영향. (제거 시 이 prop 삭제)
   help: { type: Object, default: null },
@@ -190,6 +194,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
           :row-key="rowKey"
           clickable-row
           :selected-row="selectedRow"
+          :max-height="listMaxHeight"
           @row-click="onRowClick"
         >
           <!-- 헤더: 정렬 가능한 컬럼은 클릭 화살표 -->
@@ -276,6 +281,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap; /* ★ (2026-06-12, dspark): 좁은 화면에서 제목+버튼 찌그러짐 방지 */
 }
 .catalog-page__title-row {
   display: flex;
@@ -380,6 +386,7 @@ function onSizeChange(s) { props.list.setSize?.(s); }
   justify-content: space-between;
   gap: 16px;
   padding: 8px 4px;
+  flex-wrap: wrap; /* ★ (2026-06-12, dspark): 좁은 화면에서 페이지크기+총건수+페이징 줄바꿈 허용 */
 }
 .catalog-page__footer-left {
   display: inline-flex;

@@ -12,6 +12,7 @@ import { ref, computed, onMounted } from 'vue';
 import dayjs from 'dayjs';
 import { adminApi } from '@/services/adminApi';
 import { useToast } from '@/composables/useToast';
+import { MSG } from '@/constants/messages'; // ★ (2026-06-12, dspark): 공통 문구 통일 (#6)
 
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import InButton from '@/components/ui/InButton.vue';
@@ -103,7 +104,7 @@ async function loadGrid() {
 
 async function save() {
   const dirty = rows.value.filter((r) => r.rowStatus);
-  if (!dirty.length) { toast.info('변경된 내용이 없습니다.'); return; }
+  if (!dirty.length) { toast.info(MSG.NO_CHANGES); return; }
   saving.value = true;
   try {
     const body = {
@@ -114,7 +115,7 @@ async function save() {
     const data = await adminApi.access.authCriteria.saveGrid(body);
     grid.value = data;
     rows.value = mapRows(data);
-    toast.success('저장되었습니다.');
+    toast.success(MSG.SAVED);
   } catch (e) {
     toast.error('저장 실패: ' + (e?.response?.data?.error?.message || e?.message || e));
   } finally {
@@ -178,7 +179,7 @@ onMounted(async () => { await loadTree(); await loadGrid(); });
           :columns="gridColumns"
           key-field="hisId"
           :new-row="newRow"
-          add-label="입력"
+          add-label="+ 추가"
           show-seq
           show-status
           hint="부여권한 = 임원/보직자/개인 등급. 유효기간(시작·종료)으로 시점별 기준 관리."

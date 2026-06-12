@@ -218,6 +218,9 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   max-height: 86vh;
+  /* ★ (2026-06-12, dspark): 반응형 폭 가드 — width(px 고정)가 좁은 화면(예: Drawer 900px @ <980px
+     뷰포트)에서 오버플로되지 않도록 clamp. 효과 = min(width, 100vw-80px). API·호출처 변경 0. */
+  max-width: calc(100vw - 80px);
   font-family: var(--in-font-family-body);
 }
 

@@ -50,7 +50,7 @@ function onType(v) { staged.value.objectType = v; }
 //   실측: view 4520 · elaform 193 · (legacy fsq 3 · statis 2). [aut0030.jsp:240 listProvider="AutObjectType"]
 //   ※ TODO: 장기적으로 IST_OBJECT_TYPE 공통코드 API 로 동적 로드(SSOT)하면 USE_YN 변경에 자동 추종.
 const typeOptions = [
-  { value: '',        label: '전체 타입' },
+  { value: '',        label: '전체' },   // ★ (2026-06-12, dspark): '전체 타입' → '전체' 통일 (#6)
   { value: 'view',    label: 'view (뷰)' },
   { value: 'elaform', label: 'elaform (전자결재유형)' },
 ];
@@ -123,10 +123,11 @@ const editor = useMetaEditor({
     };
   },
   toPayload: (f) => ({ def: { ...f.def }, attributes: f.attributes, relations: f.relations }),
-  validate: (f, { setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { setTab, focusField }) => {
     const d = f.def;
-    if (!d.objectNm || !d.objectNm.trim()) { toast.error?.('OBJECT_NM 은 필수입니다.'); setTab('def'); return false; }
-    if (!d.objectDisplayNm || !d.objectDisplayNm.trim()) { toast.error?.('화면표시명은 필수입니다.'); setTab('def'); return false; }
+    if (!d.objectNm || !d.objectNm.trim()) { toast.error?.('OBJECT_NM 은 필수입니다.'); setTab('def'); focusField?.('objectNm'); return false; }
+    if (!d.objectDisplayNm || !d.objectDisplayNm.trim()) { toast.error?.('화면표시명은 필수입니다.'); setTab('def'); focusField?.('objectDisplayNm'); return false; }
     for (const a of (f.attributes || []).filter((x) => x.rowStatus !== 'D')) {
       if (!a.attributeNm || !a.attributeNm.trim()) { toast.error?.('속성명이 빈 행이 있습니다.'); setTab('attributes'); return false; }
       if (!a.attributeTypeCd || !a.attributeTypeCd.trim()) { toast.error?.(`속성 '${a.attributeNm}'의 타입은 필수입니다.`); setTab('attributes'); return false; }

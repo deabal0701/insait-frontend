@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import VisibilityOnIcon from '@/assets/icons/visibility-on.svg';
 import VisibilityOffIcon from '@/assets/icons/visibility-off.svg';
 
@@ -79,6 +79,9 @@ const statusMessage = computed(() => {
 
 const inputType = computed(() => (internalVisible.value ? 'text' : 'password'));
 const iconSrc = computed(() => (internalVisible.value ? VisibilityOnIcon : VisibilityOffIcon));
+
+// ★ (2026-06-12, dspark): label↔input 연결 (#7 a11y) — InTextField 와 동일 패턴 (Vue 3.5 useId)
+const inputId = useId();
 </script>
 
 <template>
@@ -98,12 +101,13 @@ const iconSrc = computed(() => (internalVisible.value ? VisibilityOnIcon : Visib
 
     <!-- 메인: 라벨 + 인풋 + visibility 토글 -->
     <div class="in-pw__row">
-      <div v-if="showLabel" class="in-pw__label">
+      <label v-if="showLabel" class="in-pw__label" :for="inputId">
         <span class="in-pw__label-text">{{ label }}</span>
         <span v-if="showRequired" class="in-pw__req" aria-hidden="true">*</span>
-      </div>
+      </label>
       <div class="in-pw__control">
         <el-input
+          :id="inputId"
           :model-value="modelValue"
           :type="inputType"
           :placeholder="input"

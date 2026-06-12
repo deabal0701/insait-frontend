@@ -58,7 +58,7 @@ function onTx(v) { staged.value.txSupportYn = v; }
 function onUseLog(v) { staged.value.useLogYn = v; }
 
 const cmdOptions = [
-  { value: '', label: '전체 Command' },
+  { value: '', label: '전체' },   // ★ (2026-06-12, dspark): '전체 Command' → '전체' 통일 (#6)
   { value: 'MultiQuery', label: 'MultiQuery (조회)' },
   { value: 'MultiSave',  label: 'MultiSave (저장)' },
   { value: 'Procedure',  label: 'Procedure (PL/SQL)' },
@@ -146,12 +146,13 @@ const editor = useMetaEditor({
     };
   },
   toPayload: (f) => ({ def: { ...f.def }, funcMaps: f.funcMaps, attrs: f.attrs }),
-  validate: (f, { mode, setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { mode, setTab, focusField }) => {
     const d = f.def;
     if (mode === 'create' && !SERVICE_NAME_RE.test((d.svDefNm || '').trim())) {
-      toast.error?.('서비스명은 7-char 컨벤션을 따라야 합니다 (예: TST0001_00_R01).'); setTab('def'); return false;
+      toast.error?.('서비스명은 7-char 컨벤션을 따라야 합니다 (예: TST0001_00_R01).'); setTab('def'); focusField?.('svDefNm'); return false;
     }
-    if (!d.cmdClassNm || !d.cmdClassNm.trim()) { toast.error?.('Command 클래스(FQCN)는 필수입니다.'); setTab('def'); return false; }
+    if (!d.cmdClassNm || !d.cmdClassNm.trim()) { toast.error?.('Command 클래스(FQCN)는 필수입니다.'); setTab('def'); focusField?.('cmdClassNm'); return false; }
     for (const fm of (f.funcMaps || []).filter((x) => x.rowStatus !== 'D')) {
       if (!fm.svMapTypeCd) { toast.error?.('함수매핑 type 이 빈 행이 있습니다.'); setTab('funcMaps'); return false; }
       if (!fm.funcNm || !fm.funcNm.trim()) { toast.error?.('함수매핑 func_nm 이 빈 행이 있습니다.'); setTab('funcMaps'); return false; }

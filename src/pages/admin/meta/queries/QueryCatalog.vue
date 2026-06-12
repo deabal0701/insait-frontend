@@ -108,12 +108,13 @@ const editor = useMetaEditor({
     };
   },
   toPayload: (f) => ({ def: { ...f.def }, body: f.body, params: f.params }),
-  validate: (f, { mode, setTab }) => {
+  // ★ (2026-06-12, dspark): focusField — 검증 실패 필드 자동 포커스 (#8)
+  validate: (f, { mode, setTab, focusField }) => {
     const d = f.def;
-    if (!d.displayName || !d.displayName.trim()) { toast.error?.('한글명(화면표시명)은 필수입니다.'); setTab('def'); return false; }
-    if (!d.dataSource || !d.dataSource.trim()) { toast.error?.('DataSource는 필수입니다.'); setTab('def'); return false; }
+    if (!d.displayName || !d.displayName.trim()) { toast.error?.('한글명(화면표시명)은 필수입니다.'); setTab('def'); focusField?.('displayName'); return false; }
+    if (!d.dataSource || !d.dataSource.trim()) { toast.error?.('DataSource는 필수입니다.'); setTab('def'); focusField?.('dataSource'); return false; }
     if (mode === 'create' && !SQL_NAME_RE.test((d.queryName || '').trim())) {
-      toast.error?.('SQL 이름은 7-char 컨벤션을 따라야 합니다 (예: TST0009_00_R01).'); setTab('def'); return false;
+      toast.error?.('SQL 이름은 7-char 컨벤션을 따라야 합니다 (예: TST0009_00_R01).'); setTab('def'); focusField?.('queryName'); return false;
     }
     return true;
   },
@@ -189,7 +190,7 @@ onMounted(() => list.reload());
         />
         <InSelect
           :model-value="staged.dataSource"
-          :options="[{value:'',label:'전체 DS'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
+          :options="[{value:'',label:'전체'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
           label="DataSource"
           input="전체"
           layout="vertical"
