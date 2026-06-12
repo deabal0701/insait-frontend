@@ -45,7 +45,7 @@ function onSearch(v) { staged.value.q = v; }
 
 const columns = [
   { field: 'authItemName', label: '권한이름', sortable: true, sortKey: 'auth_item_name', width: 240 },
-  { field: 'authItemType', label: '유형', align: 'center', width: 90 },
+  { field: 'authItemType', label: '유형', align: 'center', width: 120 }, // ★ (2026-06-12, dspark): 90→120 — '01 (메뉴접근)' 두 줄 줄바꿈 해소
   { field: 'note', label: '설명' },
 ];
 function typeText(cd) { return cd === '01' ? '01 (메뉴접근)' : (cd || '—'); }
