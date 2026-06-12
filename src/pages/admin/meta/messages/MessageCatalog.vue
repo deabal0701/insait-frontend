@@ -79,11 +79,11 @@ const typeEditOptions = [
 const colColumns = [
   { key: 'orderSeq',    label: '순서',   kind: 'number',   width: 56 },
   { key: 'msgColDefId', label: '컬럼 ID', kind: 'text',     placeholder: 'emp_id' },
-  // ★ (2026-06-08, dspark): M2 — datalist 콤보(표준값 제안 + 자유입력). MT_* value-type·기존 비표준값 보존(오타만 줄임, AS-IS §3.5).
-  { key: 'typeCd',      label: '타입',   kind: 'combo',    width: 110, options: ['string', 'numeric', 'date', 'clob'], placeholder: 'string' },
+  // ★ (2026-06-12, dspark): datalist combo → editcombo(el-select filterable+allow-create). 클릭 시 전체 옵션 표시 + MT_* value-type 자유입력 둘 다(datalist 가 기존값으로 옵션 가리던 문제 해결). 사용자 피드백.
+  { key: 'typeCd',      label: '타입',   kind: 'editcombo', width: 120, options: ['string', 'numeric', 'date', 'clob'], placeholder: 'string' },
   { key: 'labelCd',     label: '라벨',   kind: 'text',     width: 96 },
-  // ★ (2026-06-12, dspark): 포맷도 datalist 콤보 — 자주 쓰는 형식 제안 + 자유입력(포맷은 종류가 열려 있어 datalist 적합). 사용자 피드백.
-  { key: 'formatText',  label: '포맷',   kind: 'combo',    width: 130, placeholder: '예: yyyy-MM-dd',
+  // ★ (2026-06-12, dspark): 포맷도 editcombo — 자주 쓰는 형식 10종 드롭다운 + 자유입력(allow-create). 타입과 일관. 사용자 피드백.
+  { key: 'formatText',  label: '포맷',   kind: 'editcombo', width: 150, placeholder: '예: yyyy-MM-dd',
     options: ['yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss', 'yyyy.MM.dd', 'yyyy/MM/dd', 'HH:mm:ss', 'HH:mm', 'yyyyMMdd', '#,##0', '#,##0.00', '0.00%'] },
   { key: 'minLength',   label: '최소',   kind: 'number',   width: 56 },
   { key: 'maxLength',   label: '최대',   kind: 'number',   width: 56 },

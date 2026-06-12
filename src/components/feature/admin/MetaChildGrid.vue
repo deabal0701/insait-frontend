@@ -164,6 +164,22 @@ function statusLabel(r) {
               :placeholder="c.placeholder || ''"
               @input="touch(r)"
             />
+            <!-- ★ (2026-06-12, dspark): editcombo = 드롭다운(클릭 시 전체 옵션) + 자유입력(allow-create) 둘 다. datalist 가 기존값 필터로 옵션을 가리는 문제 해결. -->
+            <el-select
+              v-else-if="c.kind === 'editcombo'"
+              v-model="r[c.key]"
+              filterable
+              allow-create
+              default-first-option
+              :reserve-keyword="false"
+              size="small"
+              class="meta-grid__editcombo"
+              :style="c.width ? { width: c.width + 'px' } : null"
+              :placeholder="c.placeholder || ''"
+              @change="touch(r)"
+            >
+              <el-option v-for="o in (c.options || [])" :key="o" :label="o" :value="o" />
+            </el-select>
             <input
               v-else
               v-model="r[c.key]"
