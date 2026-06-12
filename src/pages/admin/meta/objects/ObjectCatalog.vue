@@ -82,7 +82,8 @@ function newAttr() {
 }
 const relColumns = [
   { key: 'seq',        label: '순서', kind: 'number', width: 56 },
-  { key: 'relTypeCd',  label: '관계유형', kind: 'text', width: 120, placeholder: 'POPUP' },
+  // ★ (2026-06-12, dspark): placeholder POPUP → child. 사용자 실측 SELECT DISTINCT REL_TYPE_CD FROM FRM_OBJECT_RELATION = 'child' 유일 (POPUP 은 임의 예시값이었음). combo 로 표준값 제안 + 자유입력 보존
+  { key: 'relTypeCd',  label: '관계유형', kind: 'combo', width: 120, options: ['child'], placeholder: 'child' },
   { key: 'childObjId', label: '하위 OBJECT_ID', kind: 'number', width: 140 },
 ];
 function newRel(rows) {

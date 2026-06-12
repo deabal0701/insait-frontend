@@ -68,7 +68,8 @@ const useYnEditOptions = [{ value: 'Y', label: 'Y (사용)' }, { value: 'N', lab
 const paramColumns = [
   { key: 'queryParamSeq',       label: '순서',     kind: 'number', width: 56 },
   { key: 'queryParamName',      label: '파라미터명', kind: 'text',   placeholder: 'company_cd' },
-  { key: 'queryParamType',      label: '타입',     kind: 'text',   width: 110, placeholder: '문자' },
+  // ★ (2026-06-12, dspark): 사용자 피드백 — 파라미터 타입 자유텍스트 → combo(datalist). AS-IS IST0010 콤보 4종 (매뉴얼 05 §3.4) 제안 + 자유입력 보존 (메시지 컬럼 타입 M2 와 동일 패턴)
+  { key: 'queryParamType',      label: '타입',     kind: 'combo',  width: 110, options: ['문자', '숫자', '날짜/시간', '긴문자열'], placeholder: '문자' },
   { key: 'queryParamInoutType', label: 'IN/OUT',   kind: 'select', width: 96,
     options: [{ value: 'IN', label: 'IN' }, { value: 'OUT', label: 'OUT' }, { value: 'INOUT', label: 'INOUT' }] },
 ];
