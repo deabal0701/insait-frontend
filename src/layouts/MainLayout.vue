@@ -54,6 +54,8 @@ const ADMIN_PARENT = {
   // ★ (2026-06-02, dspark): Grid 카탈로그 → 시스템관리 > Playground 그룹
   DevGridGallery: 'playground',
   DevTestGridPage: 'playground',
+  // ★ (2026-06-14, dspark): InDataTable 개발자 매뉴얼(/dev/grid-docs) → 동일 Playground 그룹
+  DevGridDocs: 'playground',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -346,6 +348,7 @@ const items = computed(() => {
           label: 'Playground (dev)',
           expanded: settingsExpanded.value.playground,
           children: [
+            { key: 'DevGridDocs', label: 'Grid 개발자 매뉴얼', active: current === 'DevGridDocs' },
             { key: 'DevGridGallery', label: 'Grid 카탈로그', active: current === 'DevGridGallery' },
             { key: 'DevTestGridPage', label: 'Grid 테스트 페이지', active: current === 'DevTestGridPage' },
           ],
