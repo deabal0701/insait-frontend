@@ -30,6 +30,14 @@ const routes = [
         name: 'DevTestGridPage',
         component: () => import('@/pages/dev/TestGridPage.vue'),
         meta: { requiresAuth: true, title: 'Grid 테스트' },
+      },
+      // ★ (2026-06-14, dspark): InDataTable(tui-grid) 개발자 매뉴얼 + 라이브 플레이그라운드.
+      //   API 설명 + IBSheet→tui-grid 대응표 + W3Schools식 코드편집→즉시렌더(vue3-sfc-loader).
+      {
+        path: 'dev/grid-docs',
+        name: 'DevGridDocs',
+        component: () => import('@/pages/dev/grid-docs/GridDocsLayout.vue'),
+        meta: { requiresAuth: true, title: 'Grid 개발자 매뉴얼' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
