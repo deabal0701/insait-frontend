@@ -4,7 +4,7 @@
 //   모든 entity(저장) 화면이 동일 패턴 1개만 쓰도록 고정 — 화면마다 dirty 추출/envelope 조립을
 //   재작성하지 않는다. tui-grid native API 는 그대로(InDataTable.getInstance()) 사용.
 //
-//   흐름: retrieve(조회) → 사용자 편집(tui-grid) → save(getModifiedRows → extractDirtyForEnvelope
+//   흐름: retrieve(조회) → 사용자 편집(tui-grid) → save(getModifiedRows → extractDirty(@win/grid)
 //         → /serviceBroker.h5 S-service POST → 성공 시 dirty clear + 재조회).
 //
 // ★ (2026-06-02, dspark): [옵션 1 — 단일 창구 통합] 이후 본 composable 은 INTERNAL 부품으로 격하.
@@ -15,7 +15,8 @@
 import { ref } from 'vue';
 import { useService } from '@/composables/useService';
 import { parseResponse } from '@/services/envelope';
-import { extractDirtyForEnvelope } from '@/utils/grid';
+// ★ (2026-06-14, dspark): dirty 추출 헬퍼는 라이브러리 @win/grid 단일 출처(이전 @/utils/grid 중복 제거).
+import { extractDirty } from '@win/grid';
 
 /**
  * @param {object} config
@@ -75,7 +76,7 @@ export function useEntityGrid(config = {}) {
     // ★ (2026-06-01, dspark): 편집 중인 셀을 강제 커밋. Enter/blur 없이 저장 버튼을 바로
     //   누르면 in-progress 편집이 getModifiedRows() 에 반영 안 돼 변경이 누락됨(빈 배열).
     try { g.finishEditing?.(); } catch (_) { /* 편집 중 아님 */ }
-    return extractDirtyForEnvelope(g.getModifiedRows(), { statusKey, softDelete });
+    return extractDirty(g.getModifiedRows(), { statusKey, softDelete });
   }
 
   /**

@@ -6,7 +6,7 @@
 //   구현과 문서가 갈라지지 않는다(drift 0). 예제 코드는 실 프로젝트에 그대로 복붙 가능.
 //
 //   moduleCache 로 허용 import 화이트리스트를 주입:
-//     vue / element-plus / @/components/ui/InDataTable.vue / InButton / useToast / @/utils/grid
+//     vue / element-plus / @/components/ui/InDataTable.vue / InButton / useToast / @win/grid
 //   → 예제는 실제 코드와 동일한 import 경로를 쓴다(복붙 호환).
 import { ref, shallowRef, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import * as Vue from 'vue';
@@ -20,7 +20,7 @@ import { EditorState } from '@codemirror/state';
 import InDataTable from '@/components/ui/InDataTable.vue';
 import InButton from '@/components/ui/InButton.vue';
 import { useToast } from '@/composables/useToast';
-import * as gridUtils from '@/utils/grid';
+import * as winGrid from '@win/grid';
 
 const props = defineProps({
   // 플레이그라운드 초기 코드 (SFC 원문). 예제 = examples.js 의 문자열.
@@ -49,7 +49,7 @@ const moduleCache = {
   '@/components/ui/InDataTable.vue': { default: InDataTable, __esModule: true },
   '@/components/ui/InButton.vue': { default: InButton, __esModule: true },
   '@/composables/useToast': { useToast, __esModule: true },
-  '@/utils/grid': { ...gridUtils, __esModule: true },
+  '@win/grid': { ...winGrid, __esModule: true },
 };
 
 function makeLoaderOptions(getCode) {
@@ -59,7 +59,7 @@ function makeLoaderOptions(getCode) {
       // ★ (2026-06-14, dspark): 엔트리는 매 컴파일 고유 경로(/__pg_N.vue) → vue3-sfc-loader
       //   moduleCache 가 엔트리를 캐시해 편집 후에도 첫 모듈을 반환하던 문제 차단.
       if (url.startsWith('/__pg_')) return { getContentData: () => getCode(), type: '.vue' };
-      throw new Error(`허용되지 않은 import: ${url}\n(사용 가능: vue, element-plus, @/components/ui/InDataTable.vue, @/components/ui/InButton.vue, @/composables/useToast, @/utils/grid)`);
+      throw new Error(`허용되지 않은 import: ${url}\n(사용 가능: vue, element-plus, @/components/ui/InDataTable.vue, @/components/ui/InButton.vue, @/composables/useToast, @win/grid)`);
     },
     addStyle(textContent) {
       const style = document.createElement('style');

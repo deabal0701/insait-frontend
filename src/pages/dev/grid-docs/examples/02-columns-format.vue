@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import InDataTable from '@/components/ui/InDataTable.vue';
 
 // align(정렬) · width · formatter(표시 변환). 숫자/금액/날짜 포맷은
-// utils/grid.js 의 formatRegistry 키를 format 으로 줘도 된다(IBSheet Format 대응).
+// @win/grid 의 formatRegistry 키를 format 으로 줘도 된다(IBSheet Format 대응).
 const columns = [
   { name: 'item',   header: '품목',   width: 140 },
   { name: 'qty',    header: '수량',   width: 100, align: 'right', format: 'Integer' },

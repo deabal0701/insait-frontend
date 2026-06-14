@@ -35,7 +35,7 @@ const SECTIONS = [
   { id: 'getting-started', group: '시작하기', title: '시작하기', code: exGettingStarted,
     intro: 'InDataTable 한 줄 import 후 <code>:columns</code> 와 <code>:data</code> 만 주면 그리드가 그려진다. <code>options.rowHeaders:[\'rowNum\']</code> 는 IBSheet 의 행 번호(Seq) 대응.' },
   { id: 'columns-format', group: '컬럼', title: '정렬·너비·포맷', code: exColumnsFormat,
-    intro: '<code>align</code>/<code>width</code> 와 숫자·날짜 포맷. <code>format</code> 키(<code>Integer·KrwAmount·Ymd</code> 등)는 IBSheet <code>Format</code> 문자열 대응 — <code>utils/grid.js</code> 의 formatRegistry 가 변환한다.' },
+    intro: '<code>align</code>/<code>width</code> 와 숫자·날짜 포맷. <code>format</code> 키(<code>Integer·KrwAmount·Ymd</code> 등)는 IBSheet <code>Format</code> 문자열 대응 — <code>@win/grid</code> 의 formatRegistry 가 변환한다.' },
   { id: 'combo', group: '컬럼', title: '콤보 셀', code: exCombo,
     intro: 'IBSheet <code>Type:Combo</code> + <code>ComboText/ComboCode</code> 대응. <code>editor:{type:\'select\',options:{listItems:[{text,value}]}}</code> + 코드→라벨 <code>formatter</code>.' },
   { id: 'checkbox', group: '컬럼', title: '체크박스 (Y/N)', code: exCheckboxYn,
