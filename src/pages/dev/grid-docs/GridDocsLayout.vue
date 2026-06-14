@@ -24,6 +24,11 @@ import exSummary from './examples/11-summary.vue?raw';
 import exPopupSearch from './examples/12-popup-search.vue?raw';
 import exTree from './examples/13-tree.vue?raw';
 import exServiceEnvelope from './examples/14-service-envelope.vue?raw';
+import exCheckboxDelete from './examples/15-checkbox-delete.vue?raw';
+import exExportPrint from './examples/16-export-print.vue?raw';
+import exPaging from './examples/17-paging.vue?raw';
+import exSortFilter from './examples/18-sort-filter.vue?raw';
+import exRowHeight from './examples/19-row-height.vue?raw';
 
 // ── 섹션 정의(좌측 네비 = group 으로 묶음) ─────────────────────────────
 const SECTIONS = [
@@ -37,6 +42,8 @@ const SECTIONS = [
     intro: 'IBSheet <code>Type:CheckBox</code>(Y/N 저장) 대응. 데이터 셀은 select(Y/N)+formatter, 행 선택용 체크박스는 <code>rowHeaders:[\'checkbox\']</code> 로 구분.' },
   { id: 'editing-dirty', group: '편집·저장', title: '편집 & Dirty (sStatus)', code: exEditingDirty,
     intro: '<strong>IBSheet 의 핵심 프로토콜.</strong> 행 추가→<code>I</code>, 셀 수정→<code>U</code>, 체크 삭제→<code>D</code>. <code>getDirty()</code> 가 <code>getModifiedRows()</code> 를 envelope 형식(<code>sStatus</code>+<code>_seq</code>)으로 변환 — IBSheet <code>GetSaveJson()</code> 대응.' },
+  { id: 'checkbox-delete', group: '편집·저장', title: '체크 삭제 → sStatus=D', code: exCheckboxDelete,
+    intro: 'IBSheet <code>DelCheck</code>(행 체크 삭제) 프로토콜. 행 헤더 체크박스 → <code>removeCheckedRows()</code> 가 원본행을 삭제표시로 옮기고, <code>getDirty()</code> 추출 시 그 행은 <code>sStatus=\'D\'</code>. <strong>soft-delete 토글</strong>이면 <code>sStatus=\'U\' + sDelete=\'Y\'</code>(논리삭제). 아래 패널에 실제 dirty JSON 이 찍힌다.' },
   { id: 'service-envelope', group: '편집·저장', title: '서비스 연동 (envelope)', code: exServiceEnvelope,
     intro: 'AS-IS <code>h5:Service</code>+IBSheet 한 사이클의 TO-BE 대응. <code>retrieve/save serviceId</code> 만 주면 <code>/serviceBroker.h5</code> envelope 를 내부 조립·POST·재조회. <code>grid.retrieve(body)</code>/<code>grid.save()</code>. <em>(실 백엔드 필요)</em>' },
   { id: 'cell-button', group: '렌더링', title: '인셀 버튼 (Html)', code: exCellButton,
@@ -51,11 +58,19 @@ const SECTIONS = [
     intro: 'IBSheet <code>AutoSum</code>(합계/소계) 대응. <code>options.summary.columnContent</code> 에 sum/avg/max/min 집계.' },
   { id: 'tree', group: '구조', title: '트리 (TreeCol)', code: exTree,
     intro: 'IBSheet <code>TreeCol</code>+<code>DataInsert(row,level)</code> 계층 대응. 데이터 <code>_children</code> 중첩 + <code>options.treeColumnOptions</code>.' },
+  { id: 'row-height', group: '구조', title: '행 높이 조절', code: exRowHeight,
+    intro: 'IBSheet 행 높이 대응. <code>rowHeight: 40</code>(고정) / <code>rowHeight: \'auto\'</code>(멀티라인 자동) / <code>getInstance().setRowHeight(rowKey, px)</code>(개별 행). 긴 비고는 자동 줄바꿈, 행을 선택해 개별 높이도 바꿀 수 있다.' },
+  { id: 'paging', group: '조회·출력', title: '페이징', code: exPaging,
+    intro: 'IBSheet <code>SearchMode/Page</code> 대응 → <code>options.pageOptions</code>. AS-IS 는 대부분 <strong>전체 조회 후 클라이언트 페이징</strong>(SearchMode:1) — <code>{ useClient: true, perPage: N }</code> 로 동일. 서버 페이징은 <code>useClient:false</code> + retrieve 검색조건에 페이지 파라미터.' },
+  { id: 'sort-filter', group: '조회·출력', title: '정렬 · 필터', code: exSortFilter,
+    intro: 'IBSheet 헤더 정렬(<code>Sort:1</code>) → 컬럼 <code>sortable:true</code>. <strong>필터는 tui-grid 추가 이점</strong>(AS-IS 는 상단 검색폼으로 재조회) — 컬럼 <code>filter:\'text\'|\'select\'|\'number\'</code> 로 헤더 인라인 필터 제공.' },
+  { id: 'export-print', group: '조회·출력', title: '출력 (엑셀·인쇄)', code: exExportPrint,
+    intro: 'IBSheet <code>Down2Excel</code>(엑셀 다운) 대응 → <code>exportExcel({fileName,sheetName})</code>. 추가로 <code>importExcel(file)</code>(엑셀 업로드)·<code>printGrid({title})</code>(인쇄). <em>PDF·OZ 리포트는 그리드가 아닌 별도 리포트 엔진 영역.</em>' },
   { id: 'events', group: '이벤트', title: '이벤트', code: exEvents,
     intro: 'IBSheet <code>OnClick/OnChange</code> 등 대응. tui-grid 이벤트를 kebab-case emit 으로 전달. (셀 클릭/더블클릭/변경 로그)' },
 ];
 
-const GROUPS = ['시작하기', '컬럼', '편집·저장', '렌더링', '구조', '이벤트'];
+const GROUPS = ['시작하기', '컬럼', '편집·저장', '렌더링', '구조', '조회·출력', '이벤트'];
 const EXTRA_NAV = [
   { id: 'api', label: 'API 레퍼런스' },
   { id: 'ibsheet-map', label: 'IBSheet ↔ tui-grid 대응표' },
@@ -119,7 +134,7 @@ const MAP_TYPE = [
   ['Float / Int (63)', "<code>format:'Float2'/'Integer'</code> · <code>align:'right'</code>"],
   ['Date (24)', "<code>format:'Ymd'</code> · 편집은 <code>editor:'datePicker'</code>"],
   ['Status (54)', '자동 — <code>getModifiedRows()</code> → <code>extractDirtyForEnvelope</code>(sStatus)'],
-  ['DelCheck (54)', "<code>removeCheckedRows()</code> + <code>rowHeaders:['checkbox']</code>"],
+  ['DelCheck (104) → sStatus=D', "행 체크 → <code>removeCheckedRows()</code> → 원본행 삭제표시 → <code>getDirty()</code> 에 <code>sStatus='D'</code>. 논리삭제는 softDelete=true → <code>sStatus='U'+sDelete='Y'</code>. (rowHeaders:['checkbox'])"],
   ['CheckBox Y/N (8)', "select(Y/N) editor + formatter (단일 셀)"],
   ['Html (23)', 'CellRenderer 클래스(<code>renderer.type</code>) — 버튼/링크/이미지'],
   ['Popup (6)', '셀 버튼 renderer → 모달 → <code>setValue()</code>'],
@@ -133,16 +148,20 @@ const MAP_ATTR = [
   ['Hidden', '<code>column.hidden</code> 또는 <code>grid.hideColumn()</code>'],
   ['Format', "<code>column.format</code> (formatRegistry: Integer·KrwAmount·Ymd…). 주민번호·사업자번호(IdNo/SaupNo)는 커스텀 formatter"],
   ['ComboText / ComboCode', "<code>listItems:[{text,value}]</code> (파이프 문자열 → 객체 배열)"],
-  ['FrozenCol', '<code>columnOptions.frozenCount</code>'],
+  ['FrozenCol (150)', '<code>columnOptions.frozenCount</code>'],
   ['MergeSheet (멀티헤더)', '<code>header.complexColumns</code>'],
+  ['Sort:1 / ColMove / ColResize', "컬럼 <code>sortable:true</code> / <code>columnOptions.resizable:true</code> (AS-IS 표준)"],
   ['KeyField / MaxCheck', '<code>before-change</code> 검증 또는 저장 전 validate'],
-  ['SearchMode / Page', '클라이언트 데이터 바인딩 / 서버 페이징(serviceId)'],
+  ['SearchMode:1 / Page (122)', "<code>pageOptions:{useClient:true,perPage:N}</code> (AS-IS 99% = 전체조회+클라이언트 페이징). 서버 페이징은 retrieve 파라미터"],
+  ['행 높이', "<code>rowHeight:40</code>(고정) / <code>'auto'</code>(멀티라인) / <code>setRowHeight(rowKey,px)</code>(개별)"],
 ];
 const MAP_METHOD = [
   ['GetSaveJson()', '<code>getDirty()</code> / <code>save()</code>'],
   ["FindStatusRow('I|U|D')", '<code>getModified()</code> (created/updated/deletedRows)'],
   ['DataInsert(-1, 0)', '<code>addRow(row)</code>'],
-  ['RemoveRow / sStatus=D', '<code>removeCheckedRows()</code>'],
+  ['DelCheck 체크 → sStatus=D', '<code>removeCheckedRows()</code> → getDirty 에 D'],
+  ['Down2Excel({FileName})', '<code>exportExcel({fileName,sheetName})</code>'],
+  ['Print()', '<code>printGrid({title})</code>'],
   ['SetCellValue(r,c,v)', '<code>getInstance().setValue(rowKey, col, v)</code>'],
   ['GetCellValue(r,c)', '<code>getInstance().getValue(rowKey, col)</code>'],
   ['GetSelectRow()', '<code>getInstance().getFocusedCell()</code>'],
