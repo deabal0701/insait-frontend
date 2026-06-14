@@ -28,6 +28,13 @@ export default defineConfig({
   resolve: {
     alias: { '@': APP_SRC },
     extensions: ['.js', '.mjs', '.ts', '.tsx', '.vue', '.json'],
+    // ★ @win/grid 를 file: 로 링크할 때 vue/tui-grid 가 라이브러리·앱 양쪽 node_modules 에서
+    //   해석되어 인스턴스가 중복되는 것을 방지 (reactivity·theme 깨짐 차단).
+    dedupe: ['vue', 'tui-grid'],
+  },
+  // ★ @win/grid 는 사전 번들 대상에 포함 (file: ESM 의존성 — dev 서버 최적화 정합).
+  optimizeDeps: {
+    include: ['@win/grid'],
   },
   server: {
     port: 5173,
