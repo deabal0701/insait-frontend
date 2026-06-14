@@ -56,7 +56,9 @@ function makeLoaderOptions(getCode) {
   return {
     moduleCache,
     getFile(url) {
-      if (url === '/playground.vue') return { getContentData: () => getCode(), type: '.vue' };
+      // ★ (2026-06-14, dspark): 엔트리는 매 컴파일 고유 경로(/__pg_N.vue) → vue3-sfc-loader
+      //   moduleCache 가 엔트리를 캐시해 편집 후에도 첫 모듈을 반환하던 문제 차단.
+      if (url.startsWith('/__pg_')) return { getContentData: () => getCode(), type: '.vue' };
       throw new Error(`허용되지 않은 import: ${url}\n(사용 가능: vue, element-plus, @/components/ui/InDataTable.vue, @/components/ui/InButton.vue, @/composables/useToast, @/utils/grid)`);
     },
     addStyle(textContent) {
@@ -75,17 +77,22 @@ function clearInjectedStyles() {
   styleEls = [];
 }
 
+let compileSeq = 0;
 async function recompile() {
   const code = view ? view.state.doc.toString() : props.initialCode;
   clearInjectedStyles();
   runtimeError.value = '';
+  const path = `/__pg_${++compileSeq}.vue`;
+  const opts = makeLoaderOptions(() => code);
   try {
-    const comp = await loadModule('/playground.vue', makeLoaderOptions(() => code));
+    const comp = await loadModule(path, opts);
     error.value = '';
     compiled.value = markRaw(comp);
   } catch (e) {
     error.value = String(e?.message || e);
     // 컴파일 실패 시 직전 렌더는 유지(화면 깜빡임 방지)
+  } finally {
+    delete opts.moduleCache[path];   // 엔트리 캐시 누수 방지
   }
 }
 
