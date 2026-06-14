@@ -89,7 +89,7 @@ v2 의 일부 컴포넌트는 Figma 진본 정합을 위해 **el-* 미사용 nat
 | InCompanyLogo.vue | v2 | (확인 필요) | native | size · variant=insait |
 | InLNB.vue | v2 | (확인 필요) | native | items · height |
 | InLNBSubmenu.vue | v2 | (확인 필요) | native | items · activeKey · companyName |
-| InDataTable.vue | v2 (의도된 분기) | (확인 필요) | tui-grid wrap | columns/data/options + **조회·저장 흡수**(2026-06-02 옵션 1). grid 단일 창구 — useEntityGrid/plugins/utils/themes 는 internal(직접 import 불필요). self-managed: retrieve-service-id/save-service-id/slot-name/:header → ref.retrieve()/ref.save() |
+| InDataTable.vue | v2 (의도된 분기) | (확인 필요) | @win/grid(WinGrid) shim | columns/data/options + **조회·저장 흡수**(2026-06-02 옵션 1). 그리드 엔진은 라이브러리 @win/grid 로 분리(2026-06-14) — 본 shim 은 Figma 테마 주입(themes/tui-grid-figma) + envelope(useEntityGrid) 만 흡수. self-managed: retrieve-service-id/save-service-id/slot-name/:header → ref.retrieve()/ref.save() |
 | InBadge.vue | v2 | 1169:15297 | native span | state(8) × badgeStyle(standard/dot) |
 | InTooltip.vue | v2 | 1241:85351 / 1244:30035 | el-tooltip wrap | direction(5) × styleVariant(default/minimal). prop 명 `style`→`styleVariant` (Vue reserved 회피) |
 | InEmptyState.vue | v2 | (확인 필요) | native | type(no-data/no-search/no-permission/error/first-time) + actions slot |

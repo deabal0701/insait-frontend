@@ -133,7 +133,7 @@ const MAP_TYPE = [
   ['Combo (61)', "<code>editor:{type:'select',options:{listItems}}</code> + 코드→라벨 formatter"],
   ['Float / Int (63)', "<code>format:'Float2'/'Integer'</code> · <code>align:'right'</code>"],
   ['Date (24)', "<code>format:'Ymd'</code> · 편집은 <code>editor:'datePicker'</code>"],
-  ['Status (54)', '자동 — <code>getModifiedRows()</code> → <code>extractDirtyForEnvelope</code>(sStatus)'],
+  ['Status (54)', '자동 — <code>getModifiedRows()</code> → <code>extractDirty</code>(sStatus)'],
   ['DelCheck (104) → sStatus=D', "행 체크 → <code>removeCheckedRows()</code> → 원본행 삭제표시 → <code>getDirty()</code> 에 <code>sStatus='D'</code>. 논리삭제는 softDelete=true → <code>sStatus='U'+sDelete='Y'</code>. (rowHeaders:['checkbox'])"],
   ['CheckBox Y/N (8)', "select(Y/N) editor + formatter (단일 셀)"],
   ['Html (23)', 'CellRenderer 클래스(<code>renderer.type</code>) — 버튼/링크/이미지'],
@@ -246,8 +246,8 @@ const MAP_EVENT = [
 
         <div class="gd__note">
           <strong>⚠ 핵심 주의</strong> — <code>sStatus/_seq</code> 프로토콜은 백엔드 동적 SQL(BusinessEntity) 과 1:1 결합.
-          그리드 교체만으로 불충분하며 동일한 dirty 추적이 필수다. InDataTable 은 <code>extractDirtyForEnvelope</code> 로 이를 보존한다.
-          (<code>utils/grid.js</code>)
+          그리드 교체만으로 불충분하며 동일한 dirty 추적이 필수다. InDataTable 은 <code>extractDirty</code> 로 이를 보존한다.
+          (<code>@win/grid</code>)
         </div>
       </template>
     </main>
