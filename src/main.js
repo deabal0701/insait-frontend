@@ -10,7 +10,10 @@ import ko from './locales/ko.json';
 import en from './locales/en.json';
 
 import 'element-plus/dist/index.css';
-import 'tui-grid/dist/tui-grid.css';
+// ★ (2026-06-14, dspark): tui-grid CSS 직접 import 제거 — 그리드 엔진은 @win/grid 가 캡슐화한다
+//   (WinGrid 마운트 시 tui-grid CSS side-effect 자동 로드). insait 는 tui-grid 를 직접 의존하지 않음.
+//   winGrid 자체 스타일(로딩 스피너·컨텍스트메뉴 등)은 @win/grid/style.css 로 로드.
+import '@win/grid/style.css';
 import './assets/styles/index.css';
 
 const pinia = createPinia();

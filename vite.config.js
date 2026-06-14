@@ -28,9 +28,10 @@ export default defineConfig({
   resolve: {
     alias: { '@': APP_SRC },
     extensions: ['.js', '.mjs', '.ts', '.tsx', '.vue', '.json'],
-    // ★ @win/grid 를 file: 로 링크할 때 vue/tui-grid 가 라이브러리·앱 양쪽 node_modules 에서
-    //   해석되어 인스턴스가 중복되는 것을 방지 (reactivity·theme 깨짐 차단).
-    dedupe: ['vue', 'tui-grid'],
+    // ★ vue 는 insait·win-grid 양쪽 node_modules 에 존재 → dedupe 필수(인스턴스 중복 = reactivity 깨짐).
+    //   tui-grid 는 @win/grid 가 캡슐화(win-grid/node_modules 단일본) → insait 가 직접 의존하지 않으므로
+    //   dedupe 대상에서 제외(루트에 없어 dedupe 가 오히려 해석 실패를 유발). 심링크 경유로 단일 해석됨.
+    dedupe: ['vue'],
   },
   // ★ @win/grid 는 사전 번들 대상에 포함 (file: ESM 의존성 — dev 서버 최적화 정합).
   optimizeDeps: {
