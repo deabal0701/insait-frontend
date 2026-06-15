@@ -38,6 +38,13 @@ const routes = [
         name: 'DevGridDocs',
         component: () => import('@/pages/dev/grid-docs/GridDocsLayout.vue'),
         meta: { requiresAuth: true, title: 'Grid 개발자 매뉴얼' },
+      },
+      // 시즌메뉴 조건부 입력/검증 데모 (AS-IS aut0050 시즌메뉴 허점 교정 — 체크→날짜 enable→검증)
+      {
+        path: 'dev/season-menu',
+        name: 'DevSeasonMenuDemo',
+        component: () => import('@/pages/dev/SeasonMenuDemo.vue'),
+        meta: { requiresAuth: true, title: '시즌메뉴 데모 (dev)' },
       }
       // TODO(Phase 1B+): ...phmRoutes, ...payRoutes, ...dtsRoutes, ...elaRoutes
     ],
