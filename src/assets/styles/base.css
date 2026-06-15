@@ -1,5 +1,12 @@
 /* Base resets and global defaults for insait DS v2 */
 
+/* ★ (2026-06-15, dspark): 네이티브 폼 컨트롤 팝업(select·datalist·input[type=date] 등)을 라이트로 고정.
+ *   OS 다크모드에서 네이티브 팝업만 검정으로 뜨던 불일치 해결 (앱 본문은 라이트 토큰 전용 — _dark-tokens.css 미연결).
+ *   추후 다크모드 도입 시 이 줄을 토큰/미디어쿼리 연동으로 교체. */
+:root {
+  color-scheme: light;
+}
+
 html,
 body {
   margin: 0;

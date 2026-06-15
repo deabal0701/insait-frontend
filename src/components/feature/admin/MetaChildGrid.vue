@@ -18,7 +18,7 @@
  *
  * Figma 노드 ID = TBD (atomic <table> + 입력 셀).
  */
-import { computed, getCurrentInstance } from 'vue';
+import { computed, getCurrentInstance, ref } from 'vue';
 import InButton from '@/components/ui/InButton.vue';
 
 const props = defineProps({
@@ -47,6 +47,43 @@ const instanceId = getCurrentInstance()?.uid ?? 0;
 const comboColumns = computed(() => props.columns.filter((c) => c.kind === 'combo'));
 
 function touch(r) { if (r.rowStatus !== 'I') r.rowStatus = 'U'; }
+
+// ★ (2026-06-15, dspark): searchcombo = el-select remote(인라인 서버검색). 팝업 없이 칸에 타이핑→드롭다운 리스트→선택.
+//   col.sc = { fetcher(q)->raw[], value(raw)->저장값, label(raw)->드롭다운라벨, apply(raw,row)->row write }
+//   col.displayKey: 선택 후 표시용 라벨(없으면 col.key 값). 한 번에 하나만 열리므로 옵션 목록은 공유 ref.
+const scOptions = ref([]);     // [{ value, label }]
+const scLastRaw = ref([]);     // 마지막 검색 원본 행 (선택 시 apply 에 전달)
+const scLoading = ref(false);
+async function scSearch(col, q) {
+  const query = (q || '').trim();
+  if (!query) { scOptions.value = []; scLastRaw.value = []; return; }
+  scLoading.value = true;
+  try {
+    const raws = (await col.sc.fetcher(query)) || [];
+    scLastRaw.value = raws;
+    // label = 드롭다운 리스트(풍부) / short = 선택 후 접힌 표시값(짧게). short 없으면 label 사용.
+    scOptions.value = raws.map((raw) => ({
+      value: col.sc.value(raw),
+      label: col.sc.label(raw),
+      short: col.sc.short ? col.sc.short(raw) : col.sc.label(raw),
+    }));
+  } catch (e) { scOptions.value = []; scLastRaw.value = []; }
+  finally { scLoading.value = false; }
+}
+function scSelect(r, col, v) {
+  const raw = scLastRaw.value.find((x) => col.sc.value(x) === v);
+  if (raw) col.sc.apply(raw, r);           // 원본 행으로 write (다중 필드·변환 포함)
+  else r[col.key] = v;                      // 매칭 없으면(=clear 등) 값만
+  touch(r);
+}
+// 현재 저장값을 검색 전에도 라벨로 보여주기 위한 seed 옵션 (검색 결과가 비었을 때만 — 옵션 개수 토글로 인한 el-select 키보드 내비 오류 방지)
+function scSeed(r, col) {
+  if (scOptions.value.length) return null;
+  const val = r[col.key];
+  if (val == null || val === '') return null;
+  const disp = (col.displayKey && r[col.displayKey]) ? r[col.displayKey] : val;
+  return { value: val, label: disp, short: disp };
+}
 
 function defaultNewRow() {
   const r = { rowStatus: 'I' };
@@ -126,9 +163,7 @@ function statusLabel(r) {
               v-if="c.kind === 'number'"
               v-model.number="r[c.key]"
               type="number"
-              class="meta-grid__cell"
-              :style="c.width ? { width: c.width + 'px' } : null"
-              @change="touch(r)"
+              class="meta-grid__cell"              @change="touch(r)"
             />
             <input
               v-else-if="c.kind === 'checkbox'"
@@ -140,9 +175,7 @@ function statusLabel(r) {
             <select
               v-else-if="c.kind === 'select'"
               v-model="r[c.key]"
-              class="meta-grid__cell"
-              :style="c.width ? { width: c.width + 'px' } : null"
-              @change="touch(r)"
+              class="meta-grid__cell"              @change="touch(r)"
             >
               <option v-for="o in (c.options || [])" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
@@ -150,9 +183,7 @@ function statusLabel(r) {
               v-else-if="c.kind === 'date'"
               v-model="r[c.key]"
               type="date"
-              class="meta-grid__cell"
-              :style="c.width ? { width: c.width + 'px' } : null"
-              @change="touch(r)"
+              class="meta-grid__cell"              @change="touch(r)"
             />
             <input
               v-else-if="c.kind === 'combo'"
@@ -160,7 +191,6 @@ function statusLabel(r) {
               type="text"
               class="meta-grid__cell"
               :list="`dl-${instanceId}-${c.key}`"
-              :style="c.width ? { width: c.width + 'px' } : null"
               :placeholder="c.placeholder || ''"
               @input="touch(r)"
             />
@@ -174,7 +204,6 @@ function statusLabel(r) {
               :reserve-keyword="false"
               size="small"
               class="meta-grid__editcombo"
-              :style="c.width ? { width: c.width + 'px' } : null"
               :placeholder="c.placeholder || ''"
               @change="touch(r)"
             >
@@ -183,9 +212,7 @@ function statusLabel(r) {
             <!-- ★ (2026-06-15, dspark): picker = 검색 버튼으로 값 채움 (정확한 이름 손입력 대체). 클릭 → 부모가 SearchPickerModal 띄움. r[displayKey] 우선 표시, 없으면 r[key]. -->
             <div
               v-else-if="c.kind === 'picker'"
-              class="meta-grid__picker"
-              :style="c.width ? { width: c.width + 'px' } : null"
-            >
+              class="meta-grid__picker"            >
               <input
                 :value="(c.displayKey && r[c.displayKey]) ? r[c.displayKey] : r[c.key]"
                 type="text"
@@ -196,12 +223,31 @@ function statusLabel(r) {
               />
               <button type="button" class="meta-grid__pick-btn" title="검색" @click="emit('cell-picker', { row: r, col: c })">🔍</button>
             </div>
+            <!-- ★ (2026-06-15, dspark): searchcombo = 인라인 서버검색 드롭다운(el-select remote). 타이핑→리스트→선택, 팝업 없음. -->
+            <el-select
+              v-else-if="c.kind === 'searchcombo'"
+              :model-value="r[c.key]"
+              filterable
+              remote
+              :remote-method="(q) => scSearch(c, q)"
+              :loading="scLoading"
+              default-first-option
+              clearable
+              :reserve-keyword="false"
+              size="small"
+              class="meta-grid__editcombo"
+              :placeholder="c.placeholder || '검색하여 선택'"
+              @change="(v) => scSelect(r, c, v)"
+            >
+              <!-- :label = 접힌 표시값(짧게) / 슬롯 = 드롭다운 리스트(풍부) -->
+              <el-option v-if="scSeed(r, c)" :key="'_seed'" :value="scSeed(r, c).value" :label="scSeed(r, c).short">{{ scSeed(r, c).label }}</el-option>
+              <el-option v-for="o in scOptions" :key="o.value" :value="o.value" :label="o.short">{{ o.label }}</el-option>
+            </el-select>
             <input
               v-else
               v-model="r[c.key]"
               type="text"
               class="meta-grid__cell"
-              :style="c.width ? { width: c.width + 'px' } : null"
               :placeholder="c.placeholder || ''"
               @input="touch(r)"
             />
