@@ -66,6 +66,17 @@ v2 의 일부 컴포넌트는 Figma 진본 정합을 위해 **el-* 미사용 nat
 - 컴포넌트 prefix BEM 클래스: `in-{shortname}` (`in-sel`, `in-radio`, `in-sw`, `in-tabs`, `in-modal`, `in-tag`, `in-fi`, `in-num`, `in-dp` 등)
 - design-system 의 v1/v2 코드는 **직접 import 안 함** (`@ds/...` alias 없음) — 우리 `ui/` 로 옮긴 사본만 사용
 
+## 그리드 2층 구조 — WinGrid vs InDataTable (★ 2026-06-15 혼동 방지 못박음)
+
+이름이 닮아 헷갈리기 쉬우나 **층이 다르다 (둘 중 택일 아님, 상하 관계)**:
+
+- **`WinGrid` (`@win/grid`, win-grid/)** = 순수 그리드 **라이브러리**. tui-grid 엔진 격리 + 메모리 데이터/변경분(dirty)만. **서버·Figma 테마 지식 0** (AS-IS IBSheet 책임 경계 재현).
+- **`InDataTable` (ui/)** = 그 WinGrid 를 감싼 **앱 전용 shim**. ① Figma 테마 주입(white/green 토글 추종) + ② envelope 서버 연동(`retrieveServiceId`/`saveServiceId` → useEntityGrid → `/serviceBroker.h5`) 만 추가.
+
+**규율: 화면(페이지)에서는 `InDataTable` 만 쓴다. `@win/grid` 직접 import 금지.**
+예외 3곳만 허용 — shim 본인(InDataTable) · 내부 헬퍼(useEntityGrid 의 `extractDirty`) · 런타임 SFC 플레이그라운드(LiveSfcPlayground).
+> `In*` 는 "역할"로 이름 짓는다(InButton≠InElButton). 그래서 엔진명(WinGrid)이 아닌 역할명 `InDataTable` 을 유지한다. PoC(`toast-ui-grid/`)는 서버·테마가 없어 `WinGrid` 를 직접 쓰는 게 맞다.
+
 ## 현재 ui/ 컴포넌트 (P0~P1)
 
 | 파일 | 출처 SSOT | Figma 노드 | 구현 | 주요 prop |
