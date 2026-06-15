@@ -53,6 +53,8 @@ function keyOf(row, i) { return props.rowKey && row[props.rowKey] != null ? row[
 </script>
 
 <template>
+  <!-- ★ (2026-06-15, dspark): body 로 Teleport — 드로어(MetaDetailEditor) 등 상위 stacking context 에 갇혀 뒤에 깔리는 문제 해결. -->
+  <Teleport to="body">
   <div v-if="open" class="spm__mask" @click.self="close">
     <div class="spm__modal">
       <div class="spm__head">
@@ -84,10 +86,11 @@ function keyOf(row, i) { return props.rowKey && row[props.rowKey] != null ? row[
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>
-.spm__mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 9000; }
+.spm__mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 10050; }
 .spm__modal { width: 560px; max-width: 92vw; background: var(--in-bg-white); border-radius: var(--in-radius-md); box-shadow: 0 12px 40px rgba(0,0,0,.2); overflow: hidden; }
 .spm__head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--in-border-default); font-weight: var(--in-font-weight-bold); }
 .spm__x { border: none; background: transparent; cursor: pointer; font-size: 16px; color: var(--in-text-subtle); }
