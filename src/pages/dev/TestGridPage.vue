@@ -77,6 +77,11 @@ function search(){
   searchState.resultCount = rows.value.length;
 }
 
+
+function save(){
+  alert ("save")
+}
+
 </script>
 
 <template>
@@ -86,7 +91,12 @@ function search(){
     <div class = "search-bar">
       <InSearchField v-model="keyword" label="그룹명" input="그룹명 또는 ID를 입력하세요" :icon-clickable="false"  @search="search" />
       <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" @click="search"> 검색</InButton>
+      <InButton variant="rounded" :left-icon-show="false" :right-icon-show="false" @click="search"> 검색</InButton>
+      <InButton variant="primary" @click="save">저장</InButton>
     </div> 
+
+
+
 
 
     <p>현재 검색어: "{{ keyword }}"</p>    
@@ -94,6 +104,8 @@ function search(){
     <p>검색실행횟수: {{  searchCount  }}</p>
     <p>마지막 검색어: "{{ searchState.lastKeyword }}" / 결과 {{ searchState.resultCount }}건</p>
     <InDataTable :columns="columns" :data= "rows" :height="320" />
+
+
 
 
 
