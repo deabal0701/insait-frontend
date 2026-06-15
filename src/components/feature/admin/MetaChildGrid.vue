@@ -38,7 +38,7 @@ const props = defineProps({
   hideAdd: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['row-select']);
+const emit = defineEmits(['row-select', 'cell-picker']);
 
 const visibleRows = computed(() => props.rows.filter((r) => r.rowStatus !== 'D'));
 
@@ -180,6 +180,22 @@ function statusLabel(r) {
             >
               <el-option v-for="o in (c.options || [])" :key="o" :label="o" :value="o" />
             </el-select>
+            <!-- ★ (2026-06-15, dspark): picker = 검색 버튼으로 값 채움 (정확한 이름 손입력 대체). 클릭 → 부모가 SearchPickerModal 띄움. r[displayKey] 우선 표시, 없으면 r[key]. -->
+            <div
+              v-else-if="c.kind === 'picker'"
+              class="meta-grid__picker"
+              :style="c.width ? { width: c.width + 'px' } : null"
+            >
+              <input
+                :value="(c.displayKey && r[c.displayKey]) ? r[c.displayKey] : r[c.key]"
+                type="text"
+                readonly
+                class="meta-grid__cell meta-grid__picker-val"
+                :placeholder="c.placeholder || '검색하여 선택'"
+                @click="emit('cell-picker', { row: r, col: c })"
+              />
+              <button type="button" class="meta-grid__pick-btn" title="검색" @click="emit('cell-picker', { row: r, col: c })">🔍</button>
+            </div>
             <input
               v-else
               v-model="r[c.key]"
@@ -236,6 +252,11 @@ function statusLabel(r) {
   min-height: 30px; padding: 4px 8px; border-radius: var(--in-radius-xs);
   box-shadow: 0 0 0 1px var(--in-border-input) inset; font-size: var(--in-font-size-sm);
 }
+/* ★ (2026-06-15, dspark): picker 셀 — 읽기전용 값 + 🔍 버튼. 정확한 이름 손입력 대체. */
+.meta-grid__picker { display: flex; gap: 4px; align-items: center; }
+.meta-grid__picker-val { flex: 1 1 0; min-width: 0; cursor: pointer; background: var(--in-bg-white); }
+.meta-grid__pick-btn { flex: 0 0 auto; border: 1px solid var(--in-border-input); background: var(--in-bg-default, #f5f5f5); border-radius: var(--in-radius-xs); padding: 4px 6px; cursor: pointer; font-size: 12px; line-height: 1; }
+.meta-grid__pick-btn:hover { background: var(--in-bg-brand-subtle, #e9f0ff); }
 .meta-grid__row-del { border: none; background: transparent; cursor: pointer; color: var(--in-text-subtle); font-size: 14px; padding: 4px 8px; }
 .meta-grid__row-del:hover { color: var(--in-text-error, #d33); }
 .meta-grid__empty { text-align: center; color: var(--in-text-subtle); }

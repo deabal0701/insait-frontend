@@ -8,7 +8,7 @@
  *     편집 모드에서만 def 폼 + funcMaps/attrs 그리드 노출 (drawerTab 을 mode 로 분기).
  *   서비스 정의는 Waffle 풀 evict 대상 아님 (매 요청 DB → 즉시반영).
  */
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { adminApi } from '@/services/adminApi';
@@ -26,6 +26,7 @@ import HealthDot from '@/components/feature/admin/HealthDot.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
+import SearchPickerModal from '@/components/feature/admin/SearchPickerModal.vue';
 
 import InSearchField from '@/components/ui/InSearchField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
@@ -88,11 +89,44 @@ const cmdClassPresets = [
   'h5.ela.command.ElaServiceCommand',
 ];
 
+// ★ (2026-06-15, dspark): 그리드 셀 검색 picker (G18/I11) — func_nm(SQL)·value_type(MT_)·속성명(ME_)을 손입력 대신 검색→선택.
+const pickerOpen = ref(false);
+const pickerCol = ref(null);
+const pickerRow = ref(null);
+function onCellPicker({ row, col }) { pickerCol.value = col; pickerRow.value = row; pickerOpen.value = true; }
+function onPickerSelect(sel) {
+  const col = pickerCol.value, row = pickerRow.value;
+  if (col && row) {
+    const p = col.picker || {};
+    if (p.apply) p.apply(sel, row);                       // 커스텀 다중 필드 write (예: MT_ 선택 → ME_+MT_ 동시)
+    else {
+      row[col.key] = p.valueKey ? sel[p.valueKey] : sel;
+      if (col.displayKey && p.displayValueKey) row[col.displayKey] = sel[p.displayValueKey];
+    }
+    if (row.rowStatus !== 'I') row.rowStatus = 'U';
+  }
+  pickerOpen.value = false;
+}
+// 공통 picker 설정
+const SQL_PICKER = {
+  title: 'SQL 쿼리 검색', placeholder: 'SQL 이름 prefix (예: ACM0010)',
+  columns: [{ key: 'queryName', label: 'SQL 이름', width: 200 }, { key: 'displayName', label: '한글명' }],
+  fetcher: (q) => adminApi.meta.queries.list({ q, size: 50, page: 1 }).then((r) => r.content || []),
+  rowKey: 'queryName', valueKey: 'queryName',
+};
+const MSG_PICKER = {
+  title: '메시지 검색', placeholder: '메시지ID 앞부분 또는 한글명',
+  columns: [{ key: 'msgDefId', label: '메시지ID', width: 200 }, { key: 'msgDefNm', label: '한글명' }],
+  fetcher: (q) => adminApi.meta.messages.list({ q, size: 50, page: 1 }).then((r) => r.content || []),
+  rowKey: 'msgDefId',
+};
+
 const funcMapColumns = [
   { key: 'seqOrder',    label: '순서', kind: 'number', width: 56 },
   { key: 'svMapTypeCd', label: '타입', kind: 'select', width: 90,
     options: [{ value: 'sql', label: 'sql' }, { value: 'entity', label: 'entity' }] },
-  { key: 'funcNm',      label: 'func_nm (쿼리/엔터티명)', kind: 'text' },
+  // ★ (2026-06-15, dspark): SQL 검색 picker (sql 타입일 때 쿼리명을 검색으로 채움). entity 명은 직접 입력도 가능하나 일단 SQL 검색 제공.
+  { key: 'funcNm',      label: 'func_nm (쿼리/엔터티명)', kind: 'picker', picker: SQL_PICKER },
   { key: 'reqMsgNm',    label: 'REQ msg', kind: 'text', width: 140 },
   { key: 'resMsgNm',    label: 'RES msg', kind: 'text', width: 140 },
 ];
@@ -102,10 +136,17 @@ function newFuncMap(rows) {
 }
 
 const attrColumns = [
-  { key: 'svAttrNm',     label: '속성명', kind: 'text', placeholder: 'ME_TST0001_01' },
+  // ★ (2026-06-15, dspark): 속성명(ME_) = 메시지 검색(MT_) → ME_ 자동변환 + value_type(MT_) 동시 채움. 한 번 선택으로 ME_/MT_ 페어 완성.
+  { key: 'svAttrNm',     label: '속성명 (ME_*)', kind: 'picker', placeholder: 'ME_…',
+    picker: { ...MSG_PICKER, apply: (sel, row) => {
+      const id = sel.msgDefId || '';
+      row.svAttrNm = id.replace(/^MT_/, 'ME_');
+      if (!row.valueType) row.valueType = id;
+    } } },
   { key: 'svAttrType',   label: '타입', kind: 'select', width: 110,
     options: [{ value: 'IN_MSG', label: 'IN_MSG' }, { value: 'OUT_MSG', label: 'OUT_MSG' }] },
-  { key: 'valueType',    label: 'value_type (MT_*)', kind: 'text' },
+  // value_type(MT_) = 메시지 검색 → msgDefId 채움.
+  { key: 'valueType',    label: 'value_type (MT_*)', kind: 'picker', picker: { ...MSG_PICKER, valueKey: 'msgDefId' } },
   { key: 'defaultValue', label: '기본값', kind: 'text', width: 130 },
 ];
 function newAttr() {
@@ -484,7 +525,8 @@ onMounted(() => list.reload());
             key-field="svAttrId"
             :new-row="newAttr"
             add-label="+ 속성 추가"
-            hint="IN_MSG/OUT_MSG 슬롯. value_type = MT_<화면7자>_NN (메시지 정의)."
+            hint="속성명·value_type 칸의 🔍 로 메시지를 검색→선택하면 ME_/MT_ 가 자동 채워집니다. (IN_MSG/OUT_MSG 슬롯)"
+            @cell-picker="onCellPicker"
           />
           <ul v-else-if="detail" class="resource-list">
             <li v-for="a in detail.attrs" :key="a.svAttrId" class="svc-attr-row">
@@ -519,7 +561,8 @@ onMounted(() => list.reload());
             key-field="svMapId"
             :new-row="newFuncMap"
             add-label="+ 매핑 추가"
-            hint="sql=쿼리명(조회/프로시저) / entity=엔터티명(저장). func_nm 은 SQL 또는 엔터티 이름."
+            hint="sql=쿼리명(조회/프로시저) / entity=엔터티명(저장). func_nm 칸의 🔍 로 SQL 쿼리를 검색→선택할 수 있습니다."
+            @cell-picker="onCellPicker"
           />
           <ul v-else-if="detail" class="resource-list">
             <li v-for="f in detail.funcMaps" :key="f.svMapId" class="svc-attr-row">
@@ -591,6 +634,19 @@ onMounted(() => list.reload());
         @confirm="doDelete"
         @cancel="confirmDelete = false"
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
+      />
+
+      <!-- ★ (2026-06-15) 그리드 셀 검색 picker (func_nm SQL / ME_·MT_ 메시지) -->
+      <SearchPickerModal
+        v-if="pickerCol"
+        :open="pickerOpen"
+        :title="pickerCol.picker.title"
+        :placeholder="pickerCol.picker.placeholder"
+        :columns="pickerCol.picker.columns"
+        :fetcher="pickerCol.picker.fetcher"
+        :row-key="pickerCol.picker.rowKey"
+        @update:open="pickerOpen = $event"
+        @select="onPickerSelect"
       />
     </template>
   </CatalogPage>
