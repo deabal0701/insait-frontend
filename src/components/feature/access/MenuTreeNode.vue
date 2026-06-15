@@ -2,15 +2,18 @@
 /**
  * MenuTreeNode — 메뉴 lazy 트리 노드 (재귀). AUT0050 메뉴관리 좌측.
  * ★ (2026-06-11, dspark): FRM_MENU self-FK. hasChildren=true 만 펼침,
- *   펼칠 때 직계자식을 adminApi.access.menus.children(menuId, menuGroup) lazy 로드.
+ *   펼칠 때 직계자식을 adminApi.access.menus.children(menuId) lazy 로드.
  *   refreshKey 변경 시 로드 상태 초기화(상위 CRUD 후 재조회). Figma 노드 ID = TBD.
+ * ★ (2026-06-15, dspark): 자식 조회 시 menuGroup 필터 제거 (AS-IS AUT0050_00_R01 정합).
+ *   MENU_GROUP 은 "루트 파티션 키"라 루트에만 태그됨 — 자식들은 group 이 비어있음(예: PRIVATE_GROUP
+ *   루트의 직계자식 11건 전부 빈값). 자식까지 group 으로 거르면 개인 트리가 통째 사라짐 → 부모로만 조회.
+ *   그룹필터는 루트 조회(MenuCatalog.loadRoots)에만 적용.
  */
 import { ref, watch } from 'vue';
 import { adminApi } from '@/services/adminApi';
 
 const props = defineProps({
   node: { type: Object, required: true },     // { menuId, menuNm, hasChildren }
-  menuGroup: { type: String, default: '' },
   selectedMenuId: { type: String, default: null },
   depth: { type: Number, default: 0 },
   refreshKey: { type: Number, default: 0 },   // 변경 시 자식 캐시 무효화
@@ -25,7 +28,7 @@ const children = ref([]);
 async function loadChildren() {
   loading.value = true;
   try {
-    children.value = await adminApi.access.menus.children(props.node.menuId, props.menuGroup);
+    children.value = await adminApi.access.menus.children(props.node.menuId);
     loaded.value = true;
   } catch (e) { /* keep collapsed */ } finally { loading.value = false; }
 }
@@ -62,7 +65,6 @@ watch(() => props.refreshKey, async () => {
         v-for="c in children"
         :key="c.menuId"
         :node="c"
-        :menu-group="menuGroup"
         :selected-menu-id="selectedMenuId"
         :depth="depth + 1"
         :refresh-key="refreshKey"

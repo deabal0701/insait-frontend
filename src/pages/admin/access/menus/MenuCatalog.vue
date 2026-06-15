@@ -184,7 +184,6 @@ onMounted(loadRoots);
             v-for="r in roots"
             :key="r.menuId"
             :node="r"
-            :menu-group="menuGroup"
             :selected-menu-id="selectedMenuId"
             :refresh-key="refreshKey"
             @select="onSelect"
