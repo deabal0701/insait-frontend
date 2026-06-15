@@ -15,6 +15,8 @@ export const useAuthStore = defineStore('auth', {
     loginId: '',
     companyCd: '',
     tokenType: 'Bearer',
+    // ★ (2026-06-15, dspark): 상단바 권한(역할) 콤보 선택값. AS-IS 역할 선택 정합 (현재는 표시·보관까지, G5 LNB 연동 후 메뉴 필터).
+    selectedAuthId: '',
   }),
   getters: {
     isLoggedIn: (s) => !!s.accessToken,
@@ -72,6 +74,6 @@ export const useAuthStore = defineStore('auth', {
   persist: {
     storage: localStorage,
     key: 'insait.auth',
-    pick: ['accessToken', 'refreshToken', 'empId', 'userId', 'loginId', 'companyCd', 'tokenType'],
+    pick: ['accessToken', 'refreshToken', 'empId', 'userId', 'loginId', 'companyCd', 'tokenType', 'selectedAuthId'],
   },
 });

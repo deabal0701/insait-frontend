@@ -89,6 +89,8 @@ export const adminApi = {
   // ★ (2026-06-08, dspark): 「사용자와 접근제어」 직접 REST (com.win.insait.admin.access.*).
   //   표준 list/detail/create/update/remove 는 makeDomain. 화면별 비표준 메서드만 확장.
   access: {
+    // ★ (2026-06-15, dspark): 현재 로그인 사용자의 권한(역할) 목록 — 상단바 권한 콤보. [{authItemId, authItemName, displayName}]
+    myAuths() { return http.get('/api/admin/access/my-auths'); },
     users: {
       ...makeDomain('/api/admin/access/users'),          // AUT0010
       // exists 는 /{key}/exists 가 아니라 ?loginId 쿼리 (백엔드 계약 — login_id 가 업무 유일키, PK 는 userId).

@@ -11,6 +11,7 @@ import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
 import InLNB from '@/components/ui/InLNB.vue';
+import { adminApi } from '@/services/adminApi';
 
 const router = useRouter();
 const route = useRoute();
@@ -56,6 +57,7 @@ const ADMIN_PARENT = {
   DevTestGridPage: 'playground',
   // ★ (2026-06-14, dspark): InDataTable 개발자 매뉴얼(/dev/grid-docs) → 동일 Playground 그룹
   DevGridDocs: 'playground',
+  DevSeasonMenuDemo: 'playground',
 };
 
 // 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
@@ -351,6 +353,7 @@ const items = computed(() => {
             { key: 'DevGridDocs', label: 'Grid 개발자 매뉴얼', active: current === 'DevGridDocs' },
             { key: 'DevGridGallery', label: 'Grid 카탈로그', active: current === 'DevGridGallery' },
             { key: 'DevTestGridPage', label: 'Grid 테스트 페이지', active: current === 'DevTestGridPage' },
+            { key: 'DevSeasonMenuDemo', label: '시즌메뉴 데모', active: current === 'DevSeasonMenuDemo' },
           ],
         },
       ],
@@ -402,6 +405,29 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
 
 const displayName = computed(() => auth.loginId || auth.empId || 'user');
 const currentTitle = computed(() => route.meta?.title || '');
+
+// ★ (2026-06-15, dspark): 상단바 권한(역할) 콤보 — AS-IS 헤더 역할 셀렉터 정합.
+//   GET /api/admin/access/my-auths 로 현재 사용자 보유 권한 조회 → 콤보 표시.
+//   ⚠️ G5: TO-BE LNB 는 코드 정의라 선택해도 메뉴 자동 변경 X (현재 표시·선택값 보관까지).
+const myAuths = ref([]);
+const selectedAuthId = computed({
+  get: () => auth.selectedAuthId,
+  set: (v) => { auth.selectedAuthId = v; },
+});
+onMounted(async () => {
+  if (!auth.isLoggedIn) return;
+  try {
+    const list = await adminApi.access.myAuths();
+    myAuths.value = Array.isArray(list) ? list : [];
+    const ids = myAuths.value.map((a) => String(a.authItemId));
+    // 저장된 선택값이 목록에 없으면(또는 비어있으면) 첫 항목으로 기본 설정
+    if (!auth.selectedAuthId || !ids.includes(String(auth.selectedAuthId))) {
+      auth.selectedAuthId = ids.length ? ids[0] : '';
+    }
+  } catch {
+    myAuths.value = []; // 권한 조회 실패 시 콤보 비표시
+  }
+});
 </script>
 
 <template>
@@ -437,7 +463,23 @@ const currentTitle = computed(() => route.meta?.title || '');
              [<] 액션은 페이지 본문 헤더 우측으로 이전 (사용자 피드백 — 헤더에는 헤더에 있을 것).
              현재는 route.meta.title 표시. 추후 breadcrumb 격상은 별도 카드. -->
         <div class="main-layout__crumb">{{ currentTitle }}</div>
-        <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
+        <div class="main-layout__header-right">
+          <!-- ★ (2026-06-15, dspark): 권한(역할) 콤보 — AS-IS 상단 역할 셀렉터 정합. 보유 권한 있을 때만 표시. -->
+          <el-select
+            v-if="myAuths.length"
+            v-model="selectedAuthId"
+            size="small"
+            class="main-layout__auth"
+            placeholder="권한"
+          >
+            <el-option
+              v-for="a in myAuths"
+              :key="a.authItemId"
+              :value="String(a.authItemId)"
+              :label="a.displayName || a.authItemName"
+            />
+          </el-select>
+          <el-dropdown trigger="click" placement="bottom-end" @command="onUserCommand">
           <span class="main-layout__user">
             <span class="main-layout__user-avatar">{{ (displayName[0] || '?').toUpperCase() }}</span>
             <span class="main-layout__user-name">{{ displayName }}</span>
@@ -449,7 +491,8 @@ const currentTitle = computed(() => route.meta?.title || '');
               <el-dropdown-item command="logout" divided>로그아웃</el-dropdown-item>
             </el-dropdown-menu>
           </template>
-        </el-dropdown>
+          </el-dropdown>
+        </div>
       </header>
 
       <main class="main-layout__content">
@@ -543,6 +586,15 @@ const currentTitle = computed(() => route.meta?.title || '');
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+.main-layout__header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+/* ★ (2026-06-15, dspark): 상단바 권한(역할) 콤보 */
+.main-layout__auth {
+  width: 160px;
 }
 .main-layout__user {
   display: inline-flex;
