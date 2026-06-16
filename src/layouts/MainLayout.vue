@@ -1,432 +1,156 @@
 <script setup>
-// ★ (2026-05-27, dspark): 인증 후 메인 layout — InLNBSubmenu (Figma 1402:27025) 정합.
-//   디자인 시스템의 11 1depth 카탈로그를 그대로 유지 + '설정' (lnb-settings) 의 submenu 에
-//   실제 admin 9 화면 (메타관리 5 + 권한관리 3 + 자료실 1) 을 OBJECT_ID 기반으로 매핑.
-//   타 카테고리 (인사기획·인사운영·성과관리·보상관리·결재관리·시각화·메일 등) 는 디자인 시스템
-//   default submenu 를 그대로 노출 (3depth 클릭 시 '준비 중' 토스트 — 점진 활성화 대상).
+// ★ (2026-06-16, dspark): 동적 LNB — AS-IS 메뉴 로딩 방식(envelope) 정합. 사용자 지시: "AS-IS 동일 방식 조회".
+//   rail(업무 카테고리) = AUT0050_00_R06 / 하위트리 = GNB0001_00_R01 (services/menuApi.js).
+//   권한 콤보(auth_item) → 메뉴 권한필터(AS-IS 동일하게 "권한 바꾸면 메뉴 바뀜").
+//   스마트 플레이스(대시보드)=하드코딩 최상단 · 시스템관리=하드코딩 최하단 · 그 사이 업무메뉴=서버 동적.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useMenuStore } from '@/stores/menu';
 import { useAuth } from '@/composables/useAuth';
 import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
 import InLNB from '@/components/ui/InLNB.vue';
 import { adminApi } from '@/services/adminApi';
+import { PLACE_ITEM, ADMIN_OBJECT_IDS, buildSettingsItem } from '@/constants/menuTree';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const menu = useMenuStore();
 const { logout } = useAuth();
 
 function onUserCommand(cmd) {
-  if (cmd === 'settings') {
-    router.push({ name: 'SETTINGS' });
-  } else if (cmd === 'logout') {
-    logout();
-  }
+  if (cmd === 'settings') router.push({ name: 'SETTINGS' });
+  else if (cmd === 'logout') logout();
 }
 
-// ★ (2026-05-27, dspark): 각 1depth 카테고리별 2depth 그룹 펼침 상태 (사용자 toggle 보존).
-//   Figma 진본 정합으로 모든 1depth 에 placeholder submenu 트리 (router 진입은 시스템관리만,
-//   그 외 카테고리는 click 시 '준비 중' 토스트).
-const settingsExpanded = ref({ meta: true, auth: false, sysenv: false, pds: false, env: false, playground: false });
-const planningExpanded = ref({ org: true, 'member-mgmt': false, recruit: false });
-const operationExpanded = ref({ attendance: true, leave: false, dispatch: false, order: false });
-const performanceExpanded = ref({ eval: true, meeting: false, config: false });
-const compensationExpanded = ref({ pay: true, bonus: false, deduction: false });
-const approvalExpanded = ref({ line: true, doc: false, inbox: false, list: false });
-const analyticsExpanded = ref({ 'hr-data': true, 'recruit-data': false });
-const mailExpanded = ref({ box: true });
-const bookmarkExpanded = ref({ list: true });
-const bentoExpanded = ref({ all: true });
-
-// admin 화면 → '설정' 카테고리의 2depth 그룹 매핑
-const ADMIN_PARENT = {
-  // ★ (2026-06-11, dspark): 메타관리(SYS_DEV) = AS-IS active 5 화면 (공통코드는 시스템환경으로 이동).
-  AUT0030: 'meta', IST0030: 'meta', IST0020: 'meta', IST0050: 'meta', IST0010: 'meta',
-  // ★ (2026-06-07, dspark): 「사용자와 접근제어」(auth) 그룹 = AS-IS SYS_ACCESS 7 화면.
-  AUT0010: 'auth', AUT0020: 'auth', AUT0040: 'auth', AUT0060: 'auth', AUT0070: 'auth', AUT0100: 'auth', AUT0050: 'auth',
-  // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) = AS-IS 공통코드/기준/레지스트리 등 (TO-BE 토대 8).
-  CCD0040: 'sysenv', CCD0080: 'sysenv', CCD0010: 'sysenv', CCD0050: 'sysenv',
-  CCD0030: 'sysenv', CCD0220: 'sysenv', CCD0020: 'sysenv', CCD0070: 'sysenv',
-  FRM0090: 'pds',
-  SETTINGS: 'env',
-  COMPONENTS: 'env',
-  // ★ (2026-06-02, dspark): Grid 카탈로그 → 시스템관리 > Playground 그룹
-  DevGridGallery: 'playground',
-  DevTestGridPage: 'playground',
-  // ★ (2026-06-14, dspark): InDataTable 개발자 매뉴얼(/dev/grid-docs) → 동일 Playground 그룹
-  DevGridDocs: 'playground',
-  DevSeasonMenuDemo: 'playground',
-};
-
-// 현재 라우트로부터 1depth activeKey 추론 (admin = 설정 / 그 외 = smart place)
-const activeKey = ref('place');
-function syncActiveKey() {
-  activeKey.value = ADMIN_PARENT[route.name] ? 'settings' : 'place';
-  const parent = ADMIN_PARENT[route.name];
-  if (parent) settingsExpanded.value = { ...settingsExpanded.value, [parent]: true };
-}
-syncActiveKey();
-// ★ (2026-05-29, dspark): route 변경 시 LNB activeKey + 메뉴 그룹 펼침 상태 재계산.
-//   미적용 시 admin 화면 간 이동 후 LNB 강조가 stale. router.afterEach 보다 컴포넌트
-//   생명주기에 묶어 두는 편이 디버깅 용이.
-watch(() => route.name, syncActiveKey);
-
-// ★ LNB 접기 상태 — collapsed=true 일 때 InLNB (fixed 66px), false 일 때 InLNBSubmenu (open 308px).
-//   localStorage 로 사용자 선호 persist.
-const COLLAPSED_KEY = 'insait.lnb.collapsed';
-const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === '1');
-function setCollapsed(next) {
-  collapsed.value = next;
-  localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
-}
-function onCollapse() { setCollapsed(true); }
-function onExpand()   { setCollapsed(false); }
-
-// InLNB(fixed) 의 key 컨벤션은 InLNBSubmenu 와 다름 — 역매핑 테이블.
-// InLNB key (search/people/...) ↔ InLNBSubmenu key (place/planning/...)
-const FIXED_TO_SUBMENU = {
-  search: 'place', people: 'planning', demography: 'operation',
-  analytics: 'performance', cases: 'compensation', inventory: 'approval',
-  finance: 'analytics', mail: 'mail', 'bookmark-add': 'bookmark',
-  bento: 'bento', settings: 'settings',
-};
-
-// InLNB(fixed) 가 받는 평탄 items — activeKey 동기. 시스템관리 맨 하단 정합.
-const fixedItems = computed(() => [
-  { key: 'search',       label: '스마트 플레이스', active: activeKey.value === 'place' },
-  { key: 'people',       label: '인사기획',       active: activeKey.value === 'planning' },
-  { key: 'demography',   label: '인사운영',       active: activeKey.value === 'operation' },
-  { key: 'analytics',    label: '성과관리',       active: activeKey.value === 'performance' },
-  { key: 'cases',        label: '보상관리',       active: activeKey.value === 'compensation' },
-  { key: 'inventory',    label: '결재관리',       active: activeKey.value === 'approval' },
-  { key: 'finance',      label: '시각화',         active: activeKey.value === 'analytics' },
-  { key: 'mail',         label: '메일',           active: activeKey.value === 'mail' },
-  { key: 'bookmark-add', label: '즐겨찾기',       active: activeKey.value === 'bookmark' },
-  { key: 'bento',        label: '전체보기',       active: activeKey.value === 'bento' },
-  { key: 'settings',     label: '시스템관리',     active: activeKey.value === 'settings' },
-]);
-
-// fixed 모드에서 1depth 클릭 시 — activeKey 설정 + 자동으로 펼침 (submenu 트리 노출).
-function onFixedClickItem(item) {
-  const next = FIXED_TO_SUBMENU[item.key] || item.key;
-  activeKey.value = next;
-  setCollapsed(false);
-  if (next === 'place') router.push({ name: 'Dashboard' });
-}
-
-const items = computed(() => {
-  const current = route.name;
-  return [
-    // ★ (2026-05-27, dspark): 스마트 플레이스 — submenu 미정 (Figma 진본·AS-IS 카탈로그에
-    //   구체 메뉴 부재). submenu: [] 로 두면 panel 의 1depth-Title 상단 박스만 보이고
-    //   2depth/3depth 메뉴는 비어 있음. 추후 정확한 메뉴 확정 시 children 채울 것.
-    { key: 'place', label: '스마트 플레이스', icon: 'lnb-search', submenu: [] },
-    {
-      key: 'planning',
-      label: '인사기획',
-      icon: 'lnb-people',
-      submenu: [
-        {
-          key: 'org', label: '조직 관리',
-          expanded: planningExpanded.value.org,
-          children: [
-            { key: 'org-info', label: '조직정보' },
-            { key: 'org-chart', label: '조직도' },
-            { key: 'org-restructure', label: '조직 개편' },
-            { key: 'org-history', label: '조직이력' },
-            { key: 'member-history', label: '구성원이력' },
-          ],
-        },
-        { key: 'member-mgmt', label: '구성원 관리', expanded: planningExpanded.value['member-mgmt'] },
-        { key: 'recruit', label: '채용 관리', expanded: planningExpanded.value.recruit },
-      ],
-    },
-    {
-      key: 'operation', label: '인사운영', icon: 'lnb-demography',
-      submenu: [
-        {
-          key: 'attendance', label: '근태관리',
-          expanded: operationExpanded.value.attendance,
-          children: [
-            { key: 'attendance-daily', label: '일일근태' },
-            { key: 'attendance-monthly', label: '월간근태' },
-            { key: 'attendance-overtime', label: '연장근무' },
-          ],
-        },
-        { key: 'leave', label: '휴가관리', expanded: operationExpanded.value.leave },
-        { key: 'dispatch', label: '출장관리', expanded: operationExpanded.value.dispatch },
-        { key: 'order', label: '발령관리', expanded: operationExpanded.value.order },
-      ],
-    },
-    {
-      key: 'performance', label: '성과관리', icon: 'lnb-analytics',
-      submenu: [
-        {
-          key: 'eval', label: '성과 평가',
-          expanded: performanceExpanded.value.eval,
-          children: [
-            { key: 'eval-mine', label: '나의 평가' },
-            { key: 'eval-manage', label: '평가관리' },
-          ],
-        },
-        { key: 'meeting', label: '면담', expanded: performanceExpanded.value.meeting },
-        { key: 'config', label: '평가설정', expanded: performanceExpanded.value.config },
-      ],
-    },
-    {
-      key: 'compensation', label: '보상관리', icon: 'lnb-cases',
-      submenu: [
-        {
-          key: 'pay', label: '급여지급',
-          expanded: compensationExpanded.value.pay,
-          children: [
-            { key: 'pay-date',   label: '급여일자관리' },
-            { key: 'pay-target', label: '대상자현황' },
-            { key: 'pay-base',   label: '기초원장' },
-            { key: 'pay-retro',  label: '소급처리' },
-            { key: 'pay-close',  label: '기본계산마감' },
-            { key: 'pay-except', label: '예외사항관리' },
-            { key: 'pay-deduct', label: '공제내역' },
-            { key: 'pay-calc',   label: '급여계산' },
-          ],
-        },
-        { key: 'bonus',     label: '상여관리', expanded: compensationExpanded.value.bonus },
-        { key: 'deduction', label: '공제관리', expanded: compensationExpanded.value.deduction },
-      ],
-    },
-    {
-      key: 'approval', label: '결재관리', icon: 'lnb-inventory',
-      submenu: [
-        {
-          key: 'line', label: '결재선지정',
-          expanded: approvalExpanded.value.line,
-          children: [
-            { key: 'approval-personal', label: '개인결재선' },
-            { key: 'approval-delegate', label: '대리결재선' },
-            { key: 'approval-final',    label: '전결자지정' },
-          ],
-        },
-        { key: 'doc',   label: '결재문서', expanded: approvalExpanded.value.doc },
-        { key: 'inbox', label: '상신함',   expanded: approvalExpanded.value.inbox },
-        { key: 'list',  label: '결재함',   expanded: approvalExpanded.value.list },
-      ],
-    },
-    {
-      key: 'analytics', label: '시각화', icon: 'lnb-finance',
-      submenu: [
-        {
-          key: 'hr-data', label: '인사데이터',
-          expanded: analyticsExpanded.value['hr-data'],
-          children: [
-            { key: 'hr-headcount', label: '인력구성' },
-            { key: 'hr-turnover',  label: '이직률' },
-            { key: 'hr-age',       label: '연령및근속연수' },
-            { key: 'hr-position',  label: '직무별분포' },
-            { key: 'hr-diversity', label: '다양성지표' },
-          ],
-        },
-        { key: 'recruit-data', label: '채용데이터', expanded: analyticsExpanded.value['recruit-data'] },
-      ],
-    },
-    {
-      key: 'mail', label: '메일', icon: 'lnb-mail', notificationDot: true,
-      submenu: [
-        {
-          key: 'box', label: '메일함',
-          expanded: mailExpanded.value.box,
-          children: [
-            { key: 'mail-write',  label: '편지쓰기' },
-            { key: 'mail-inbox',  label: '받은편지함' },
-            { key: 'mail-sent',   label: '보낸편지함' },
-            { key: 'mail-draft',  label: '임시보관함' },
-            { key: 'mail-outbox', label: '보낼편지함' },
-            { key: 'mail-spam',   label: '스팸편지함' },
-            { key: 'mail-trash',  label: '휴지통' },
-          ],
-        },
-      ],
-    },
-    {
-      key: 'bookmark', label: '즐겨찾기', icon: 'lnb-bookmark-add',
-      submenu: [
-        {
-          key: 'list', label: '즐겨찾기 목록',
-          expanded: bookmarkExpanded.value.list,
-          children: [
-            { key: 'bookmark-empty', label: '(등록된 즐겨찾기 없음)' },
-          ],
-        },
-      ],
-    },
-    {
-      key: 'bento', label: '전체보기', icon: 'lnb-bento',
-      submenu: [
-        {
-          key: 'all', label: '전체 메뉴',
-          expanded: bentoExpanded.value.all,
-          children: [
-            { key: 'bento-all', label: '전체 메뉴 트리' },
-          ],
-        },
-      ],
-    },
-    // ★ 시스템관리(설정) — 1depth 맨 하단 배치. 클릭 시 submenu 패널이 메타·권한·자료실 트리로 전환.
-    {
-      key: 'settings',
-      label: '시스템관리',
-      icon: 'lnb-settings',
-      submenu: [
-        {
-          key: 'meta',
-          label: '메타관리',
-          expanded: settingsExpanded.value.meta,
-          children: [
-            // ★ (2026-06-11, dspark): 메타관리 LNB 순서 = AS-IS 개발 및 수정작업(SYS_DEV) active 순서
-            //   (SD_OBJ → SD_MSG → SD_ENT → SD_MSG1 → SD_SQL). 공통코드(CCD)는 시스템환경(SYS_ENV)으로 이동.
-            { key: 'AUT0030',  label: '오브젝트 관리',    active: current === 'AUT0030' },
-            { key: 'IST0030',  label: '메시지 관리',      active: current === 'IST0030' },
-            { key: 'IST0020',  label: '엔터티 관리',      active: current === 'IST0020' },
-            { key: 'IST0050',  label: '서비스 관리',      active: current === 'IST0050' },
-            { key: 'IST0010',  label: 'SQL 관리',         active: current === 'IST0010' },
-          ],
-        },
-        {
-          // ★ (2026-06-11, dspark): AS-IS 「사용자와 접근제어」(SYS_ACCESS) active 순서 정합 (frm_menu seq).
-          //   사용자(10) → 메뉴(13) → 권한기준(15) → 사용자그룹(20) → 권한(25) → 외부사용자(30) → 조직권한(60).
-          key: 'auth',
-          label: '사용자와 접근제어',
-          expanded: settingsExpanded.value.auth,
-          children: [
-            { key: 'AUT0010', label: '사용자 관리',     active: current === 'AUT0010' },
-            { key: 'AUT0050', label: '메뉴 관리',       active: current === 'AUT0050' },
-            { key: 'AUT0070', label: '권한기준 관리',   active: current === 'AUT0070' },
-            { key: 'AUT0020', label: '사용자그룹 관리', active: current === 'AUT0020' },
-            { key: 'AUT0040', label: '권한 관리',       active: current === 'AUT0040' },
-            { key: 'AUT0100', label: '외부사용자 관리', active: current === 'AUT0100' },
-            { key: 'AUT0060', label: '조직권한 관리',   active: current === 'AUT0060' },
-          ],
-        },
-        {
-          // ★ (2026-06-11, dspark): 시스템환경(SYS_ENV) 그룹 신설 — TO-BE 개발 필수 항목만 우선 추가.
-          //   AS-IS active 순서: 인사영역(1)·단위업무(2)·공통코드(3)·옵션(4)·…·업무기준(8)·MAX값(9).
-          //   필수 5: 공통코드(전 콤보)·옵션관리/업무기준관리(기준 프레임워크, AUT0070 엔진)·인사영역(COMPANY_CD)·MAX값(채번).
-          //   ⚠️ 미구현(Placeholder). "두 얼굴"(런타임 읽기=envelope) 주의 — 착수 전 AS-IS 분석.
-          key: 'sysenv',
-          label: '시스템환경',
-          expanded: settingsExpanded.value.sysenv,
-          children: [
-            { key: 'CCD0040', label: '인사영역관리',     active: current === 'CCD0040' },
-            { key: 'CCD0080', label: '단위업무관리',     active: current === 'CCD0080' },
-            { key: 'CCD0010', label: '공통코드관리',     active: current === 'CCD0010' },
-            { key: 'CCD0050', label: '옵션관리',         active: current === 'CCD0050' },
-            { key: 'CCD0030', label: '레지스트리관리',   active: current === 'CCD0030' },
-            { key: 'CCD0220', label: '업무기준설정관리', active: current === 'CCD0220' },
-            { key: 'CCD0020', label: '업무기준관리',     active: current === 'CCD0020' },
-            { key: 'CCD0070', label: 'MAX값관리',        active: current === 'CCD0070' },
-          ],
-        },
-        {
-          key: 'pds',
-          label: '자료실',
-          expanded: settingsExpanded.value.pds,
-          children: [
-            { key: 'FRM0090', label: '파일자료실', active: current === 'FRM0090' },
-          ],
-        },
-        {
-          key: 'env',
-          label: '환경설정',
-          expanded: settingsExpanded.value.env,
-          children: [
-            { key: 'SETTINGS',   label: '테마·환경',  active: current === 'SETTINGS' },
-            { key: 'COMPONENTS', label: '컴포넌트',   active: current === 'COMPONENTS' },
-          ],
-        },
-        // ★ (2026-06-02, dspark): Playground(dev) — 환경설정 바로 아래. Grid 카탈로그 단일.
-        {
-          key: 'playground',
-          label: 'Playground (dev)',
-          expanded: settingsExpanded.value.playground,
-          children: [
-            { key: 'DevGridDocs', label: 'Grid 개발자 매뉴얼', active: current === 'DevGridDocs' },
-            { key: 'DevGridGallery', label: 'Grid 카탈로그', active: current === 'DevGridGallery' },
-            { key: 'DevTestGridPage', label: 'Grid 테스트 페이지', active: current === 'DevTestGridPage' },
-            { key: 'DevSeasonMenuDemo', label: '시즌메뉴 데모', active: current === 'DevSeasonMenuDemo' },
-          ],
-        },
-      ],
-    },
-  ];
-});
-
-function onClick1depth(item) {
-  activeKey.value = item.key;
-  if (item.key === 'place') {
-    router.push({ name: 'Dashboard' });
-  }
-}
-
-// 카테고리(1depth key) → 해당 expanded ref 매핑
-const EXPANDED_REFS = {
-  planning: planningExpanded,
-  operation: operationExpanded,
-  performance: performanceExpanded,
-  compensation: compensationExpanded,
-  approval: approvalExpanded,
-  analytics: analyticsExpanded,
-  mail: mailExpanded,
-  bookmark: bookmarkExpanded,
-  bento: bentoExpanded,
-  settings: settingsExpanded,
-};
-
-function onClick2depth(parent, group) {
-  const targetState = EXPANDED_REFS[parent.key];
-  if (!targetState) return;
-  targetState.value = { ...targetState.value, [group.key]: !targetState.value[group.key] };
-}
-
-function onClick3depth(parent, _group, child) {
-  if (parent.key === 'settings' && child?.key) {
-    if (child.key !== route.name) router.push({ name: child.key });
-    return;
-  }
-  // 타 카테고리 — 점진 활성화 대상
-  ElMessage.info(`${child.label} — 준비 중`);
-}
-
-// 화면 높이 추적 (InLNBSubmenu 의 height prop = px number)
-const viewportH = ref(window.innerHeight);
-function onResize() { viewportH.value = window.innerHeight; }
-onMounted(() => window.addEventListener('resize', onResize));
-onUnmounted(() => window.removeEventListener('resize', onResize));
-
-const displayName = computed(() => auth.loginId || auth.empId || 'user');
-const currentTitle = computed(() => route.meta?.title || '');
-
-// ★ (2026-06-15, dspark): 상단바 권한(역할) 콤보 — AS-IS 헤더 역할 셀렉터 정합.
-//   GET /api/admin/access/my-auths 로 현재 사용자 보유 권한 조회 → 콤보 표시.
-//   ⚠️ G5: TO-BE LNB 는 코드 정의라 선택해도 메뉴 자동 변경 X (현재 표시·선택값 보관까지).
+// ── 권한(역할) 콤보 — my-auths. 선택 권한명(authItemName) 이 메뉴 필터 파라미터(auth_item). ──
 const myAuths = ref([]);
 const selectedAuthId = computed({
   get: () => auth.selectedAuthId,
   set: (v) => { auth.selectedAuthId = v; },
 });
+const selectedAuthName = computed(() => {
+  const a = myAuths.value.find((x) => String(x.authItemId) === String(auth.selectedAuthId));
+  return a ? a.authItemName : '';
+});
+
+// ── 시스템관리(하드코딩 최하단) 2depth 그룹 펼침 상태 ──
+const settingsExpanded = ref({ meta: true, auth: false, sysenv: false, pds: false, env: false, playground: false });
+
+// ── 1depth 활성 키 ──
+const activeKey = ref('place');
+function syncActiveKey() {
+  if (ADMIN_OBJECT_IDS.has(route.name)) activeKey.value = 'settings';
+}
+syncActiveKey();
+watch(() => route.name, syncActiveKey);
+watch(() => route.meta?.menuId, (m) => menu.setCurrentMenu(m || ''), { immediate: true });
+
+// ── collapsed (fixed rail) — localStorage persist ──
+const COLLAPSED_KEY = 'insait.lnb.collapsed';
+const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === '1');
+function setCollapsed(next) { collapsed.value = next; localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); }
+function onCollapse() { setCollapsed(true); }
+function onExpand() { setCollapsed(false); }
+
+// ── 서버 rail → InLNBSubmenu items (submenu 는 store subtrees 에서 lazy, expanded/active 주입) ──
+const serverItems = computed(() => menu.rail.map((cat) => ({
+  key: cat.key,
+  label: cat.label,
+  icon: cat.icon,
+  submenu: (menu.subtrees[cat.key] || []).map((g) => ({
+    key: g.key,
+    label: g.label,
+    expanded: !!menu.expanded[g.key],
+    children: (g.children || []).map((c) => ({
+      key: c.key, label: c.label, objectId: c.objectId, active: c.objectId === route.name,
+    })),
+  })),
+})));
+
+// ── 시스템관리 노드(최하단 고정) ──
+const settingsItem = computed(() => buildSettingsItem(route.name, settingsExpanded.value));
+
+// ── 최종 items = [스마트플레이스(고정), ...서버 업무메뉴, 시스템관리(고정 최하단)] ──
+const items = computed(() => [{ ...PLACE_ITEM }, ...serverItems.value, settingsItem.value]);
+
+// ── collapsed rail items (동일 소스) ──
+const fixedItems = computed(() => items.value.map((it) => ({
+  key: it.key, label: it.label, icon: it.icon, notificationDot: it.notificationDot,
+  active: it.key === activeKey.value,
+})));
+
+// ── 핸들러 ──
+async function onClick1depth(item) {
+  activeKey.value = item.key;
+  if (item.key === 'place') { router.push({ name: 'Dashboard' }); return; }
+  if (item.key !== 'settings') await menu.ensureSubtree(item.key);
+}
+function onFixedClickItem(item) {
+  activeKey.value = item.key;
+  setCollapsed(false);
+  if (item.key === 'place') { router.push({ name: 'Dashboard' }); return; }
+  if (item.key !== 'settings') menu.ensureSubtree(item.key);
+}
+function onClick2depth(parent, group) {
+  if (parent.key === 'settings') {
+    settingsExpanded.value = { ...settingsExpanded.value, [group.key]: !settingsExpanded.value[group.key] };
+  } else {
+    menu.toggleGroup(group.key);
+  }
+}
+function onClick3depth(parent, _group, child) {
+  if (parent.key === 'settings') {
+    if (child?.key && child.key !== route.name) router.push({ name: child.key });
+    return;
+  }
+  // 서버 업무메뉴 — object_id 가 insait 라우트로 존재하면 이동, 없으면 준비 중(화면 미구현)
+  const rn = child?.objectId;
+  if (rn && router.hasRoute(rn)) {
+    if (rn !== route.name) router.push({ name: rn });
+  } else {
+    ElMessage.info(`${child?.label || ''} — 준비 중`);
+  }
+}
+
+// ── viewport 높이 추적 (LNB height prop) ──
+const viewportH = ref(window.innerHeight);
+function onResize() { viewportH.value = window.innerHeight; }
+
+const displayName = computed(() => auth.loginId || auth.empId || 'user');
+const currentTitle = computed(() => route.meta?.title || '');
+
+// ── rail 로드 (권한명 기준). admin 화면이 아니면 첫 업무 카테고리 자동 선택. ──
+async function reloadRail() {
+  if (menu.loaded && menu.authItemName === selectedAuthName.value) return; // 동일 권한 중복 로드 방지
+  await menu.loadRail(selectedAuthName.value);
+  if (!ADMIN_OBJECT_IDS.has(route.name) && menu.rail.length) {
+    activeKey.value = menu.rail[0].key;
+    await menu.ensureSubtree(menu.rail[0].key);
+  }
+}
 onMounted(async () => {
+  window.addEventListener('resize', onResize);
   if (!auth.isLoggedIn) return;
   try {
     const list = await adminApi.access.myAuths();
     myAuths.value = Array.isArray(list) ? list : [];
     const ids = myAuths.value.map((a) => String(a.authItemId));
-    // 저장된 선택값이 목록에 없으면(또는 비어있으면) 첫 항목으로 기본 설정
     if (!auth.selectedAuthId || !ids.includes(String(auth.selectedAuthId))) {
       auth.selectedAuthId = ids.length ? ids[0] : '';
     }
   } catch {
     myAuths.value = []; // 권한 조회 실패 시 콤보 비표시
   }
+  await reloadRail();
+});
+onUnmounted(() => window.removeEventListener('resize', onResize));
+
+// 권한(역할) 변경 → rail 재조회 (메뉴 권한 필터 반영 — AS-IS 정합)
+watch(selectedAuthName, async (name, old) => {
+  if (name && name !== old) await reloadRail();
 });
 </script>
 

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import InCompanyLogo from '@/components/ui/InCompanyLogo.vue';
+import { ICON_REGISTRY } from '@/assets/icons/registry';
 // ★ (2026-06-16, dspark): toggle 전용 chevron('<'). open='<'(접기) / fixed 일 때 rotate(180)='>'(펼치기).
 //   design-system chevron-left 대신 여백 0 전용 SVG (16px 버튼서 정확한 크기·찌부 없음).
 import LnbToggleChevron from '@/assets/icons/lnb-toggle-chevron.svg';
@@ -112,6 +113,12 @@ function onItemClick(it, idx) {
   emit('update:activeKey', it.key);
   emit('click-item', it, idx);
 }
+
+// ★ (2026-06-16, dspark): 동적 메뉴 지원 — item.icon(ICON_REGISTRY 키) 우선, 없으면 key 기반 iconMap.
+//   AS-IS rail(server menu_id 키)은 iconMap 에 없으므로 icon 필드로 해석.
+function iconSrc(it) {
+  return (it.icon && ICON_REGISTRY[it.icon]) || iconMap[it.key] || ICON_REGISTRY['lnb-bento'];
+}
 </script>
 
 <template>
@@ -141,7 +148,7 @@ function onItemClick(it, idx) {
           @click="onItemClick(it, idx)"
         >
           <span class="in-lnb__icon-box">
-            <img :src="iconMap[it.key]" :alt="it.label || it.key" class="in-lnb__icon" />
+            <img :src="iconSrc(it)" :alt="it.label || it.key" class="in-lnb__icon" />
             <span v-if="it.notificationDot" class="in-lnb__item-dot" aria-hidden="true"></span>
           </span>
         </button>
@@ -174,7 +181,7 @@ function onItemClick(it, idx) {
           <span class="in-lnb__title-label">{{ activeItem.label }}</span>
           <span class="in-lnb__title-icon">
             <img
-              :src="iconMap[activeItem.key]"
+              :src="iconSrc(activeItem)"
               :alt="activeItem.label"
               class="in-lnb__title-svg"
             />

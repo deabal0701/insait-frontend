@@ -243,3 +243,104 @@ export function normalizeFrmMenuRows(rows) {
   };
   return sortRec(roots);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ★ (2026-06-16, dspark): 동적 LNB — AS-IS envelope 메뉴(AUT0050_00_R06 + GNB0001_00_R01)
+//   결과를 InLNBSubmenu items shape 으로 변환. 사용자 지시(2026-06-16): "AS-IS 동일 방식 조회".
+//   rail = 서버 권한필터 카테고리, 시스템관리(SYS_ADMIN)는 하드코딩 최하단 고정.
+// ════════════════════════════════════════════════════════════════════════════
+
+// AS-IS rail 아이콘코드(icon_default = shape_0N) → Figma LNB 아이콘(ICON_REGISTRY 키) 매핑.
+// 운영 동작 우선의 임시 매핑 — 추후 카테고리별 정합 아이콘 확정 대상.
+const SHAPE_TO_LNB = {
+  shape_01: 'lnb-people', shape_02: 'lnb-demography', shape_03: 'lnb-finance',
+  shape_04: 'lnb-bookmark-add', shape_05: 'lnb-analytics', shape_06: 'lnb-cases',
+  shape_07: 'lnb-inventory', shape_08: 'lnb-mail',
+};
+
+/** AUT0050_00_R06 rail 행 → 1depth 카테고리(submenu 는 lazy, 클릭 시 GNB0001_00_R01 로 채움).
+ *  ★ 서버 '시스템관리'(레거시 메뉴)는 제외 — insait 실화면을 가리키는 하드코딩 시스템관리(최하단)로 대체. */
+export function railRowsToItems(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter((r) => (r.menu_nm || '').trim() !== '시스템관리')
+    .map((r) => ({
+      key: r.menu_id,
+      label: r.menu_nm,
+      icon: SHAPE_TO_LNB[r.icon_default] || 'lnb-bento',
+      objectId: r.object_id || null,
+      source: 'h5on',
+    }));
+}
+
+/**
+ * GNB0001_00_R01 하위트리 행(lvl/leaf) → InLNBSubmenu submenu([{key,label,children:[{key,label,objectId}]}]).
+ *   lvl1 = 2depth 그룹, lvl2+ = 3depth 리프. lvl1 leaf(자식없음) → 자기 자신을 단일 리프로(클릭 네비).
+ */
+export function subtreeRowsToSubmenu(rows) {
+  const groups = [];
+  let cur = null;
+  for (const r of (Array.isArray(rows) ? rows : [])) {
+    const lvl = Number(r.lvl);
+    if (lvl <= 1) {
+      cur = { key: r.menu_id, label: r.menu_nm, objectId: r.object_id || null, _leaf: Number(r.leaf) === 1, children: [] };
+      groups.push(cur);
+    } else if (cur) {
+      cur.children.push({ key: r.menu_id, label: r.menu_nm, objectId: r.object_id || null });
+    }
+  }
+  for (const g of groups) {
+    if (g._leaf && g.children.length === 0) {
+      g.children.push({ key: g.key, label: g.label, objectId: g.objectId });
+    }
+    delete g._leaf;
+  }
+  return groups;
+}
+
+/** rail 맨 앞 고정 — 스마트 플레이스(대시보드). 업무 카테고리 아님(insait 프레임). */
+export const PLACE_ITEM = Object.freeze({ key: 'place', label: '스마트 플레이스', icon: 'lnb-search', submenu: [] });
+
+/** 시스템관리(설정) 하위 화면 OBJECT_ID 집합 — 라우트가 admin 화면인지 판정용. */
+export const ADMIN_OBJECT_IDS = new Set([
+  'AUT0030', 'IST0030', 'IST0020', 'IST0050', 'IST0010',
+  'AUT0010', 'AUT0050', 'AUT0070', 'AUT0020', 'AUT0040', 'AUT0100', 'AUT0060',
+  'CCD0040', 'CCD0080', 'CCD0010', 'CCD0050', 'CCD0030', 'CCD0220', 'CCD0020', 'CCD0070',
+  'FRM0090', 'SETTINGS', 'COMPONENTS',
+  'DevGridDocs', 'DevGridGallery', 'DevTestGridPage', 'DevSeasonMenuDemo',
+]);
+
+/**
+ * 시스템관리 하드코딩 노드(최하단 고정). routeName=OBJECT_ID=라우트명 → onClick3depth 에서 router.push.
+ * @param {string} current        현재 route.name (active 표시)
+ * @param {object} expanded       { meta, auth, sysenv, pds, env, playground } 펼침 상태
+ */
+export function buildSettingsItem(current, expanded = {}) {
+  const leaf = (key, label) => ({ key, label, active: current === key });
+  return {
+    key: 'settings', label: '시스템관리', icon: 'lnb-settings',
+    submenu: [
+      { key: 'meta', label: '메타관리', expanded: !!expanded.meta, children: [
+        leaf('AUT0030', '오브젝트 관리'), leaf('IST0030', '메시지 관리'), leaf('IST0020', '엔터티 관리'),
+        leaf('IST0050', '서비스 관리'), leaf('IST0010', 'SQL 관리'),
+      ] },
+      { key: 'auth', label: '사용자와 접근제어', expanded: !!expanded.auth, children: [
+        leaf('AUT0010', '사용자 관리'), leaf('AUT0050', '메뉴 관리'), leaf('AUT0070', '권한기준 관리'),
+        leaf('AUT0020', '사용자그룹 관리'), leaf('AUT0040', '권한 관리'), leaf('AUT0100', '외부사용자 관리'),
+        leaf('AUT0060', '조직권한 관리'),
+      ] },
+      { key: 'sysenv', label: '시스템환경', expanded: !!expanded.sysenv, children: [
+        leaf('CCD0040', '인사영역관리'), leaf('CCD0080', '단위업무관리'), leaf('CCD0010', '공통코드관리'),
+        leaf('CCD0050', '옵션관리'), leaf('CCD0030', '레지스트리관리'), leaf('CCD0220', '업무기준설정관리'),
+        leaf('CCD0020', '업무기준관리'), leaf('CCD0070', 'MAX값관리'),
+      ] },
+      { key: 'pds', label: '자료실', expanded: !!expanded.pds, children: [leaf('FRM0090', '파일자료실')] },
+      { key: 'env', label: '환경설정', expanded: !!expanded.env, children: [
+        leaf('SETTINGS', '테마·환경'), leaf('COMPONENTS', '컴포넌트'),
+      ] },
+      { key: 'playground', label: 'Playground (dev)', expanded: !!expanded.playground, children: [
+        leaf('DevGridDocs', 'Grid 개발자 매뉴얼'), leaf('DevGridGallery', 'Grid 카탈로그'),
+        leaf('DevTestGridPage', 'Grid 테스트 페이지'), leaf('DevSeasonMenuDemo', '시즌메뉴 데모'),
+      ] },
+    ],
+  };
+}
