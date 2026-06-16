@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import InCompanyLogo from '@/components/ui/InCompanyLogo.vue';
-import ArrowLeftIcon from '@/assets/icons/arrow-left.svg';
+// ★ (2026-06-16, dspark): 접기 toggle 전용 chevron('<'). design-system chevron-left 는 24 viewBox 에
+//   여백 + preserveAspectRatio="none" 이라 16px 버튼서 작게/가로 찌부됐음 → 여백 0 전용 SVG 신설.
+import LnbToggleChevron from '@/assets/icons/lnb-toggle-chevron.svg';
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg';
 import NotificationsIcon from '@/assets/icons/notifications.svg';
 import PersonIcon from '@/assets/icons/person.svg';
@@ -193,7 +195,7 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
       aria-label="메뉴 접기"
       @click="emit('collapse')"
     >
-      <img :src="ArrowLeftIcon" alt="" class="in-lnb2__toggle-icon" />
+      <img :src="LnbToggleChevron" alt="" class="in-lnb2__toggle-icon" />
     </button>
   </aside>
 </template>
@@ -583,8 +585,8 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
 }
 
 .in-lnb2__toggle-icon {
-  width: 16px;
-  height: 16px;
+  width: 13px;                       /* ★ (2026-06-16, dspark): 전용 chevron(여백 0) — 16px 버튼 안에 딱 맞음 */
+  height: 20px;
   display: block;
   filter: brightness(0) invert(1);
 }

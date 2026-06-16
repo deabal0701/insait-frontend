@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import InCompanyLogo from '@/components/ui/InCompanyLogo.vue';
-import ArrowLeftIcon from '@/assets/icons/arrow-left.svg';
+// ★ (2026-06-16, dspark): toggle 전용 chevron('<'). open='<'(접기) / fixed 일 때 rotate(180)='>'(펼치기).
+//   design-system chevron-left 대신 여백 0 전용 SVG (16px 버튼서 정확한 크기·찌부 없음).
+import LnbToggleChevron from '@/assets/icons/lnb-toggle-chevron.svg';
 import PersonIcon from '@/assets/icons/person.svg';
 import NotificationsIcon from '@/assets/icons/notifications.svg';
 import LnbSearchIcon from '@/assets/icons/lnb-search.svg';
@@ -203,7 +205,7 @@ function onItemClick(it, idx) {
       @click="emit('toggle-accordion')"
     >
       <img
-        :src="ArrowLeftIcon"
+        :src="LnbToggleChevron"
         alt=""
         class="in-lnb__toggle-icon"
         :class="{ 'in-lnb__toggle-icon--flipped': accordion === 'fixed' }"
@@ -537,8 +539,8 @@ function onItemClick(it, idx) {
 }
 
 .in-lnb__toggle-icon {
-  width: 16px;
-  height: 16px;
+  width: 13px;                       /* ★ (2026-06-16, dspark): 전용 chevron(여백 0) — 16px 버튼 안에 딱 맞음 */
+  height: 20px;
   display: block;
   filter: brightness(0) invert(1);
 }

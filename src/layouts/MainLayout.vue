@@ -529,10 +529,25 @@ onMounted(async () => {
   width: 248px !important;          /* rail 50 + panel 182 + toggle 16 */
   min-width: 248px !important;
   max-width: 248px !important;
+  position: relative;               /* ★ (2026-06-16, dspark): absolute rail 오버레이 기준 */
 }
+/* ★ (2026-06-16, dspark): h5on 식 hover 오버레이 drawer.
+ *   rail 을 absolute(평소 50px 아이콘 전용)로 띄워 panel 을 밀지 않게 하고,
+ *   hover 시 rail 이 라벨까지 168px 로 펼쳐져 panel 위로 오버레이된다.
+ *   (이전: 50px icon-only 고정 + 라벨 display:none — h5on 식 drawer 미동작 원인) */
 .main-layout__lnb--open :deep(.in-lnb2__rail) {
-  flex: 0 0 50px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 50px;
+  z-index: 30;
+  overflow: hidden;
+  transition: width 160ms ease, box-shadow 160ms ease;
+}
+.main-layout__lnb--open :deep(.in-lnb2__rail:hover) {
+  width: 150px;                     /* 펼침 — 라벨 노출 (★ 2026-06-16 168→150 폭 축소) */
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.18);
 }
 /* ★ (2026-05-27, dspark): .in-lnb2__home 는 design-system default (--in-text-default
  *   #565656 회색 + 옅은 blue border-bottom) 그대로 유지. Figma 진본에서 home cell 만
@@ -542,20 +557,34 @@ onMounted(async () => {
   align-items: center;
   width: 100%;
 }
+.main-layout__lnb--open :deep(.in-lnb2__rail:hover .in-lnb2__cats) {
+  align-items: flex-start;
+  padding-left: 7px;
+}
 .main-layout__lnb--open :deep(.in-lnb2__1dep) {
   width: 100%;
   justify-content: center;
   gap: 0;
   padding: 0;
 }
+.main-layout__lnb--open :deep(.in-lnb2__rail:hover .in-lnb2__1dep) {
+  width: 134px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 6px;
+}
 .main-layout__lnb--open :deep(.in-lnb2__1dep-label) {
-  display: none;                    /* 라벨 hiding — icon-only rail */
+  display: none;                    /* 평소 숨김 — icon-only rail */
+}
+.main-layout__lnb--open :deep(.in-lnb2__rail:hover .in-lnb2__1dep-label) {
+  display: block;                   /* hover 시 라벨 노출 — h5on 정합 */
 }
 .main-layout__lnb--open :deep(.in-lnb2__profile) {
   width: 100%;
 }
 .main-layout__lnb--open :deep(.in-lnb2__panel) {
   flex: 0 0 182px;
+  margin-left: 50px;                /* ★ (2026-06-16, dspark): absolute rail(50) 공간 확보 */
 }
 
 /* ★ (2026-05-27, dspark): InLNB(fixed) collapsed — Figma 진본 정합.
