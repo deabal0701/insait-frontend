@@ -27,6 +27,9 @@ const props = defineProps({
   bodyHeight: { type: [Number, String], default: undefined },
   loading: { type: Boolean, default: false },
   contextMenuItems: { type: Array, default: () => [] },
+  // 공통 컬럼 헤더(필수* + ⋮메뉴) — WinGrid 기본값(true) 그대로 전달. 끄려면 :column-menu="false"
+  columnMenu: { type: Boolean, default: true },
+  columnMenuItems: { type: Array, default: undefined },
   // self-managed 모드 — 서비스 props (주면 조회·저장을 내부 처리). :data 와 배타.
   retrieveServiceId: { type: String, default: undefined },
   saveServiceId: { type: String, default: undefined },
@@ -46,7 +49,7 @@ const emit = defineEmits([
   'before-change', 'after-change',
   'editing-start', 'editing-finish',
   'selection-change', 'sort', 'filter', 'scroll-end',
-  'instance-ready', 'context-action',
+  'instance-ready', 'context-action', 'column-menu-action',
 ]);
 
 const winRef = ref(null);
@@ -132,6 +135,8 @@ defineExpose({
     :loading="showLoading"
     :theme="themeObj"
     :context-menu-items="contextMenuItems"
+    :column-menu="columnMenu"
+    :column-menu-items="columnMenuItems"
     @click="(e) => emit('click', e)"
     @dblclick="(e) => emit('dblclick', e)"
     @check="(e) => emit('check', e)"
@@ -148,5 +153,6 @@ defineExpose({
     @scroll-end="(e) => emit('scroll-end', e)"
     @instance-ready="(e) => emit('instance-ready', e)"
     @context-action="(e) => emit('context-action', e)"
+    @column-menu-action="(e) => emit('column-menu-action', e)"
   />
 </template>

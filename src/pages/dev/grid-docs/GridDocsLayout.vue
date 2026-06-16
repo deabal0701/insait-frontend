@@ -29,14 +29,14 @@ import exExportPrint from './examples/16-export-print.vue?raw';
 import exPaging from './examples/17-paging.vue?raw';
 import exSortFilter from './examples/18-sort-filter.vue?raw';
 import exRowHeight from './examples/19-row-height.vue?raw';
-import exFigmaGrid from './examples/20-figma-resource-grid.vue?raw';
+import exStandardGrid from './examples/20-standard-grid.vue?raw';
 
 // ── 섹션 정의(좌측 네비 = group 으로 묶음) ─────────────────────────────
 const SECTIONS = [
   { id: 'getting-started', group: '시작하기', title: '시작하기', code: exGettingStarted,
     intro: 'InDataTable 한 줄 import 후 <code>:columns</code> 와 <code>:data</code> 만 주면 그리드가 그려진다. <code>options.rowHeaders:[\'rowNum\']</code> 는 IBSheet 의 행 번호(Seq) 대응.' },
-  { id: 'figma-grid', group: 'Figma 정합', title: 'Figma 학력 그리드', code: exFigmaGrid,
-    intro: 'Figma <code>DataDisplay/Table</code>(node 1241:62155) 시각 스펙 + 학력 입력 화면 컬럼구성. <strong>헤더 ⋮ 컬럼메뉴</strong>(오름차순/내림차순 정렬·왼쪽/오른쪽 고정·필터 — Figma verbatim)와 <strong>필수항목 빨강 *</strong>(헤더 별표 전용 — 셀 값은 일반색 유지)를 커스텀 헤더 렌더러로 보강. 셀 = 콤보(학력·졸업구분)·텍스트·날짜(datePicker)·단일 체크박스(최종학력여부)·행 체크박스. 테마 4색(<code>#FBFBFB·#E2E2E2·#13A9E9·#E33131</code>)은 Figma 진본과 hex 일치. <em>⋮ 글리프·아이콘은 placeholder(Material more_vert swap 은 폴리싱), 열 고정은 시연 생략.</em>' },
+  { id: 'standard-grid', group: '표준 그리드', title: '표준 입력 그리드', code: exStandardGrid,
+    intro: '디자인 시스템 표준 테이블 형태(헤더 <code>#FBFBFB</code>·보더 <code>#E2E2E2</code>·brand <code>#13A9E9</code>·필수 <code>#E33131</code>). <strong>헤더 우측 ⋮ 컬럼메뉴</strong>(오름차순/내림차순 정렬·왼쪽/오른쪽 고정·필터)와 <strong>필수항목 빨강 *</strong> 는 <code>WinGrid</code> <strong>내장</strong>이라 화면 코드엔 렌더러가 없다 — <code>columns</code> 에 <code>required:true</code> 만 주면 자동 적용(<strong>모든 그리드 공통 형태</strong>). 단일 Y/N 체크박스 셀은 <code>cellType:\'checkbox\'</code> 한 줄. 헤더 타이틀 중앙정렬·⋮ 우측 배치. 끄려면 <code>:column-menu="false"</code>. (예: 학력 입력)' },
   { id: 'columns-format', group: '컬럼', title: '정렬·너비·포맷', code: exColumnsFormat,
     intro: '<code>align</code>/<code>width</code> 와 숫자·날짜 포맷. <code>format</code> 키(<code>Integer·KrwAmount·Ymd</code> 등)는 IBSheet <code>Format</code> 문자열 대응 — <code>@win/grid</code> 의 formatRegistry 가 변환한다.' },
   { id: 'combo', group: '컬럼', title: '콤보 셀', code: exCombo,
@@ -73,7 +73,7 @@ const SECTIONS = [
     intro: 'IBSheet <code>OnClick/OnChange</code> 등 대응. tui-grid 이벤트를 kebab-case emit 으로 전달. (셀 클릭/더블클릭/변경 로그)' },
 ];
 
-const GROUPS = ['시작하기', 'Figma 정합', '컬럼', '편집·저장', '렌더링', '구조', '조회·출력', '이벤트'];
+const GROUPS = ['시작하기', '표준 그리드', '컬럼', '편집·저장', '렌더링', '구조', '조회·출력', '이벤트'];
 const EXTRA_NAV = [
   { id: 'api', label: 'API 레퍼런스' },
   { id: 'ibsheet-map', label: 'IBSheet ↔ tui-grid 대응표' },
