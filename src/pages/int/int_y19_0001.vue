@@ -36,9 +36,10 @@ function todayYmd() {
 }
 const baseYmd = ref(todayYmd());
 
-// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회/신규 행 biz_cd 연결).
+// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회 biz_cd 필터 / 신규 행 int_biz_id 연결).
 const selBizCd = ref('');
 const selBizNm = ref('');
+const selIntBizId = ref('');   // 상위 사업장 PK — 디테일 저장 FK(INT_Y08_BIZ_ORG.INT_BIZ_ID, biz_cd 아님)
 
 // DATE 정규화(공통) — 조회 "2020-01-01 00:00:00.0"/8자리 → 그리드 YYYY-MM-DD(datePicker 파싱) / 저장 YYYYMMDD.
 const DATE_COLS = ['sta_ymd', 'end_ymd'];
@@ -102,16 +103,14 @@ const columns = [
   { name: 'cc_resi_tax', header: '주민세 계정코드', width: 120, editor: 'text' },
 ];
 
-// 디테일 — AS-IS DataGrid mySheet2 (ME_INT0001_03) 상위조직. PK·biz_cd 숨김.
-//   org_cd/org_nm 은 현재 편집 텍스트(조직 picker 는 후속 — TODO).
+// 디테일 — 사업장조직(INT_Y08_BIZ_ORG). 실 테이블 컬럼 = INT_BIZ_ORG_ID(PK)·INT_BIZ_ID(상위 사업장 FK)·ORG_CD 뿐.
+//   ★ (2026-06-17, dspark) sta_ymd/end_ymd/note/biz_cd 는 테이블에 없어 제거 — AS-IS 디테일 조회 ORA-00904("END_YMD") phantom 원인.
+//     저장 키 = int_biz_id. org_nm 은 표시용(조직 마스터 조인/picker 는 후속 — TODO).
 const detailColumns = [
   { name: 'int_biz_org_id', header: 'int_biz_org_id', hidden: true },
-  { name: 'biz_cd', header: 'biz_cd', hidden: true },
-  { name: 'org_cd', header: '조직코드', width: 140, align: 'center', editor: 'text' },
-  { name: 'org_nm', header: '조직명', width: 220, editor: 'text' },
-  { name: 'sta_ymd', header: '시작일', width: 120, align: 'center', format: 'Ymd', editor: DATE_EDITOR },
-  { name: 'end_ymd', header: '종료일', width: 120, align: 'center', format: 'Ymd', editor: DATE_EDITOR },
-  { name: 'note', header: '비고', width: 240, editor: 'text' },
+  { name: 'int_biz_id', header: 'int_biz_id', hidden: true },
+  { name: 'org_cd', header: '조직코드', width: 160, align: 'center', editor: 'text' },
+  { name: 'org_nm', header: '조직명', width: 260, editor: 'text' },
 ];
 
 // ── 미저장 변경 가드 ──
@@ -131,7 +130,7 @@ async function onRetrieve() {
     const rows = await grid.value.retrieve({
       ME_INT0001_01: [{ company_cd: auth.companyCd || '01', base_ymd: baseYmd.value }],
     });
-    selBizCd.value = ''; selBizNm.value = '';   // 재조회 시 선택·디테일 초기화
+    selBizCd.value = ''; selBizNm.value = ''; selIntBizId.value = '';   // 재조회 시 선택·디테일 초기화
     detail.value?.clearRows?.();
     toast.success?.(`조회 ${rows?.length || 0}건`);
   } catch (e) {
@@ -166,6 +165,7 @@ async function onMasterClick(e) {
   const row = g.getRow(e.rowKey) || {};
   selBizCd.value = row.biz_cd || '';
   selBizNm.value = row.biz_nm || '';
+  selIntBizId.value = row.int_biz_id || '';
   if (!selBizCd.value) { detail.value?.clearRows?.(); return; }   // 신규/미저장 행 — 디테일 비움
   try {
     await detail.value.retrieve({
@@ -179,10 +179,8 @@ async function onMasterClick(e) {
 // ── 디테일(상위조직) ──
 function onDetailAdd() {
   if (!selBizCd.value) { toast.info?.('사업장을 먼저 선택하세요'); return; }
-  detail.value.addRow({
-    int_biz_org_id: '', biz_cd: selBizCd.value, org_cd: '', org_nm: '',
-    sta_ymd: dayjs().format('YYYY-MM-DD'), end_ymd: '9999-12-31', note: '',
-  });
+  // 실 테이블 컬럼만 — 저장 키는 int_biz_id(상위 사업장 FK). sta/end_ymd·note 없음.
+  detail.value.addRow({ int_biz_org_id: '', int_biz_id: selIntBizId.value, org_cd: '', org_nm: '' });
 }
 function onDetailDelete() {
   const removed = detail.value.markDeleteChecked();
