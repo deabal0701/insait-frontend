@@ -1,6 +1,7 @@
 // ★ (2026-05-27, dspark): 인증 후 메인 라우트 — MainLayout (InLNB + content) 안에
 //   Dashboard + 도메인 children 을 nesting. 도메인별 children 은 각 도메인 모듈에서 import.
 import adminRoutes from './admin';
+import orgRoutes from './org';
 
 const routes = [
   {
@@ -15,6 +16,8 @@ const routes = [
         meta: { requiresAuth: true, title: '대시보드' },
       },
       ...adminRoutes,
+      // ★ (2026-06-17, dspark): 업무도메인 — 조직(ORM). route name=OBJECT_ID 로 동적 LNB 자동 연결.
+      ...orgRoutes,
       // ★ (2026-06-02, dspark): Grid 기능 카탈로그 — dev 테스트(IBSheet 형태별 tui-grid + 실서비스 TST0002).
       //   LNB 시스템관리 > Playground. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
       //   ★ 별도 Playground 허브·Grid 페이지 폐지 → 카탈로그 단일화 (실서비스 그리드는 카탈로그 탭으로 통합).
