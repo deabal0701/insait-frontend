@@ -41,6 +41,10 @@ const props = defineProps({
   softDelete: { type: Boolean, default: false },
   reloadAfterSave: { type: Boolean, default: true },
   autoRetrieve: { type: Boolean, default: false },
+  // self-managed 조회 응답 각 행 정규화 훅(그리드 바인딩 전). 예: DATE→그리드 표시형식.
+  rowMapper: { type: Function, default: undefined },
+  // self-managed 저장 전 각 dirty 행 변환 훅(rowMapper 대칭). 예: 그리드 DATE→저장 전문형식(YYYYMMDD).
+  saveMapper: { type: Function, default: undefined },
 });
 
 const emit = defineEmits([
@@ -86,6 +90,8 @@ const entity = useEntityGrid({
   softDelete: props.softDelete,
   reloadAfterSave: props.reloadAfterSave,
   header: props.header,
+  rowMapper: props.rowMapper,
+  saveMapper: props.saveMapper,
 });
 
 // 단일 데이터 소스: self-managed → entity.rows / controlled → props.data. WinGrid :data 가 주입.
@@ -165,3 +171,13 @@ defineExpose({
     @column-menu-action="(e) => emit('column-menu-action', e)"
   />
 </template>
+
+<style>
+/* ★ (2026-06-17, dspark): 그리드 외곽선 — 상단만 브랜드색 강조, 좌측 세로선은 중립색으로.
+   tui-grid theme(outline.border=브랜드색)가 좌·상 두 면을 칠하던 것을 좌측만 교정(사용자 요청:
+   "상단만 파랑, 좌/우 불필요"). 우·하단은 원래 중립. 전역(non-scoped) — 셀렉터가 tui-grid
+   고유 클래스라 충돌 없음. InDataTable = 앱 그리드 단일 창구라 전 그리드 일괄 적용. */
+.tui-grid-border-line-left {
+  border-left-color: var(--in-border-default, #e2e2e2) !important;
+}
+</style>

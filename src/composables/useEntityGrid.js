@@ -31,6 +31,10 @@ import { extractDirty } from '@win/grid';
  * @param {boolean} [config.reloadAfterSave=true] - 저장 성공 후 자동 재조회
  * @param {object}  [config.header]              - HEADER 옵션 ({ objectId, actionType, companyCd, localeCd }).
  *                                                  serviceId 접두와 objectId 가 다른 서비스(예: INT_*_S01 / objectId=ORM9999) 필수
+ * @param {(row:object)=>object} [config.rowMapper] - 조회 응답 각 행 정규화 훅. 그리드 바인딩 전 적용.
+ *                                                  예: DATE 컬럼("2020-01-01 00:00:00.0")→그리드 표시·편집용(YYYY-MM-DD).
+ * @param {(row:object)=>object} [config.saveMapper] - 저장 전 각 dirty 행 변환 훅(rowMapper 대칭).
+ *                                                  예: 그리드 DATE(YYYY-MM-DD)→저장 전문 형식(YYYYMMDD).
  */
 export function useEntityGrid(config = {}) {
   const {
@@ -44,6 +48,8 @@ export function useEntityGrid(config = {}) {
     softDelete = false,
     reloadAfterSave = true,
     header = {},
+    rowMapper,
+    saveMapper,
   } = config;
 
   const { call, loading, error } = useService();
@@ -65,7 +71,8 @@ export function useEntityGrid(config = {}) {
   async function retrieve(body = {}, options = {}) {
     lastRetrieveBody = body || {};
     const resp = await call(retrieveServiceId, lastRetrieveBody, { ...header, ...options });
-    rows.value = parseResponse(resp, retrieveSlot || slot);
+    const parsed = parseResponse(resp, retrieveSlot || slot) || [];
+    rows.value = typeof rowMapper === 'function' ? parsed.map(rowMapper) : parsed;
     return rows.value;
   }
 
@@ -90,7 +97,8 @@ export function useEntityGrid(config = {}) {
     dirtyCount.value = dirty.length;
     if (!dirty.length) return { skipped: true, dirty: [] };
 
-    const response = await call(saveServiceId, { [saveSlot || slot]: dirty }, { ...header });
+    const payload = typeof saveMapper === 'function' ? dirty.map(saveMapper) : dirty;
+    const response = await call(saveServiceId, { [saveSlot || slot]: payload }, { ...header });
 
     const g = grid();
     if (g && typeof g.clearModifiedData === 'function') g.clearModifiedData();

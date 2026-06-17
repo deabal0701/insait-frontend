@@ -1,6 +1,6 @@
 <script setup>
 /**
- * BizSiteManage — 사업장관리 (메뉴 OBJECT_ID = ORM9999 / AS-IS int_y19_0001.jsp)
+ * int_y19_0001 — 사업장관리 (AS-IS int_y19_0001.jsp / 메뉴 OBJECT_ID = ORM9999)
  *
  * ★ (2026-06-17, dspark): Phase 1 인사 비결재 도메인 첫 업무화면 (envelope 보존 호출).
  *   - 마스터 그리드(사업장 목록) 먼저. 상위조직 디테일 + 조직 picker 는 후속.
@@ -14,10 +14,11 @@
  * 신규 백엔드 0 — InDataTable self-managed 모드가 /serviceBroker.h5 envelope 를 내부 조립.
  */
 import { ref, onMounted } from 'vue';
+import dayjs from 'dayjs';
 import InDataTable from '@/components/ui/InDataTable.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InCard from '@/components/ui/InCard.vue';
-import InTextField from '@/components/ui/InTextField.vue';
+import InDatePicker from '@/components/ui/InDatePicker.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 
@@ -32,17 +33,43 @@ function todayYmd() {
 }
 const baseYmd = ref(todayYmd());
 
-const YN = [{ text: 'Y', value: 'Y' }, { text: 'N', value: 'N' }];
+// DATE 정규화 — 조회는 "2020-01-01 00:00:00.0"/8자리 혼재. 그리드는 YYYY-MM-DD(datePicker 가
+//   기존 셀값을 파싱하려면 구분자 필수 — 8자리 연속은 파싱 실패), 저장 전문은 YYYYMMDD(AS-IS 정합).
+const DATE_COLS = ['sta_ymd', 'end_ymd'];
+function toYmdDash(v) {            // 조회/표시·편집용 (YYYY-MM-DD)
+  if (v == null || v === '') return '';
+  const s = String(v).trim();
+  const iso = /^\d{8}$/.test(s) ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : s;
+  const d = dayjs(iso);
+  return d.isValid() ? d.format('YYYY-MM-DD') : s;
+}
+function toYmd8(v) {               // 저장 전문용 (YYYYMMDD)
+  if (v == null || v === '') return '';
+  const s = String(v).trim();
+  if (/^\d{8}$/.test(s)) return s;
+  const d = dayjs(s);
+  return d.isValid() ? d.format('YYYYMMDD') : s;
+}
+function mapRow(row) {             // 조회 → 그리드 (YYYY-MM-DD)
+  const out = { ...row };
+  DATE_COLS.forEach((k) => { out[k] = toYmdDash(row[k]); });
+  return out;
+}
+function mapSave(row) {            // 그리드 → 저장 전문 (YYYYMMDD)
+  const out = { ...row };
+  DATE_COLS.forEach((k) => { if (k in out) out[k] = toYmd8(out[k]); });
+  return out;
+}
+
+// tui-grid datePicker 에디터 — 구분자 형식(yyyy-MM-dd)이라야 기존 셀값을 파싱해 캘린더에 표시.
+const DATE_EDITOR = { type: 'datePicker', options: { format: 'yyyy-MM-dd' } };
 
 // AS-IS DataGrid mySheet1 (ME_INT0001_02) 27컬럼 1:1. PK·company_cd·종사업장일련번호는 숨김.
 const columns = [
   { name: 'int_biz_id', header: 'int_biz_id', hidden: true },
   { name: 'company_cd', header: 'company_cd', hidden: true },
-  {
-    name: 'mgr_biz_yn', header: '주사업장여부', width: 90, align: 'center',
-    editor: { type: 'select', options: { listItems: YN } },
-    formatter: ({ value }) => (value === 'Y' ? '☑' : '☐'),
-  },
+  // 주사업장여부 — 실제 체크박스 셀(Y/N 저장). cellType:'checkbox' → winGrid WinCheckboxCell.
+  { name: 'mgr_biz_yn', header: '주사업장여부', width: 90, align: 'center', cellType: 'checkbox' },
   { name: 'biz_cd', header: '사업장코드', width: 90, align: 'center', editor: 'text' },
   { name: 'biz_nm', header: '사업장명', width: 140, editor: 'text' },
   { name: 'tax_no', header: '사업자번호', width: 110, align: 'center', editor: 'text' },
@@ -64,8 +91,8 @@ const columns = [
   { name: 'org_nm', header: '담당자소속', width: 120, editor: 'text' },
   { name: 'charge_nm', header: '담당자', width: 100, align: 'center', editor: 'text' },
   { name: 'charge_tel_no', header: '담당자전화', width: 120, align: 'center', editor: 'text' },
-  { name: 'sta_ymd', header: '시작일', width: 100, align: 'center', editor: 'text' },
-  { name: 'end_ymd', header: '종료일', width: 100, align: 'center', editor: 'text' },
+  { name: 'sta_ymd', header: '시작일', width: 110, align: 'center', format: 'Ymd', editor: DATE_EDITOR },
+  { name: 'end_ymd', header: '종료일', width: 110, align: 'center', format: 'Ymd', editor: DATE_EDITOR },
   { name: 'cc_income_tax', header: '소득세 계정코드', width: 120, editor: 'text' },
   { name: 'cc_resi_tax', header: '주민세 계정코드', width: 120, editor: 'text' },
 ];
@@ -90,8 +117,8 @@ function onAdd() {
     mgr_biz_yn: 'N',
     biz_cd: '',
     biz_nm: '',
-    sta_ymd: todayYmd(),
-    end_ymd: '99991231',
+    sta_ymd: dayjs().format('YYYY-MM-DD'),
+    end_ymd: '9999-12-31',
   });
 }
 
@@ -128,13 +155,12 @@ onMounted(onRetrieve);
     <InCard class="biz__bar">
       <div class="biz__search">
         <label class="biz__label">기준일자</label>
-        <InTextField
+        <InDatePicker
           :model-value="baseYmd"
-          :show-label="false"
-          placeholder="YYYYMMDD"
+          hide-label
           class="biz__ymd"
-          @update:model-value="(v) => (baseYmd = v)"
-          @keyup.enter="onRetrieve"
+          @update:model-value="(v) => (baseYmd = v || '')"
+          @change="onRetrieve"
         />
         <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onRetrieve">
           조회
@@ -160,6 +186,8 @@ onMounted(onRetrieve);
         save-service-id="INT_Y19_0001_01_S01"
         slot-name="ME_INT0001_02"
         :header="{ objectId: 'ORM9999' }"
+        :row-mapper="mapRow"
+        :save-mapper="mapSave"
       />
     </section>
   </div>
