@@ -186,6 +186,7 @@ defineExpose({
   retrieve: entity.retrieve,
   save: entity.save,
   collectDirty: entity.collectDirty,
+  clearRows: entity.clear,
   rows: entity.rows,
   dirtyCount: entity.dirtyCount,
   loading: entity.loading,

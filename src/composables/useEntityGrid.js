@@ -123,5 +123,8 @@ export function useEntityGrid(config = {}) {
     return { skipped: false, dirty, response };
   }
 
-  return { rows, retrieve, save, collectDirty, loading, error, dirtyCount };
+  /** 행 비우기 — 마스터-디테일에서 마스터 신규/미선택 시 디테일 클리어용. */
+  function clear() { rows.value = []; }
+
+  return { rows, retrieve, save, collectDirty, clear, loading, error, dirtyCount };
 }
