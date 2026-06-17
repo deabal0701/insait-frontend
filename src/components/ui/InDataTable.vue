@@ -17,6 +17,7 @@ import { WinGrid } from '@win/grid';
 import { useEntityGrid } from '@/composables/useEntityGrid';
 import { useThemeStore } from '@/stores/theme';
 import { buildFigmaTheme } from '@/themes/tui-grid-figma';
+import { statusColumn, STATUS_FIELD } from '@/utils/gridRowStatus';
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -45,6 +46,12 @@ const props = defineProps({
   rowMapper: { type: Function, default: undefined },
   // self-managed 저장 전 각 dirty 행 변환 훅(rowMapper 대칭). 예: 그리드 DATE→저장 전문형식(YYYYMMDD).
   saveMapper: { type: Function, default: undefined },
+  // ★ 행 상태(신규/수정/삭제) 배지 컬럼 + soft-delete + 저장 시 sStatus 전송 — AS-IS IBSheet showStatus.
+  //   켜면 화면은 입력=신규, 셀편집=수정 자동 마킹. 삭제는 markDeleteChecked()(행 유지+삭제표시),
+  //   복원은 restoreChecked(). 저장 시 'D' 행이 삭제로 전송(useEntityGrid statusField). 화면 재작성 0.
+  showStatus: { type: Boolean, default: false },
+  statusHeader: { type: String, default: '상태' },
+  statusWidth: { type: Number, default: 64 },
 });
 
 const emit = defineEmits([
@@ -69,6 +76,47 @@ const themeObj = computed(() => {
 
 const selfManaged = computed(() => !!props.retrieveServiceId);
 
+// ★ (2026-06-17, dspark): show-status 시 상태 배지 컬럼을 맨 앞에 자동 주입(화면 컬럼 무수정).
+const effectiveColumns = computed(() => (props.showStatus
+  ? [statusColumn({ header: props.statusHeader, width: props.statusWidth }), ...props.columns]
+  : props.columns));
+
+// 행 상태 마킹 헬퍼 (show-status 전용). tui-grid 인스턴스로 getValue/setValue.
+function gi() { return winRef.value?.getInstance?.() || null; }
+function markEdited(ev) {
+  const g = gi();
+  if (!g) return;
+  const changes = Array.isArray(ev?.changes) ? ev.changes : (ev?.rowKey != null ? [ev] : []);
+  changes.forEach((c) => {
+    if (c.columnName === STATUS_FIELD) return;
+    const cur = g.getValue(c.rowKey, STATUS_FIELD);
+    if (cur !== 'I' && cur !== 'D') g.setValue(c.rowKey, STATUS_FIELD, 'U'); // 신규·삭제는 보존
+  });
+}
+function onWinAfterChange(e) {
+  if (props.showStatus) markEdited(e);
+  emit('after-change', e);
+}
+/** 체크 행 삭제 표시 — 실제 제거 X(신규행만 제거). 저장 시 'D' 가 삭제로 전송. */
+function markDeleteChecked() {
+  const g = gi();
+  if (!g) return [];
+  const checked = w()?.getCheckedRows?.() || [];
+  checked.forEach((r) => {
+    if (g.getValue(r.rowKey, STATUS_FIELD) === 'I') g.removeRow(r.rowKey);
+    else g.setValue(r.rowKey, STATUS_FIELD, 'D');
+  });
+  return checked;
+}
+/** 체크된 '삭제' 표시 행 복원. */
+function restoreChecked() {
+  const g = gi();
+  if (!g) return;
+  (w()?.getCheckedRows?.() || [])
+    .filter((r) => g.getValue(r.rowKey, STATUS_FIELD) === 'D')
+    .forEach((r) => g.setValue(r.rowKey, STATUS_FIELD, ''));
+}
+
 // ★ (2026-06-17, dspark): 컬럼 너비 드래그 리사이즈 = 앱 기본 ON (insa-IT 정책).
 //   tui-grid/winGrid 코어는 기본 OFF(중립) — 모든 앱 그리드가 매번 켜야 했음 → 단일 창구
 //   (InDataTable)에서 기본값 주입. 화면이 :options="{ columnOptions:{ resizable:false } }" 를
@@ -92,6 +140,7 @@ const entity = useEntityGrid({
   header: props.header,
   rowMapper: props.rowMapper,
   saveMapper: props.saveMapper,
+  statusField: props.showStatus ? STATUS_FIELD : undefined,
 });
 
 // 단일 데이터 소스: self-managed → entity.rows / controlled → props.data. WinGrid :data 가 주입.
@@ -108,7 +157,11 @@ onMounted(async () => {
 const w = () => winRef.value;
 function getInstance() { return w()?.getInstance() || null; }
 function rebuild() { return w()?.rebuild(); }
-function addRow(row, opts) { return w()?.addRow(row, opts); }
+function addRow(row, opts) {
+  // show-status 시 신규행을 '신규'(I)로 자동 마킹.
+  const r = props.showStatus ? { [STATUS_FIELD]: 'I', ...row } : row;
+  return w()?.addRow(r, opts);
+}
 function removeCheckedRows() { return w()?.removeCheckedRows() || []; }
 function getCheckedRows() { return w()?.getCheckedRows() || []; }
 function getModified() { return w()?.getModified() || { createdRows: [], updatedRows: [], deletedRows: [] }; }
@@ -127,6 +180,8 @@ defineExpose({
   getModified, getDirty, clearModified, focusCell,
   on, off,
   exportExcel, importExcel, printGrid,
+  // 행 상태(show-status) — soft-delete 표시 / 복원
+  markDeleteChecked, restoreChecked,
   // self-managed 단일 창구
   retrieve: entity.retrieve,
   save: entity.save,
@@ -141,7 +196,7 @@ defineExpose({
 <template>
   <WinGrid
     ref="winRef"
-    :columns="columns"
+    :columns="effectiveColumns"
     :data="gridData"
     :options="gridOptions"
     :row-key="rowKey"
@@ -159,7 +214,7 @@ defineExpose({
     @check-all="(e) => emit('check-all', e)"
     @uncheck-all="(e) => emit('uncheck-all', e)"
     @before-change="(e) => emit('before-change', e)"
-    @after-change="(e) => emit('after-change', e)"
+    @after-change="onWinAfterChange"
     @editing-start="(e) => emit('editing-start', e)"
     @editing-finish="(e) => emit('editing-finish', e)"
     @selection-change="(e) => emit('selection-change', e)"

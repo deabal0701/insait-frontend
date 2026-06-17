@@ -35,6 +35,9 @@ import { extractDirty } from '@win/grid';
  *                                                  예: DATE 컬럼("2020-01-01 00:00:00.0")→그리드 표시·편집용(YYYY-MM-DD).
  * @param {(row:object)=>object} [config.saveMapper] - 저장 전 각 dirty 행 변환 훅(rowMapper 대칭).
  *                                                  예: 그리드 DATE(YYYY-MM-DD)→저장 전문 형식(YYYYMMDD).
+ * @param {string} [config.statusField] - 표시용 상태 필드명(예: '_rowStatus'). 지정 시 저장에서
+ *                                        해당 필드='D' 행을 삭제(sStatus='D'+sDelete)로 격상 + 필드 제거.
+ *                                        (InDataTable :show-status 가 주입 — soft-delete 표시↔저장 연동)
  */
 export function useEntityGrid(config = {}) {
   const {
@@ -50,6 +53,7 @@ export function useEntityGrid(config = {}) {
     header = {},
     rowMapper,
     saveMapper,
+    statusField,
   } = config;
 
   const { call, loading, error } = useService();
@@ -97,7 +101,17 @@ export function useEntityGrid(config = {}) {
     dirtyCount.value = dirty.length;
     if (!dirty.length) return { skipped: true, dirty: [] };
 
-    const payload = typeof saveMapper === 'function' ? dirty.map(saveMapper) : dirty;
+    let payload = dirty;
+    // 상태필드(soft-delete) 격상 — 'D' 표시 행은 setValue 흔적 때문에 extractDirty 가 U 로 보지만 의도는 삭제.
+    if (statusField) {
+      payload = payload.map((row) => {
+        const out = { ...row };
+        if (out[statusField] === 'D') { out[statusKey] = 'D'; out.sDelete = 1; }
+        delete out[statusField];          // 표시 전용 헬퍼 — 서버 미전송.
+        return out;
+      });
+    }
+    if (typeof saveMapper === 'function') payload = payload.map(saveMapper);
     const response = await call(saveServiceId, { [saveSlot || slot]: payload }, { ...header });
 
     const g = grid();

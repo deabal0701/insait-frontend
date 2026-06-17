@@ -58,56 +58,10 @@ function mapRow(row) {             // 조회 → 그리드 (YYYY-MM-DD)
 function mapSave(row) {            // 그리드 → 저장 전문 (YYYYMMDD)
   const out = { ...row };
   DATE_COLS.forEach((k) => { if (k in out) out[k] = toYmd8(out[k]); });
-  // 상태(_rowStatus='D')는 삭제로 전송 — extractDirty 는 setValue 흔적 때문에 U 로 보지만 의도는 삭제.
-  if (out._rowStatus === 'D') { out.sStatus = 'D'; out.sDelete = 1; }
-  delete out._rowStatus;          // 표시 전용 헬퍼 필드 — 서버 미전송.
   return out;
 }
 
-// ── 행 상태(sStatus) 표시 — AS-IS IBSheet showStatus 정합. 표시값이 곧 저장 시 전송될 I/U/D.
-//   신규(I)/수정(U)/삭제(D). 삭제는 행을 실제 제거하지 않고 'D' 마킹(복원 가능) → 저장 시 D 전송.
-// 상태 배지(pill) — 연한 배경 + 색 테두리 + 색 글자 + 라운드. 디자인 토큰 hex 직접(raw DOM, white 테마).
-const STATUS_BADGE = {
-  I: { label: '신규', fg: '#1a7f37', bg: '#eaf7ee', bd: '#9bd6ad' },
-  U: { label: '수정', fg: '#13a9e9', bg: '#eaf6fd', bd: '#a8def4' },
-  D: { label: '삭제', fg: '#e33131', bg: '#fdecec', bd: '#f3b4b4' },
-};
-class RowStatusCell {
-  constructor(props) {
-    this.el = document.createElement('div');
-    this.el.style.cssText = 'display:flex;justify-content:center;align-items:center;height:100%;';
-    this.pill = document.createElement('span');
-    this.pill.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;'
-      + 'min-width:32px;height:20px;padding:0 8px;border-radius:5px;border:1px solid transparent;'
-      + 'font-size:11px;font-weight:600;line-height:1;box-sizing:border-box;';
-    this.el.appendChild(this.pill);
-    this.render(props);
-  }
-  render(props) {
-    const s = STATUS_BADGE[props.value];
-    this.pill.style.display = s ? 'inline-flex' : 'none';
-    if (!s) { this.pill.textContent = ''; return; }
-    this.pill.textContent = s.label;
-    this.pill.style.color = s.fg;
-    this.pill.style.background = s.bg;
-    this.pill.style.borderColor = s.bd;
-  }
-  getElement() { return this.el; }
-}
-
-function tuiGrid() { return grid.value?.getInstance?.() || null; }
-
-/** 셀 편집 시 행 상태 갱신 — 신규(I)·삭제(D)는 보존, 그 외 편집은 수정(U). */
-function onAfterChange(ev) {
-  const g = tuiGrid();
-  if (!g) return;
-  const changes = Array.isArray(ev?.changes) ? ev.changes : (ev?.rowKey != null ? [ev] : []);
-  changes.forEach((c) => {
-    if (c.columnName === '_rowStatus') return;
-    const cur = g.getValue(c.rowKey, '_rowStatus');
-    if (cur !== 'I' && cur !== 'D') g.setValue(c.rowKey, '_rowStatus', 'U');
-  });
-}
+// 행 상태(신규/수정/삭제) 표시·soft-delete·저장 전송은 InDataTable :show-status 가 내장 처리(공통).
 
 // tui-grid datePicker 에디터 — 구분자 형식(yyyy-MM-dd)이라야 기존 셀값을 파싱해 캘린더에 표시.
 const DATE_EDITOR = { type: 'datePicker', options: { format: 'yyyy-MM-dd' } };
@@ -116,8 +70,7 @@ const DATE_EDITOR = { type: 'datePicker', options: { format: 'yyyy-MM-dd' } };
 const columns = [
   { name: 'int_biz_id', header: 'int_biz_id', hidden: true },
   { name: 'company_cd', header: 'company_cd', hidden: true },
-  // 상태 — 신규/수정/삭제 표시(저장 시 전송될 sStatus). 편집 불가, 저장 전 mapSave 가 제거.
-  { name: '_rowStatus', header: '상태', width: 64, align: 'center', renderer: { type: RowStatusCell } },
+  // (상태 컬럼은 InDataTable :show-status 가 맨 앞에 자동 주입)
   // 주사업장여부 — 실제 체크박스 셀(Y/N 저장). cellType:'checkbox' → winGrid WinCheckboxCell.
   { name: 'mgr_biz_yn', header: '주사업장여부', width: 90, align: 'center', cellType: 'checkbox' },
   { name: 'biz_cd', header: '사업장코드', width: 90, align: 'center', editor: 'text' },
@@ -164,7 +117,6 @@ function onAdd() {
   grid.value.addRow({
     int_biz_id: '',
     company_cd: auth.companyCd || '01',
-    _rowStatus: 'I',
     mgr_biz_yn: 'N',
     biz_cd: '',
     biz_nm: '',
@@ -173,25 +125,15 @@ function onAdd() {
   });
 }
 
-/** 삭제 — 실제 제거 X. 기존행은 '삭제' 마킹(저장 시 D 전송), 신규행은 목록에서 제거(서버에 없던 것). */
+/** 삭제 — 체크 행을 '삭제' 표시(실제 제거 X). show-status 내장 처리. */
 function onDeleteChecked() {
-  const g = tuiGrid();
-  if (!g) return;
-  const checked = grid.value.getCheckedRows();
-  if (!checked.length) { toast.info?.('선택된 행이 없습니다'); return; }
-  checked.forEach((r) => {
-    if (g.getValue(r.rowKey, '_rowStatus') === 'I') g.removeRow(r.rowKey);
-    else g.setValue(r.rowKey, '_rowStatus', 'D');
-  });
+  const removed = grid.value.markDeleteChecked();
+  if (!removed.length) toast.info?.('선택된 행이 없습니다');
 }
 
-/** 복원 — '삭제' 마킹된 체크 행을 되돌림(상태 해제). */
+/** 복원 — '삭제' 표시된 체크 행 되돌림. */
 function onRestoreChecked() {
-  const g = tuiGrid();
-  if (!g) return;
-  grid.value.getCheckedRows()
-    .filter((r) => g.getValue(r.rowKey, '_rowStatus') === 'D')
-    .forEach((r) => g.setValue(r.rowKey, '_rowStatus', ''));
+  grid.value.restoreChecked();
 }
 
 /** 저장 — 변경분(I/U/D)만 batch 저장 후 재조회. */
@@ -255,7 +197,7 @@ onMounted(onRetrieve);
         :header="{ objectId: 'ORM9999' }"
         :row-mapper="mapRow"
         :save-mapper="mapSave"
-        @after-change="onAfterChange"
+        show-status
       />
     </section>
   </div>
