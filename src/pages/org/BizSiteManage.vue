@@ -155,7 +155,7 @@ onMounted(onRetrieve);
         ref="grid"
         :columns="columns"
         :height="520"
-        :options="{ rowHeaders: ['rowNum', 'checkbox'], bodyHeight: 460 }"
+        :options="{ rowHeaders: ['rowNum', 'checkbox'], bodyHeight: 460, columnOptions: { resizable: true } }"
         retrieve-service-id="INT_Y19_0001_01_R01"
         save-service-id="INT_Y19_0001_01_S01"
         slot-name="ME_INT0001_02"
