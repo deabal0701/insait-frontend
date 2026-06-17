@@ -65,6 +65,15 @@ const themeObj = computed(() => {
 
 const selfManaged = computed(() => !!props.retrieveServiceId);
 
+// ★ (2026-06-17, dspark): 컬럼 너비 드래그 리사이즈 = 앱 기본 ON (insa-IT 정책).
+//   tui-grid/winGrid 코어는 기본 OFF(중립) — 모든 앱 그리드가 매번 켜야 했음 → 단일 창구
+//   (InDataTable)에서 기본값 주입. 화면이 :options="{ columnOptions:{ resizable:false } }" 를
+//   명시할 때만 잠긴다(사용자 columnOptions 를 default 위에 spread → 명시값이 이김). frozenCount 등 보존.
+const gridOptions = computed(() => ({
+  ...props.options,
+  columnOptions: { resizable: true, ...(props.options.columnOptions || {}) },
+}));
+
 // self-managed envelope 흐름 (AS-IS execute() 현대판). grid 인스턴스는 WinGrid 에서 해석.
 const entity = useEntityGrid({
   retrieveServiceId: props.retrieveServiceId,
@@ -128,7 +137,7 @@ defineExpose({
     ref="winRef"
     :columns="columns"
     :data="gridData"
-    :options="options"
+    :options="gridOptions"
     :row-key="rowKey"
     :height="height"
     :body-height="bodyHeight"
