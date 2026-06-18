@@ -68,12 +68,14 @@ export const CONTROLS = [
     defaultProps: {
       title: '목록', objectId: '', retrieveServiceId: '', saveServiceId: '', slot: '',
       toolbar: true, autoRetrieve: false,
+      retrieveIn: { company_cd: '{session.companyCd}' },   // 조회 파라미터 ← 검색바 {search.<key>} / {session.X} / {today}
       columns: [{ name: 'col1', header: '컬럼1', width: 120 }],
     },
     schema: [
       T('title', '제목'), T('objectId', 'OBJECT ID'), T('retrieveServiceId', '조회 서비스ID'),
       T('saveServiceId', '저장 서비스ID'), T('slot', '메시지 슬롯'),
       T('toolbar', '툴바(입력/삭제/복원/저장)', 'switch'), T('autoRetrieve', '진입 시 자동조회', 'switch'),
+      T('retrieveIn', '조회 파라미터(JSON) — {search.키}/{session.companyCd}', 'json'),
       T('columns', '컬럼(JSON)', 'json'),
     ] },
 ];
