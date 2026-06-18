@@ -346,8 +346,9 @@ onMounted(onSearch);
       </button>
     </InCard>
 
-    <!-- 활성 필터 칩 (3줄 초과 시 접힘 정합) -->
-    <div v-if="hasClientFilter" class="sg__chips">
+    <!-- 활성 필터 칩 — ★ (2026-06-18, dspark): 검색 접혔을 때만 표시(펼침 시 필드로 보여 중복).
+         기획 미팅 "검색박스 접기 + 칩 표시" 정합. -->
+    <div v-if="!filterOpen && hasClientFilter" class="sg__chips">
       <span v-if="aBizNm" class="sg__chip">사업장명: {{ aBizNm }}</span>
       <span v-if="aBizCd" class="sg__chip">코드: {{ aBizCd }}</span>
       <span v-if="aMgrYn" class="sg__chip">{{ aMgrYn === 'Y' ? '주사업장' : '비주사업장' }}</span>
