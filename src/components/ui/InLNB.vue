@@ -136,22 +136,25 @@ function iconSrc(it) {
         <InCompanyLogo :logo="true" :size="32" />
       </div>
 
-      <!-- Categories -->
+      <!-- Categories (divider 항목은 구분선으로 렌더) -->
       <nav class="in-lnb__cats" aria-label="1depth">
-        <button
-          v-for="(it, idx) in items"
-          :key="it.key"
-          type="button"
-          class="in-lnb__item"
-          :class="{ 'in-lnb__item--active': it.key === activeKey }"
-          :aria-current="it.key === activeKey ? 'page' : undefined"
-          @click="onItemClick(it, idx)"
-        >
-          <span class="in-lnb__icon-box">
-            <img :src="iconSrc(it)" :alt="it.label || it.key" class="in-lnb__icon" />
-            <span v-if="it.notificationDot" class="in-lnb__item-dot" aria-hidden="true"></span>
-          </span>
-        </button>
+        <template v-for="(it, idx) in items">
+          <div v-if="it.divider" :key="it.key + '-sep'" class="in-lnb__rail-divider" role="separator" aria-hidden="true"></div>
+          <button
+            v-else
+            :key="it.key"
+            type="button"
+            class="in-lnb__item"
+            :class="{ 'in-lnb__item--active': it.key === activeKey }"
+            :aria-current="it.key === activeKey ? 'page' : undefined"
+            @click="onItemClick(it, idx)"
+          >
+            <span class="in-lnb__icon-box">
+              <img :src="iconSrc(it)" :alt="it.label || it.key" class="in-lnb__icon" />
+              <span v-if="it.notificationDot" class="in-lnb__item-dot" aria-hidden="true"></span>
+            </span>
+          </button>
+        </template>
       </nav>
 
       <!-- Profile -->
@@ -266,6 +269,17 @@ function iconSrc(it) {
   align-items: center;
   flex: 1 1 0;
   overflow-y: auto;
+}
+
+/* ★ (2026-06-18, dspark): rail 구분자 — 상단 h5on / 하단 동적 메뉴 분리 가로바. */
+.in-lnb__rail-divider {
+  width: 34px;
+  height: 3px;
+  margin: 8px auto;
+  background: var(--in-text-white);
+  opacity: 0.6;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .in-lnb__item {

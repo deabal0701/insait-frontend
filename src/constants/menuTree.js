@@ -346,3 +346,107 @@ export function buildSettingsItem(current, expanded = {}) {
     ],
   };
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ★ (2026-06-18, dspark): h5on.com 메뉴 전체 하드코딩 이식 (사용자 지시).
+//   https://h5on.com 의 메뉴 트리(hrs_menutree_get · 226행 · 9 최상위 카테고리)를
+//   Playwright MCP 로 로그인 후 직접 캡처(2026-06-18) → 1:1 하드코딩.
+//   LNB 구성: [상단 = 본 h5on 하드코딩 메뉴] · [구분자 H5ON_DIVIDER] · [하단 = 동적(서버) 메뉴].
+//   "일단 메뉴·서브메뉴까지만" → 화면 미연결. 3depth 클릭은 '준비 중'(MainLayout onClick3depth
+//   에서 key prefix 'h5on:' 판정). key 는 'h5on:' prefix 로 서버 menu_id·시스템관리 키와 충돌 방지.
+//   level1/level0 leaf(자식 없는 노드)는 자기 자신을 단일 3depth 리프로 펼침(subtreeRowsToSubmenu 동일 규약).
+//   ⚠️ 추후 동적 전환 시 본 상수 제거하고 서버 메뉴(railRowsToItems/subtreeRowsToSubmenu)로 대체.
+// ════════════════════════════════════════════════════════════════════════════
+
+export const H5ON_MENU = [
+  { key: 'h5on:R', label: '인사기본', icon: 'lnb-people', groups: [
+    { key: 'h5on:RD', label: '조직관리', children: [{ key: 'h5on:RD002', label: '조직도' }, { key: 'h5on:RD003', label: '조직개편' }, { key: 'h5on:RD005', label: '조직장관리' }, { key: 'h5on:RD004', label: '조직히스토리' } ] },
+    { key: 'h5on:RB', label: '구성원관리', children: [{ key: 'h5on:RB001', label: '모든구성원' }, { key: 'h5on:RB002', label: '구성원초대' } ] },
+    { key: 'h5on:RE', label: '인사정보', children: [{ key: 'h5on:RE001', label: '개별인사정보' }, { key: 'h5on:RE002', label: '전체인사정보' }, { key: 'h5on:RE003', label: '변경내역조회' } ] },
+    { key: 'h5on:RM', label: '신청서', children: [{ key: 'h5on:RM001', label: '신청내역' }, { key: 'h5on:RM002', label: '결재함' }, { key: 'h5on:RM003', label: '신청서 작성' }, { key: 'h5on:RM004', label: '임시보관함' }, { key: 'h5on:RM005', label: '신청서 양식 관리' } ] },
+    { key: 'h5on:RL', label: '전자계약', children: [{ key: 'h5on:RL', label: '전자계약' } ] },
+    { key: 'h5on:RG', label: '발령관리', children: [{ key: 'h5on:RG001', label: '발령등록' }, { key: 'h5on:RG002', label: '발령내역' }, { key: 'h5on:RG003', label: '입사발령' }, { key: 'h5on:RG004', label: '입사내역' } ] },
+    { key: 'h5on:RI', label: '근무관리', children: [{ key: 'h5on:RI001', label: '근태현황정보' }, { key: 'h5on:RI002', label: '출퇴근현황관리' }, { key: 'h5on:RI003', label: '출퇴근현황' }, { key: 'h5on:RI005', label: '근무스케줄관리(일/주/월)' }, { key: 'h5on:RI006', label: '근무스케줄(주/월)' }, { key: 'h5on:RI007', label: '근무시간현황관리' }, { key: 'h5on:RI008', label: '근무시간현황' }, { key: 'h5on:RI009', label: '특근현황관리' }, { key: 'h5on:RI011', label: '교대근무등록' }, { key: 'h5on:RI012', label: '교대근무현황관리' }, { key: 'h5on:RI013', label: '교대근무현황' }, { key: 'h5on:RI014', label: '근태 마감' } ] },
+    { key: 'h5on:RJ', label: '휴가관리', children: [{ key: 'h5on:RJ001', label: '휴가사용현황관리' }, { key: 'h5on:RJ002', label: '휴가사용현황' }, { key: 'h5on:RJ003', label: '휴가신청내역관리' }, { key: 'h5on:RJ004', label: '연차촉진관리' }, { key: 'h5on:RJ005', label: '연차사용통보' } ] },
+    { key: 'h5on:RK', label: '출장관리', children: [{ key: 'h5on:RK001', label: '출장품의' }, { key: 'h5on:RK002', label: '출장내역' }, { key: 'h5on:RK003', label: '외근내역' }, { key: 'h5on:RK004', label: '교통비내역' }, { key: 'h5on:RK005', label: '네이버맵API' } ] },
+  ] },
+  { key: 'h5on:V', label: '인사이트', icon: 'lnb-analytics', groups: [
+    { key: 'h5on:VA', label: '인원통계', children: [{ key: 'h5on:VA001', label: '인원분포' }, { key: 'h5on:VA002', label: '인원변동' } ] },
+    { key: 'h5on:VB', label: '업무통계', children: [{ key: 'h5on:VB', label: '업무통계' } ] },
+    { key: 'h5on:VC', label: '비용통계', children: [{ key: 'h5on:VC', label: '비용통계' } ] },
+    { key: 'h5on:VD', label: '인재운영', children: [{ key: 'h5on:VD', label: '인재운영' } ] },
+  ] },
+  { key: 'h5on:B', label: '보상관리', icon: 'lnb-cases', groups: [
+    { key: 'h5on:BC', label: '근로자별 관리', children: [{ key: 'h5on:BC001', label: '계약관리' }, { key: 'h5on:BC002', label: '임금피크계약관리' }, { key: 'h5on:BC003', label: '용역계약직인건비조회' }, { key: 'h5on:BC004', label: '일용직신청관리' }, { key: 'h5on:BC005', label: '인원현황' } ] },
+    { key: 'h5on:BA', label: '급여정산', children: [{ key: 'h5on:BA001', label: '급여생성/마감' }, { key: 'h5on:BA002', label: '급여대상자관리' }, { key: 'h5on:BA004', label: '소급관리' }, { key: 'h5on:BA003', label: '기초원장조회' }, { key: 'h5on:BA008', label: '급여계산' }, { key: 'h5on:BA007', label: '공제내역관리' }, { key: 'h5on:BA006', label: '예외사항관리' }, { key: 'h5on:BA005', label: '압류관리' } ] },
+    { key: 'h5on:BB', label: '급여관리', children: [{ key: 'h5on:BB001', label: '급여내역' }, { key: 'h5on:BB002', label: '급여메일발송' }, { key: 'h5on:BB003', label: '급여계좌관리' }, { key: 'h5on:BB004', label: '급여대장조회' }, { key: 'h5on:BB005', label: '급여신고/제출자료' }, { key: 'h5on:BB006', label: '급여결과출력' }, { key: 'h5on:BB007', label: '급여 현황' }, { key: 'h5on:BB008', label: '급여 이체 내역' } ] },
+    { key: 'h5on:BG', label: '근로소득명세', children: [{ key: 'h5on:BG001', label: '대상자 관리' }, { key: 'h5on:BG002', label: '정산대상 급여관리' }, { key: 'h5on:BG003', label: '근로소득간이지급명세서' } ] },
+    { key: 'h5on:BD', label: '성과급관리', children: [{ key: 'h5on:BD001', label: '성과급산출 기초자료' }, { key: 'h5on:BD002', label: '성과급관리' }, { key: 'h5on:BD003', label: '이연성과급 관리' }, { key: 'h5on:BD004', label: '성과급확인' } ] },
+    { key: 'h5on:BE', label: '예산관리', children: [{ key: 'h5on:BE001', label: '인건비 예산관리' }, { key: 'h5on:BE002', label: '예산 집행 집계표' }, { key: 'h5on:BE003', label: '4대보험 예산관리' }, { key: 'h5on:BE004', label: '퇴직충당금 예산관리' }, { key: 'h5on:BE005', label: '연차충당금관리' } ] },
+    { key: 'h5on:BF', label: '회계정산', children: [{ key: 'h5on:BF001', label: '급여항목 계정매핑' }, { key: 'h5on:BF002', label: '급여 매출전표' }, { key: 'h5on:BF003', label: 'DC부담금 매출전표' } ] },
+    { key: 'h5on:BJ', label: '퇴직금관리', children: [{ key: 'h5on:BJ001', label: '퇴직금계산' }, { key: 'h5on:BJ002', label: '퇴직금 계좌관리' }, { key: 'h5on:BJ003', label: '원천징수영수증' }, { key: 'h5on:BJ004', label: '퇴직소득지급조서' }, { key: 'h5on:BJ005', label: '전근무지퇴직소득' }, { key: 'h5on:BJ006', label: '퇴직연금관리' }, { key: 'h5on:BJ007', label: '퇴직추계관리' }, { key: 'h5on:BJ008', label: '퇴직충당금관리' }, { key: 'h5on:BJ009', label: '예상퇴직금조회' }, { key: 'h5on:BJ010', label: '명예퇴직' } ] },
+    { key: 'h5on:BZ', label: '연말정산', children: [{ key: 'h5on:BZ001', label: '연말정산기준관리' }, { key: 'h5on:BZ002', label: '사업장 관리' }, { key: 'h5on:BZ003', label: '법정공제율관리' }, { key: 'h5on:BZ004', label: '연말정산항목관리' }, { key: 'h5on:BZ005', label: '소득공제신청' }, { key: 'h5on:BZ006', label: '소득공제신청서' }, { key: 'h5on:BZ007', label: '소득공제신청서출력' }, { key: 'h5on:BZ008', label: '종전근무지등록' }, { key: 'h5on:BZ009', label: '정산대상급여관리' }, { key: 'h5on:BZ010', label: '추가소득산입' }, { key: 'h5on:BZ011', label: '소득공제내역다운로드' }, { key: 'h5on:BZ012', label: '연말정산계산' }, { key: 'h5on:BZ013', label: '연말정산내역다운로드' }, { key: 'h5on:BZ014', label: '연말정산내역' }, { key: 'h5on:BZ015', label: '국세청전산자료' }, { key: 'h5on:BZ016', label: '원천징수영수증출력' }, { key: 'h5on:BZ017', label: '공제자료오류검증' }, { key: 'h5on:BZ018', label: '원천징수부출력' }, { key: 'h5on:BZ019', label: '의료비지급명세서출력' }, { key: 'h5on:BZ020', label: '기부금명세서출력' }, { key: 'h5on:BZ021', label: '원천징수세액조정관리' } ] },
+  ] },
+  { key: 'h5on:M', label: '성과평가', icon: 'lnb-finance', groups: [
+    { key: 'h5on:MA', label: '성과평가', children: [{ key: 'h5on:MA001', label: '나의평가' }, { key: 'h5on:MA002', label: '평가관리' } ] },
+    { key: 'h5on:MB', label: '면담', children: [{ key: 'h5on:MB001', label: '나의면담' }, { key: 'h5on:MB002', label: '면담관리' } ] },
+    { key: 'h5on:MC', label: '평가설정', children: [{ key: 'h5on:MC001', label: '평가양식' }, { key: 'h5on:MC002', label: '평가등급' }, { key: 'h5on:MC003', label: '평가지표' }, { key: 'h5on:MC004', label: '평가위원' }, { key: 'h5on:MC005', label: '성과급기준' }, { key: 'h5on:MC006', label: '승진대상자 기준' }, { key: 'h5on:MC007', label: '평가제외대상' } ] },
+  ] },
+  { key: 'h5on:RI004', label: '캘린더 (일간/주간)', icon: 'calendar', groups: [
+    { key: 'h5on:RI004', label: '캘린더 (일간/주간)', children: [{ key: 'h5on:RI004', label: '캘린더 (일간/주간)' } ] },
+  ] },
+  { key: 'h5on:I', label: '채용', icon: 'lnb-inventory', groups: [
+    { key: 'h5on:IA', label: '결재선지정', children: [{ key: 'h5on:IA001', label: '개인결재선' }, { key: 'h5on:IA002', label: '대리결재선' }, { key: 'h5on:IA003', label: '전결자지정' } ] },
+    { key: 'h5on:IB', label: '결재선지정', children: [{ key: 'h5on:IB001', label: '공용문서' }, { key: 'h5on:IB002', label: '증명서' }, { key: 'h5on:IB003', label: '계약서' } ] },
+    { key: 'h5on:IC', label: '결재선지정', children: [{ key: 'h5on:IC001', label: '상신보관함' }, { key: 'h5on:IC002', label: '임시보관함' }, { key: 'h5on:IC003', label: '수신함' }, { key: 'h5on:IC004', label: '수신상신함' } ] },
+    { key: 'h5on:ID', label: '결재선지정', children: [{ key: 'h5on:ID001', label: '미결함' }, { key: 'h5on:ID002', label: '반려함' }, { key: 'h5on:ID003', label: '전결함' }, { key: 'h5on:ID004', label: '기결함' }, { key: 'h5on:ID005', label: '공람함' }, { key: 'h5on:ID006', label: '참조함' } ] },
+    { key: 'h5on:TTEFS', label: '템플릿관리', children: [{ key: 'h5on:TTEFS', label: '템플릿관리' } ] },
+    { key: 'h5on:TTEFST', label: 'eformsuite_템플릿_등록', children: [{ key: 'h5on:TTEFST', label: 'eformsuite_템플릿_등록' } ] },
+    { key: 'h5on:TTEFST1', label: 'eformsuite_템플릿_목록', children: [{ key: 'h5on:TTEFST1', label: 'eformsuite_템플릿_목록' } ] },
+  ] },
+  { key: 'h5on:O', label: '인재육성', icon: 'lnb-bookmark-add', groups: [
+    { key: 'h5on:O', label: '인재육성', children: [{ key: 'h5on:O', label: '인재육성' } ] },
+  ] },
+  { key: 'h5on:S', label: '환경설정', icon: 'lnb-settings', groups: [
+    { key: 'h5on:SA', label: '화면설정', children: [{ key: 'h5on:SA', label: '화면설정' } ] },
+    { key: 'h5on:SB', label: '내 설정', children: [{ key: 'h5on:SB001', label: '내 로그인 정보' }, { key: 'h5on:SB002', label: '내 입사 정보' } ] },
+    { key: 'h5on:SC', label: '회사 정보 관리', children: [{ key: 'h5on:SC', label: '회사 정보 관리' } ] },
+    { key: 'h5on:SD', label: '로그인관리', children: [{ key: 'h5on:SD', label: '로그인관리' } ] },
+    { key: 'h5on:SE', label: '인사정보 관리', children: [{ key: 'h5on:SE', label: '인사정보 관리' } ] },
+    { key: 'h5on:SF', label: '초대 관리', children: [{ key: 'h5on:SF', label: '초대 관리' } ] },
+    { key: 'h5on:SG', label: '권한관리', children: [{ key: 'h5on:SG', label: '권한관리' } ] },
+    { key: 'h5on:SH', label: '결제관리', children: [{ key: 'h5on:SH', label: '결제관리' } ] },
+    { key: 'h5on:SI', label: '연동관리', children: [{ key: 'h5on:SI', label: '연동관리' } ] },
+    { key: 'h5on:SJ', label: '인사 관리', children: [{ key: 'h5on:SJ002', label: '근로계약 기준' }, { key: 'h5on:SJ004', label: '승진 기준' }, { key: 'h5on:SJ005', label: '휴가 기준' }, { key: 'h5on:SJ006', label: '근태 기준' }, { key: 'h5on:SJ007', label: '근무 기준' }, { key: 'h5on:SJ008', label: '출장 기준' }, { key: 'h5on:SJ009', label: '임원 및 노조' } ] },
+    { key: 'h5on:SK', label: '성과 관리', children: [{ key: 'h5on:SK', label: '성과 관리' } ] },
+    { key: 'h5on:SL', label: '보상관리', children: [{ key: 'h5on:SL001', label: '급여 대상자 기준' }, { key: 'h5on:SL002', label: '급여 계산 기준' }, { key: 'h5on:SL003', label: '급여 업무 기준' }, { key: 'h5on:SL004', label: '일할계산 지급기준' }, { key: 'h5on:SL005', label: '간이세액표 기준' }, { key: 'h5on:SL006', label: '급여 수식 기준' }, { key: 'h5on:SL007', label: '예산 기준' }, { key: 'h5on:SL008', label: '지급명세 기준' }, { key: 'h5on:SL009', label: '퇴직금 기준' } ] },
+    { key: 'h5on:SM', label: '발령관리', children: [{ key: 'h5on:SM001', label: '발령기준관리' }, { key: 'h5on:SM002', label: '승진발령기준' } ] },
+    { key: 'h5on:SN', label: '휴가관리', children: [{ key: 'h5on:SN001', label: '휴가기준관리' }, { key: 'h5on:SN002', label: '연차기준관리' }, { key: 'h5on:SN003', label: '연차사용촉진설정' } ] },
+    { key: 'h5on:SO', label: '근무관리', children: [{ key: 'h5on:SO001', label: '근무세부코드' }, { key: 'h5on:SO002', label: '근무그룹생성' }, { key: 'h5on:SO003', label: '출퇴근체크방식설정' }, { key: 'h5on:SO005', label: '회사휴일관리' }, { key: 'h5on:SO006', label: '교대근무기준관리' } ] },
+    { key: 'h5on:SP', label: '관리자', children: [{ key: 'h5on:SP001', label: '인사잇 소식 관리' } ] },
+  ] },
+  { key: 'h5on:WINSYS', label: '시스템관리', icon: 'lnb-bento', groups: [
+    { key: 'h5on:WINSYSA', label: '시스템설정', children: [{ key: 'h5on:WINSYSA002', label: '파일업로드' }, { key: 'h5on:WINSYSA003', label: '암복호화 테스트' }, { key: 'h5on:WINSYSA004', label: '구글otp 테스트' } ] },
+  ] },
+];
+
+/** LNB rail 구분자 — 상단 h5on 하드코딩 메뉴와 하단 동적 메뉴 시각 분리. (InLNBSubmenu/InLNB 가 divider 렌더) */
+export const H5ON_DIVIDER = Object.freeze({ key: 'h5on:__divider', divider: true });
+
+/**
+ * H5ON_MENU(raw) → InLNBSubmenu items shape. expanded = { [groupKey]: bool } 펼침 상태 주입.
+ * @param {object} expanded  2depth 그룹 펼침 맵 (MainLayout h5onExpanded ref)
+ */
+export function buildH5onItems(expanded = {}) {
+  return H5ON_MENU.map((cat) => ({
+    key: cat.key,
+    label: cat.label,
+    icon: cat.icon,
+    submenu: cat.groups.map((g) => ({
+      key: g.key,
+      label: g.label,
+      expanded: !!expanded[g.key],
+      children: g.children.map((c) => ({ key: c.key, label: c.label })),
+    })),
+  }));
+}

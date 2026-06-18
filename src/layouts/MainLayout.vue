@@ -12,7 +12,7 @@ import { ElMessage } from 'element-plus';
 import InLNBSubmenu from '@/components/ui/InLNBSubmenu.vue';
 import InLNB from '@/components/ui/InLNB.vue';
 import { adminApi } from '@/services/adminApi';
-import { PLACE_ITEM, ADMIN_OBJECT_IDS, buildSettingsItem } from '@/constants/menuTree';
+import { PLACE_ITEM, ADMIN_OBJECT_IDS, buildSettingsItem, buildH5onItems, H5ON_DIVIDER } from '@/constants/menuTree';
 
 const router = useRouter();
 const route = useRoute();
@@ -38,6 +38,10 @@ const selectedAuthName = computed(() => {
 
 // ── 시스템관리(하드코딩 최하단) 2depth 그룹 펼침 상태 ──
 const settingsExpanded = ref({ meta: true, auth: false, sysenv: false, pds: false, env: false, playground: false });
+
+// ── h5on 하드코딩 메뉴(상단) 2depth 그룹 펼침 상태 (★ 2026-06-18, dspark) ──
+//   key = h5on 그룹 key('h5on:RD' 등). 클릭 시 토글. 기본 전부 접힘.
+const h5onExpanded = ref({});
 
 // ── 1depth 활성 키 ──
 const activeKey = ref('place');
@@ -73,35 +77,59 @@ const serverItems = computed(() => menu.rail.map((cat) => ({
 // ── 시스템관리 노드(최하단 고정) ──
 const settingsItem = computed(() => buildSettingsItem(route.name, settingsExpanded.value));
 
-// ── 최종 items = [스마트플레이스(고정), ...서버 업무메뉴, 시스템관리(고정 최하단)] ──
-const items = computed(() => [{ ...PLACE_ITEM }, ...serverItems.value, settingsItem.value]);
+// ── h5on 하드코딩 메뉴(상단) — InLNBSubmenu items shape (★ 2026-06-18, dspark) ──
+const h5onItems = computed(() => buildH5onItems(h5onExpanded.value));
 
-// ── collapsed rail items (동일 소스) ──
+// ── 최종 items = [상단: h5on 하드코딩 메뉴] · [구분자] · [하단 동적: 스마트플레이스 + 서버 업무메뉴 + 시스템관리] ──
+//   (★ 2026-06-18, dspark) 사용자 지시: 상단=h5on 전체 메뉴 하드코딩, 구분자, 하단=동적 메뉴.
+const items = computed(() => [
+  ...h5onItems.value,
+  { ...H5ON_DIVIDER },
+  { ...PLACE_ITEM },
+  ...serverItems.value,
+  settingsItem.value,
+]);
+
+// ── collapsed rail items (동일 소스. divider 플래그 전달) ──
 const fixedItems = computed(() => items.value.map((it) => ({
   key: it.key, label: it.label, icon: it.icon, notificationDot: it.notificationDot,
+  divider: it.divider,
   active: it.key === activeKey.value,
 })));
 
 // ── 핸들러 ──
+//   (★ 2026-06-18, dspark) h5on 하드코딩 메뉴(key prefix 'h5on:') 는 submenu 가 상수에 내장.
+//   서버 fetch(ensureSubtree) 하지 않고 activeKey 만 전환. divider 는 클릭 무시.
 async function onClick1depth(item) {
+  if (item.divider) return;
   activeKey.value = item.key;
   if (item.key === 'place') { router.push({ name: 'Dashboard' }); return; }
+  if (item.key.startsWith('h5on:')) return;      // 하드코딩 — submenu 내장, 서버 fetch 없음
   if (item.key !== 'settings') await menu.ensureSubtree(item.key);
 }
 function onFixedClickItem(item) {
+  if (item.divider) return;
   activeKey.value = item.key;
   setCollapsed(false);
   if (item.key === 'place') { router.push({ name: 'Dashboard' }); return; }
+  if (item.key.startsWith('h5on:')) return;
   if (item.key !== 'settings') menu.ensureSubtree(item.key);
 }
 function onClick2depth(parent, group) {
-  if (parent.key === 'settings') {
+  if (parent.key.startsWith('h5on:')) {
+    h5onExpanded.value = { ...h5onExpanded.value, [group.key]: !h5onExpanded.value[group.key] };
+  } else if (parent.key === 'settings') {
     settingsExpanded.value = { ...settingsExpanded.value, [group.key]: !settingsExpanded.value[group.key] };
   } else {
     menu.toggleGroup(group.key);
   }
 }
 function onClick3depth(parent, _group, child) {
+  // h5on 하드코딩 메뉴 — 화면 미연결(메뉴·서브메뉴만). 항상 준비 중.
+  if (parent.key.startsWith('h5on:')) {
+    ElMessage.info(`${child?.label || ''} — 준비 중`);
+    return;
+  }
   if (parent.key === 'settings') {
     if (child?.key && child.key !== route.name) router.push({ name: child.key });
     return;
@@ -173,7 +201,7 @@ watch(selectedAuthName, async (name, old) => {
       <InLNBSubmenu
         :items="items"
         :active-key="activeKey"
-        company-name="insa-IT"
+        company-name="화이트 정보통신"
         :notification-count="99"
         :height="viewportH"
         class="main-layout__lnb main-layout__lnb--open"

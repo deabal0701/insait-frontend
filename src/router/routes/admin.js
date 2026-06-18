@@ -110,6 +110,13 @@ routes.push(
     component: VIEWS.ServiceTester,
     meta: { requiresAuth: true, objectId: 'SERVICE_TESTER', menuId: '', title: '서비스 테스터' },
   },
+  // ★ (2026-06-18, dspark): 화면 디자이너로 저장한 메타를 실제 렌더(메뉴 클릭 시 동작). /screen/:objectId
+  {
+    path: 'screen/:objectId',
+    name: 'SCREEN_HOST',
+    component: () => import('@/pages/screen/ScreenHost.vue'),
+    meta: { requiresAuth: true, objectId: 'SCREEN_HOST', menuId: '', title: '화면' },
+  },
 );
 
 export default routes;

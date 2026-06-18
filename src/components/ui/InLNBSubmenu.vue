@@ -96,28 +96,31 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
         <InCompanyLogo :logo="true" :size="32" />
       </div>
 
-      <!-- 1depth categories -->
+      <!-- 1depth categories (divider 항목은 구분선으로 렌더) -->
       <nav class="in-lnb2__cats" aria-label="1depth">
-        <button
-          v-for="it in items"
-          :key="it.key"
-          type="button"
-          class="in-lnb2__1dep"
-          :class="{
-            'in-lnb2__1dep--active': it.key === activeKey,
-          }"
-          @click="emit('click-1depth', it)"
-        >
-          <span class="in-lnb2__1dep-icon-box">
-            <img
-              :src="ICON_REGISTRY[it.icon]"
-              :alt="it.label"
-              class="in-lnb2__1dep-icon"
-            />
-            <span v-if="it.notificationDot" class="in-lnb2__1dep-dot" aria-hidden="true"></span>
-          </span>
-          <span class="in-lnb2__1dep-label">{{ it.label }}</span>
-        </button>
+        <template v-for="it in items">
+          <div v-if="it.divider" :key="it.key + '-sep'" class="in-lnb2__rail-divider" role="separator" aria-hidden="true"></div>
+          <button
+            v-else
+            :key="it.key"
+            type="button"
+            class="in-lnb2__1dep"
+            :class="{
+              'in-lnb2__1dep--active': it.key === activeKey,
+            }"
+            @click="emit('click-1depth', it)"
+          >
+            <span class="in-lnb2__1dep-icon-box">
+              <img
+                :src="ICON_REGISTRY[it.icon]"
+                :alt="it.label"
+                class="in-lnb2__1dep-icon"
+              />
+              <span v-if="it.notificationDot" class="in-lnb2__1dep-dot" aria-hidden="true"></span>
+            </span>
+            <span class="in-lnb2__1dep-label">{{ it.label }}</span>
+          </button>
+        </template>
       </nav>
 
       <!-- Profile -->
@@ -239,6 +242,18 @@ const formatBadgeCount = (n) => (n >= 99 ? '99+' : String(n));
   padding: 5px 0 10px 7px;
   flex: 1 1 0;
   overflow-y: auto;
+}
+
+/* ★ (2026-06-18, dspark): rail 구분자 — 상단 h5on 하드코딩 메뉴 / 하단 동적 메뉴 분리.
+ *   brand(파랑) rail 위 명확한 흰색 가로바 (사용자 요청 "가로바로 더 명확하게"). */
+.in-lnb2__rail-divider {
+  width: 100%;
+  height: 3px;
+  margin: 9px 0;
+  background: var(--in-text-white);
+  opacity: 0.6;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .in-lnb2__1dep {
