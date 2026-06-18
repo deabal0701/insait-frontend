@@ -2,13 +2,16 @@
 
 가이드: [02-tobe/01-phase1/03-frontend/07_in-components.md](../../../../../h5-saas-docs/02-tobe/01-phase1/03-frontend/07_in-components.md)
 
-## 세 가지 영역
+## 네 가지 영역
 
 | 디렉토리 | 책임 | 첫 사용 시점 |
 |---|---|---|
-| `ui/` | In* 컴포넌트 라이브러리 **단일 출처**. design-system v1/v2 의 코드를 참고해 작성 (직접 import 안 함) | P0~P1 |
+| `ui/` | In* **원자(atomic) 컴포넌트** 라이브러리 **단일 출처**. design-system v1/v2 의 코드를 참고해 작성 (직접 import 안 함) | P0~P1 |
+| `common/` | **범용 조합 컴포넌트** (원자 아님 · 특정 도메인 아님). 여러 화면이 공통으로 쓰는 레이아웃 패턴. 접두 `Sg*`(SG 화면 규격: 검색박스+그리드) 등 **목적 기반 접두** 사용 — `In*`(ui 원자)과 구분 | 화면 규격 정립 시 |
 | `feature/{domain}/` | 도메인별 재사용 조합 컴포넌트 (사원 검색 모달, 권한 매트릭스 등) | P4 이후 필요 시 |
 | `layout/` | layout 부속 (`InUserBadge`, `InBreadcrumb` 등) | 레이아웃 보강 시 |
+
+> **`common/` 현재 컴포넌트 (★ 2026-06-18)**: `SgSearchBar`(SG 검색바 — fields config + v-model + 접기/칩) · `SgGridSection`(SG 목록 섹션 — 제목+건수+표준 툴바(입력/삭제/복원/저장 emit)+그리드 슬롯). 사업장관리(ORM9999)에서 추출. ui 원자(In*)가 아니므로 `ui/` 가 아닌 `common/` + `Sg*` 접두. 출처: 2026-06-17 기획 미팅 SG 규격.
 
 ## 작성 정책 — 우선순위 (★ 2026-05-29 갱신)
 
