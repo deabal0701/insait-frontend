@@ -1,15 +1,16 @@
 <script setup>
 /**
- * FormRenderer — 폼 메타(widgets[])를 12컬럼 CSS 그리드로 렌더 + 검색→그리드 배선 (런타임) (★ 2026-06-18, dspark)
+ * FormRenderer — 폼 메타(widgets[])를 렌더 + 검색→그리드 배선 (미리보기/런타임) (★ 2026-06-18, dspark)
  *
  * ⚠️ 원자 ui 아님 — common/. 디자이너가 저장한 메타를 실제 동작 화면으로 그림.
- *   - 레이아웃: 위젯 x/y/w/h → CSS grid 배치(의존성 0).
+ *   - 레이아웃: ★ 디자이너 캔버스와 **동일한 grid-layout-plus 엔진**(읽기전용 isDraggable/isResizable=false)
+ *     → 디자인=미리보기=런타임 픽셀 일치(WYSIWYG). col-num/row-height/margin 도 디자이너와 동일([8,8]).
  *   - 데이터 배선: 검색바 @search → 화면 내 데이터그리드들의 retrieveIn(파라미터 매핑) 바인딩 해석
  *     → InDataTable.retrieve(serviceId/slot/IN) = envelope(/serviceBroker.h5) → 결과 렌더.
- *   바인딩 식 {session.companyCd}/{search.<fieldKey>}/{today} (확장: resolve 네임스페이스 추가).
- *   백엔드 0 변경.
+ *   바인딩 식 {session.companyCd}/{search.<fieldKey>}/{today}. 백엔드 0 변경.
  */
 import { ref, reactive, computed, onMounted } from 'vue';
+import { GridLayout, GridItem } from 'grid-layout-plus';
 import dayjs from 'dayjs';
 import ControlView from '@/components/designer/ControlView.vue';
 import SgSearchBar from './SgSearchBar.vue';
@@ -25,7 +26,7 @@ const cols = computed(() => props.meta.grid?.cols || 12);
 const rowH = computed(() => props.meta.grid?.rowHeight || 40);
 const widgets = computed(() => props.meta.widgets || []);
 const datagrids = computed(() => widgets.value.filter((w) => w.type === 'datagrid'));
-function cellStyle(w) { return { gridColumn: `${w.x + 1} / span ${w.w}`, gridRow: `${w.y + 1} / span ${w.h}` }; }
+function gridHeight(w) { return (w.h * rowH.value) - 40; }   // ControlView 와 동일 — 디자인/런타임 그리드 높이 일치
 
 // 검색바 → 그리드 공유 상태 + 그리드 인스턴스
 const searchValues = ref({});
@@ -70,8 +71,17 @@ onMounted(() => { initSearch(); datagrids.value.forEach((w) => { if (w.props.aut
 </script>
 
 <template>
-  <div class="fr" :style="{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridAutoRows: `${rowH}px` }">
-    <div v-for="w in widgets" :key="w.i" class="fr__cell" :style="cellStyle(w)">
+  <!-- ★ 디자이너 캔버스와 동일 엔진(grid-layout-plus) · 읽기전용 → WYSIWYG -->
+  <GridLayout
+    :layout="widgets"
+    :col-num="cols"
+    :row-height="rowH"
+    :is-draggable="false"
+    :is-resizable="false"
+    :margin="[8, 8]"
+    :use-css-transforms="true"
+  >
+    <GridItem v-for="w in widgets" :key="w.i" :x="w.x" :y="w.y" :w="w.w" :h="w.h" :i="w.i">
       <!-- 검색바 — @search 가 화면 내 그리드 조회를 구동 -->
       <SgSearchBar
         v-if="w.type === 'searchbar'"
@@ -86,7 +96,7 @@ onMounted(() => { initSearch(); datagrids.value.forEach((w) => { if (w.props.aut
         v-else-if="w.type === 'datagrid'"
         :ref="(el) => setGrid(w, el)"
         :columns="toGridColumns(w.props.columns)"
-        :height="(w.h * rowH) - 40"
+        :height="gridHeight(w)"
         :options="{ rowHeaders: ['rowNum', 'checkbox'] }"
         :retrieve-service-id="w.props.retrieveServiceId || undefined"
         :save-service-id="w.props.saveServiceId || undefined"
@@ -98,11 +108,6 @@ onMounted(() => { initSearch(); datagrids.value.forEach((w) => { if (w.props.aut
       />
       <!-- 그 외 컨트롤 -->
       <ControlView v-else :widget="w" :design="false" />
-    </div>
-  </div>
+    </GridItem>
+  </GridLayout>
 </template>
-
-<style scoped>
-.fr { display: grid; gap: 8px; align-content: start; width: 100%; }
-.fr__cell { min-width: 0; overflow: hidden; display: flex; }
-</style>
