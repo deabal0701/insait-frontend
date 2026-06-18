@@ -427,7 +427,7 @@ onMounted(onSearch);
 }
 
 /* 검색 카드 */
-.sg__search { padding: 16px 20px 0; }
+.sg__search { padding: 16px 20px 0; position: relative; margin-bottom: 8px; }  /* 하단 토글 칩 돌출분 여유 */
 .sg__search-body { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; padding-bottom: 12px; }
 .sg__fields {
   flex: 1 1 auto;
@@ -439,14 +439,17 @@ onMounted(onSearch);
 .sg__label { text-align: right; font-size: var(--in-font-size-sm); color: var(--in-text-default); white-space: nowrap; }
 .sg__search-actions { flex: 0 0 auto; display: flex; gap: 8px; align-items: flex-start; }
 
-/* 접기/펴기 토글 — 카드 하단 중앙 (기획 미팅 정합) */
+/* 접기/펴기 토글 — ★ (2026-06-18, dspark): 별도 전체폭 바 폐기 → 카드 하단 가장자리에 걸친
+   작은 둥근 칩(두 번째 이미지 "모든 구성원" 정합). 절대배치로 카드 하단 경계 중앙에 반쯤 겹침. */
 .sg__toggle {
-  display: flex; align-items: center; justify-content: center;
-  width: 100%; height: 22px; margin: 0 -20px; padding: 0;
-  border: 0; border-top: 1px solid var(--in-border-subtle, #eee);
-  background: transparent; cursor: pointer; color: var(--in-text-subtle);
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 20px; padding: 0; z-index: 1;
+  border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 999px;
+  background: var(--in-surface-overlay, #fff); color: var(--in-text-subtle);
+  cursor: pointer; box-shadow: var(--in-shadow-elev-2);
 }
-.sg__toggle:hover { color: var(--in-text-accent); }
+.sg__toggle:hover { color: var(--in-text-accent); border-color: var(--in-border-input, #c9c9c9); }
 .sg__chev {
   width: 0; height: 0;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
