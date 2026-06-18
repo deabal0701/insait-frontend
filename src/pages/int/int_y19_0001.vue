@@ -416,7 +416,15 @@ onMounted(onSearch);
 </template>
 
 <style scoped>
-.sg { display: flex; flex-direction: column; gap: 12px; padding: 20px 24px; font-family: var(--in-font-family-body); }
+/* ★ (2026-06-18, dspark): 페이지 여백 상·좌·우 12px — 상단바 바로 아래 검색을 바짝 붙임.
+   레이아웃(.main-layout__content)의 기본 여백 20px 을 본 화면만 음수 마진으로 상쇄 후 12px 적용
+   (다른 화면은 20px 유지 — page-scoped). 하단은 레이아웃 여백 유지. */
+.sg {
+  display: flex; flex-direction: column; gap: 12px;
+  margin: -20px -20px 0;
+  padding: 12px;
+  font-family: var(--in-font-family-body);
+}
 
 /* 검색 카드 */
 .sg__search { padding: 16px 20px 0; }
