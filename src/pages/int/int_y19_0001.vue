@@ -362,10 +362,10 @@ onMounted(onSearch);
           <span v-if="hasClientFilter" class="sg__count sg__count--muted">/ 전체 {{ masterRows.length.toLocaleString() }}</span>
         </strong>
         <div class="sg__btns">
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onAdd">입력</InButton>
-          <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDeleteChecked">삭제</InButton>
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onRestoreChecked">복원</InButton>
-          <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onSave">저장</InButton>
+          <InButton size="md" :left-icon-show="false" :right-icon-show="false" @click="onAdd">입력</InButton>
+          <InButton size="md" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDeleteChecked">삭제</InButton>
+          <InButton size="md" :left-icon-show="false" :right-icon-show="false" @click="onRestoreChecked">복원</InButton>
+          <InButton size="md" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onSave">저장</InButton>
         </div>
       </div>
       <InDataTable
@@ -393,10 +393,10 @@ onMounted(onSearch);
           <span v-else class="sg__sel sg__sel--muted">— 사업장을 선택하세요</span>
         </strong>
         <div class="sg__btns">
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" :disabled="!selBizCd" @click="onDetailAdd">입력</InButton>
-          <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDetailDelete">삭제</InButton>
-          <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onDetailRestore">복원</InButton>
-          <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" :disabled="!selBizCd" @click="onDetailSave">저장</InButton>
+          <InButton size="md" :left-icon-show="false" :right-icon-show="false" :disabled="!selBizCd" @click="onDetailAdd">입력</InButton>
+          <InButton size="md" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDetailDelete">삭제</InButton>
+          <InButton size="md" :left-icon-show="false" :right-icon-show="false" @click="onDetailRestore">복원</InButton>
+          <InButton size="md" variant="primary" :left-icon-show="false" :right-icon-show="false" :disabled="!selBizCd" @click="onDetailSave">저장</InButton>
         </div>
       </div>
       <InDataTable
