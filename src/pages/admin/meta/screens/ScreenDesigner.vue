@@ -33,13 +33,22 @@ function blankMeta() {
 const screenOptions = computed(() => screens.value.map((m) => ({ value: m.objectId, label: `${m.objectId} — ${m.title}` })));
 const palette = computed(() => CATEGORIES.map((c) => ({ ...c, items: CONTROLS.filter((x) => x.cat === c.key) })));
 const gridColsOptions = [{ value: 12, label: '12 컬럼' }, { value: 24, label: '24 컬럼' }];
-// 컬럼 수 변경 — 기존 위젯 x/w 를 비율대로 스케일(레이아웃 유지, 정밀도만 변경). 행(y/h)은 불변.
+// 컬럼 수 변경(가로) — 위젯 x/w 비율 스케일(레이아웃 유지). 행(y/h)은 불변.
 function onCols(v) {
   const n = Number(v); const old = meta.value.grid?.cols || 12;
   if (!n || n === old) return;
   const f = n / old;
   meta.value.widgets.forEach((w) => { w.x = Math.round(w.x * f); w.w = Math.max(1, Math.round(w.w * f)); });
   meta.value.grid = { ...meta.value.grid, cols: n };
+}
+// 행 정밀도 변경(세로) — rowHeight(칸당 px). 작을수록 행 많아짐. 위젯 y/h 비율 스케일(픽셀 위치 유지). 컬럼(x/w) 불변.
+const gridRowsOptions = [{ value: 40, label: '행 1배' }, { value: 20, label: '행 2배' }];
+function onRows(v) {
+  const n = Number(v); const old = meta.value.grid?.rowHeight || 40;
+  if (!n || n === old) return;
+  const f = old / n;
+  meta.value.widgets.forEach((w) => { w.y = Math.round(w.y * f); w.h = Math.max(1, Math.round(w.h * f)); });
+  meta.value.grid = { ...meta.value.grid, rowHeight: n };
 }
 const selectedWidget = computed(() => meta.value.widgets.find((w) => w.i === selWid.value) || null);
 const selectedDef = computed(() => (selectedWidget.value ? CONTROL_MAP[selectedWidget.value.type] : null));
@@ -110,6 +119,7 @@ onMounted(() => {
         <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDelete">삭제</InButton>
         <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onRestoreSeed">데모 복원</InButton>
         <InSelect :model-value="meta.grid.cols" :options="gridColsOptions" :show-label="false" size="sm" class="fd__cols" @update:model-value="onCols" />
+        <InSelect :model-value="meta.grid.rowHeight" :options="gridRowsOptions" :show-label="false" size="sm" class="fd__cols" @update:model-value="onRows" />
         <InButton size="sm" :variant="mode === 'preview' ? 'primary' : 'default'" :left-icon-show="false" :right-icon-show="false" @click="mode = mode === 'design' ? 'preview' : 'design'">
           {{ mode === 'design' ? '미리보기' : '디자인' }}
         </InButton>
