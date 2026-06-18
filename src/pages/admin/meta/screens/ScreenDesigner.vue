@@ -61,11 +61,11 @@ function load(objectId) {
   seq = 100 + meta.value.widgets.length;
 }
 
-// ── 팔레트 → 위젯 추가(하단 배치) ──
-function addWidget(type) {
-  const maxY = meta.value.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
+// ── 팔레트 → 위젯 추가 ──
+function addWidget(type, pos) {
   const id = `w${seq += 1}`;
-  const wg = makeWidget(type, id, { x: 0, y: maxY });
+  const at = pos || { x: 0, y: meta.value.widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0) };
+  const wg = makeWidget(type, id, at);
   if (!wg) return;
   meta.value.widgets.push(wg);
   selWid.value = id;
@@ -74,6 +74,36 @@ function removeWidget(id) {
   meta.value.widgets = meta.value.widgets.filter((w) => w.i !== id);
   if (selWid.value === id) selWid.value = '';
 }
+
+// ── 드래그앤드롭: 팔레트 → 캔버스(놓는 위치에 배치) ──
+function onPaletteDrag(type, e) {
+  try { e.dataTransfer.setData('text/plain', type); e.dataTransfer.effectAllowed = 'copy'; } catch (_) { /* noop */ }
+}
+function onCanvasDrop(e) {
+  const type = e.dataTransfer.getData('text/plain'); if (!type) return;
+  const host = e.currentTarget; const rect = host.getBoundingClientRect(); const pad = 8;
+  const cols = meta.value.grid.cols || 12; const rh = meta.value.grid.rowHeight || 40;
+  const colW = (rect.width - pad * 2) / cols;
+  const gx = Math.max(0, Math.min(cols - 1, Math.floor((e.clientX - rect.left - pad) / colW)));
+  const gy = Math.max(0, Math.floor((e.clientY - rect.top - pad + host.scrollTop) / rh));
+  addWidget(type, { x: gx, y: gy });
+}
+
+// ── 검색필드 / 그리드컬럼 구조 편집(raw JSON 대신) ──
+function addField() {
+  const w = selectedWidget.value; if (!w) return;
+  if (!w.props.fields) w.props.fields = [];
+  w.props.fields.push({ key: 'f' + (w.props.fields.length + 1), label: '항목', type: 'text', placeholder: '' });
+}
+function removeField(i) { selectedWidget.value.props.fields.splice(i, 1); }
+function optsText(f) { return (f.options || []).map((o) => o.label).join(','); }
+function setOpts(f, text) { f.options = text.split(',').map((s, i) => ({ value: i === 0 ? '' : s.trim(), label: s.trim() })); }
+function addColumn() {
+  const w = selectedWidget.value; if (!w) return;
+  if (!w.props.columns) w.props.columns = [];
+  w.props.columns.push({ name: 'col' + (w.props.columns.length + 1), header: '컬럼', width: 120 });
+}
+function removeColumn(i) { selectedWidget.value.props.columns.splice(i, 1); }
 
 // ── 속성 시트 ──
 function jsonStr(v) { try { return JSON.stringify(v, null, 2); } catch (e) { return ''; } }
@@ -135,14 +165,14 @@ onMounted(() => {
         </div>
         <div v-for="cat in palette" :key="cat.key" class="fd__cat">
           <div class="fd__cat-label">{{ cat.label }}</div>
-          <button v-for="c in cat.items" :key="c.type" type="button" class="fd__ctl" :title="c.type" @click="addWidget(c.type)">
+          <button v-for="c in cat.items" :key="c.type" type="button" class="fd__ctl" :title="c.type + ' — 드래그하거나 클릭'" draggable="true" @dragstart="onPaletteDrag(c.type, $event)" @click="addWidget(c.type)">
             <span class="fd__ctl-g">{{ c.glyph }}</span><span class="fd__ctl-n">{{ c.name }}</span>
           </button>
         </div>
       </aside>
 
       <!-- 캔버스 / 미리보기 -->
-      <main class="fd__canvas" :style="{ backgroundSize: (100 / meta.grid.cols).toFixed(4) + '% ' + meta.grid.rowHeight + 'px' }">
+      <main class="fd__canvas" :style="{ backgroundSize: (100 / meta.grid.cols).toFixed(4) + '% ' + meta.grid.rowHeight + 'px' }" @dragover.prevent @drop="onCanvasDrop">
         <FormRenderer v-if="mode === 'preview'" :meta="meta" />
         <GridLayout
           v-else
@@ -184,6 +214,30 @@ onMounted(() => {
               <option v-for="o in f.options" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
             <label v-else-if="f.kind === 'switch'" class="fd__sw"><input type="checkbox" v-model="selectedWidget.props[f.key]" /> {{ selectedWidget.props[f.key] ? 'ON' : 'OFF' }}</label>
+            <!-- 검색 필드 구조 편집 -->
+            <div v-else-if="f.kind === 'json' && f.key === 'fields'" class="fd__rows">
+              <div v-for="(fld, i) in (selectedWidget.props.fields || [])" :key="i" class="fd__row">
+                <input v-model="fld.label" class="fd__in fd__in--sm" placeholder="라벨" />
+                <select v-model="fld.type" class="fd__in fd__in--type">
+                  <option value="text">텍스트</option><option value="select">콤보</option><option value="date">날짜</option><option value="number">숫자</option>
+                </select>
+                <button type="button" class="fd__row-x" title="삭제" @click="removeField(i)">×</button>
+                <input v-if="fld.type === 'select'" :value="optsText(fld)" class="fd__in fd__in--full" placeholder="옵션(콤마): 전체,재직,퇴직" @input="setOpts(fld, $event.target.value)" />
+                <input v-else-if="fld.type !== 'date'" v-model="fld.placeholder" class="fd__in fd__in--full" placeholder="placeholder" />
+              </div>
+              <button type="button" class="fd__add" @click="addField">+ 필드 추가</button>
+            </div>
+            <!-- 그리드 컬럼 구조 편집 -->
+            <div v-else-if="f.kind === 'json' && f.key === 'columns'" class="fd__rows">
+              <div v-for="(col, i) in (selectedWidget.props.columns || [])" :key="i" class="fd__row">
+                <input v-model="col.header" class="fd__in fd__in--sm" placeholder="헤더" />
+                <input v-model="col.name" class="fd__in fd__in--sm" placeholder="name" />
+                <input v-model.number="col.width" type="number" class="fd__in fd__in--w" placeholder="폭" />
+                <button type="button" class="fd__row-x" title="삭제" @click="removeColumn(i)">×</button>
+              </div>
+              <button type="button" class="fd__add" @click="addColumn">+ 컬럼 추가</button>
+            </div>
+            <!-- 그 외 json(options 등) → textarea -->
             <template v-else-if="f.kind === 'json'">
               <textarea class="fd__json" :value="jsonStr(selectedWidget.props[f.key])" spellcheck="false" @change="setJson(selectedWidget, f.key, $event.target.value)"></textarea>
               <span v-if="jsonErr[`${selectedWidget.i}:${f.key}`]" class="fd__err">{{ jsonErr[`${selectedWidget.i}:${f.key}`] }}</span>
@@ -233,6 +287,17 @@ onMounted(() => {
 .fd__pf-l { font-size: 12px; color: var(--in-text-default); }
 .fd__sw { font-size: 12px; color: var(--in-text-default); display: inline-flex; align-items: center; gap: 6px; }
 .fd__in, .fd__geo input { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 4px; font-size: 12px; font-family: inherit; color: var(--in-text-default); background: var(--in-bg-white, #fff); }
+/* 검색필드/컬럼 행 편집 */
+.fd__rows { display: flex; flex-direction: column; gap: 6px; }
+.fd__row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 6px; border: 1px solid var(--in-border-subtle, #eee); border-radius: 4px; }
+.fd__in--sm { flex: 1 1 60px; min-width: 0; width: auto; }
+.fd__in--type { flex: 0 0 64px; width: auto; }
+.fd__in--w { flex: 0 0 56px; width: auto; }
+.fd__in--full { flex: 1 1 100%; width: auto; }
+.fd__row-x { flex: 0 0 auto; width: 22px; height: 26px; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 4px; background: var(--in-bg-white, #fff); cursor: pointer; color: var(--in-text-subtle); }
+.fd__row-x:hover { border-color: var(--in-text-error, #e33131); color: var(--in-text-error, #e33131); }
+.fd__add { width: 100%; padding: 6px; border: 1px dashed var(--in-border-input, #c9c9c9); border-radius: 4px; background: var(--in-bg-default); cursor: pointer; font-size: 12px; color: var(--in-text-accent); }
+.fd__add:hover { border-color: var(--in-border-brand, #36c1e8); color: var(--in-text-brand); }
 .fd__json { width: 100%; box-sizing: border-box; height: 140px; resize: vertical; padding: 8px; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 4px; font-family: var(--in-font-family-mono, ui-monospace, monospace); font-size: 11px; white-space: pre; color: var(--in-text-default); }
 .fd__err { font-size: 11px; color: var(--in-text-error, #e33131); }
 .fd__props-empty { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); text-align: center; padding: 30px 8px; line-height: 1.6; }
