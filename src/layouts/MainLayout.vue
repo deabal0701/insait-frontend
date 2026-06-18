@@ -121,6 +121,9 @@ function onResize() { viewportH.value = window.innerHeight; }
 
 const displayName = computed(() => auth.loginId || auth.empId || 'user');
 const currentTitle = computed(() => route.meta?.title || '');
+// ★ (2026-06-18, dspark): 상단바 제목 옆 화면 식별정보(예: "ORM9999 · envelope INT_Y19_0001").
+//   route.meta.objInfo 가 있는 화면만 표시 — 페이지 본문 헤더를 없애고 식별정보를 상단으로 이전.
+const currentObjInfo = computed(() => route.meta?.objInfo || '');
 
 // ── rail 로드 (권한명 기준). admin 화면이 아니면 첫 업무 카테고리 자동 선택. ──
 async function reloadRail() {
@@ -186,7 +189,10 @@ watch(selectedAuthName, async (name, old) => {
         <!-- ★ (2026-06-04, dspark): banner = 메뉴 뎁스(향후 breadcrumb) 영역.
              [<] 액션은 페이지 본문 헤더 우측으로 이전 (사용자 피드백 — 헤더에는 헤더에 있을 것).
              현재는 route.meta.title 표시. 추후 breadcrumb 격상은 별도 카드. -->
-        <div class="main-layout__crumb">{{ currentTitle }}</div>
+        <div class="main-layout__crumb">
+          {{ currentTitle }}
+          <span v-if="currentObjInfo" class="main-layout__obj">{{ currentObjInfo }}</span>
+        </div>
         <div class="main-layout__header-right">
           <!-- ★ (2026-06-15, dspark): 권한(역할) 콤보 — AS-IS 상단 역할 셀렉터 정합. 보유 권한 있을 때만 표시. -->
           <el-select
@@ -337,8 +343,15 @@ watch(selectedAuthName, async (name, old) => {
   font-weight: 500;
   color: var(--in-text-accent, #010101);
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
+}
+/* ★ (2026-06-18, dspark): 제목 옆 화면 식별정보 — 약하게(부제). */
+.main-layout__obj {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--in-text-subtle, #8a8a8a);
+  font-family: var(--in-font-family-mono, ui-monospace);
 }
 .main-layout__header-right {
   display: inline-flex;

@@ -9,7 +9,8 @@ const intRoutes = [
     path: 'int/biz-site',
     name: 'ORM9999',
     component: () => import('@/pages/int/int_y19_0001.vue'),
-    meta: { requiresAuth: true, title: '사업장관리', menuId: 'ORM9999' },
+    // ★ (2026-06-18, dspark): objInfo = 상단바 제목 옆 식별정보(페이지 본문 헤더 제거 → 상단 이전).
+    meta: { requiresAuth: true, title: '사업장관리', menuId: 'ORM9999', objInfo: 'ORM9999 · envelope INT_Y19_0001' },
   },
 ];
 

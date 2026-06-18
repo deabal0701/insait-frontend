@@ -13,14 +13,24 @@
  *   - 미저장 변경 가드: 조회/기준일자 변경 시 dirty 있으면 확인.
  *   - TODO(후속): 조직 picker(org_cd/org_nm) — SearchPickerModal + 조직검색 서비스 배선.
  *
+ * ★ (2026-06-18, dspark): SG 화면 규격(검색박스+그리드)으로 레이아웃 재구성 — 2026-06-17 기획 미팅 결정.
+ *   - 상단 = 검색 카드(접기/펴기) → 리스트 헤더(건수 + 툴바) → 그리드 순.
+ *   - 서버 필터 = 기준일자(base_ymd, envelope 보존). 클라이언트 필터 = 사업장명/사업장코드/주사업장여부.
+ *     (사업장관리 envelope 는 base_ymd/company_cd 외 검색 파라미터가 없음 — 추가 서버검색은 메타 변경 수반이라
+ *      보존 노선상 전량 로드 후 그리드 내부 필터로 처리. 기획 미팅 "전량 로드 + 그리드 내부 필터 기본" 정합.)
+ *   - 클라이언트 필터는 tui-grid 네이티브 filter()(행 숨김, 데이터 보존)로 적용 → 저장(dirty) 무결성 유지.
+ *     건수는 masterRows 에서 JS 로 독립 계산(applied 필터 기준).
+ *
  * 신규 백엔드 0 — InDataTable self-managed 모드가 /serviceBroker.h5 envelope 를 내부 조립.
  */
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import dayjs from 'dayjs';
 import InDataTable from '@/components/ui/InDataTable.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InCard from '@/components/ui/InCard.vue';
 import InDatePicker from '@/components/ui/InDatePicker.vue';
+import InTextField from '@/components/ui/InTextField.vue';
+import InSelect from '@/components/ui/InSelect.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 
@@ -36,10 +46,39 @@ function todayYmd() {
 }
 const baseYmd = ref(todayYmd());
 
-// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회 biz_cd 필터 / 신규 행 int_biz_id 연결).
-const selBizCd = ref('');
-const selBizNm = ref('');
-const selIntBizId = ref('');   // 상위 사업장 PK — 디테일 저장 FK(INT_Y08_BIZ_ORG.INT_BIZ_ID, biz_cd 아님)
+// ── 검색 카드 상태 (★ 2026-06-18) ──
+const filterOpen = ref(true);                  // 검색 카드 접기/펴기
+// 클라이언트 필터 입력값(staged) — [조회] 클릭 시 applied 로 확정.
+const fBizNm = ref('');
+const fBizCd = ref('');
+const fMgrYn = ref('');
+// 확정 적용값(applied) — 건수 계산·그리드 필터의 단일 출처.
+const aBizNm = ref('');
+const aBizCd = ref('');
+const aMgrYn = ref('');
+const mgrOptions = [
+  { value: '', label: '전체' },
+  { value: 'Y', label: '주사업장' },
+  { value: 'N', label: '비주사업장' },
+];
+
+// 조회 결과 전량(필터 전) — 건수 계산용. retrieve() 반환 행 보존.
+const masterRows = ref([]);
+
+const hasClientFilter = computed(() => !!(aBizNm.value || aBizCd.value || aMgrYn.value));
+function matchClient(r) {
+  const nm = aBizNm.value.toLowerCase();
+  const cd = aBizCd.value.toLowerCase();
+  return (!nm || String(r.biz_nm || '').toLowerCase().includes(nm))
+      && (!cd || String(r.biz_cd || '').toLowerCase().includes(cd))
+      && (!aMgrYn.value || r.mgr_biz_yn === aMgrYn.value);
+}
+// 화면에 보이는(필터 통과) 건수.
+const masterShown = computed(() =>
+  hasClientFilter.value ? masterRows.value.filter(matchClient).length : masterRows.value.length);
+
+// 디테일 건수.
+const detailRows = ref([]);
 
 // DATE 정규화(공통) — 조회 "2020-01-01 00:00:00.0"/8자리 → 그리드 YYYY-MM-DD(datePicker 파싱) / 저장 YYYYMMDD.
 const DATE_COLS = ['sta_ymd', 'end_ymd'];
@@ -72,12 +111,13 @@ function mapSave(row) {
 const DATE_EDITOR = { type: 'datePicker', options: { format: 'yyyy-MM-dd' } };
 
 // 마스터 — AS-IS DataGrid mySheet1 (ME_INT0001_02) 27컬럼 1:1. PK·company_cd·종사업장일련번호 숨김.
+//   ★ (2026-06-18, dspark): 검색 카드 클라이언트 필터 대상 컬럼에 filter 옵션 부여(그리드 내부 필터 기본 스펙).
 const columns = [
   { name: 'int_biz_id', header: 'int_biz_id', hidden: true },
   { name: 'company_cd', header: 'company_cd', hidden: true },
-  { name: 'mgr_biz_yn', header: '주사업장여부', width: 90, align: 'center', cellType: 'checkbox' },
-  { name: 'biz_cd', header: '사업장코드', width: 90, align: 'center', editor: 'text' },
-  { name: 'biz_nm', header: '사업장명', width: 140, editor: 'text' },
+  { name: 'mgr_biz_yn', header: '주사업장여부', width: 90, align: 'center', cellType: 'checkbox', filter: 'text' },
+  { name: 'biz_cd', header: '사업장코드', width: 90, align: 'center', editor: 'text', filter: 'text' },
+  { name: 'biz_nm', header: '사업장명', width: 140, editor: 'text', filter: 'text' },
   { name: 'tax_no', header: '사업자번호', width: 110, align: 'center', editor: 'text' },
   { name: 'tax_no_seq', header: '종사업장일련번호', hidden: true, editor: 'text' },
   { name: 'corp_no', header: '법인번호', width: 110, align: 'center', editor: 'text' },
@@ -123,20 +163,52 @@ function confirmDiscard() {
   return !hasUnsaved() || window.confirm('저장하지 않은 변경분이 있습니다. 폐기하고 계속할까요?');
 }
 
-// ── 마스터 ──
+// ── 클라이언트 필터 → tui-grid 네이티브 filter()(행 숨김, 데이터/dirty 보존) ──
+function applyGridFilter(g, col, code, value) {
+  if (!g) return;
+  if (value === '' || value == null) g.unfilter?.(col);
+  else g.filter?.(col, [{ code, value }]);
+}
+function applyClientFilters() {
+  const g = grid.value?.getInstance?.();
+  if (!g) return;
+  applyGridFilter(g, 'biz_nm', 'contain', aBizNm.value.trim());
+  applyGridFilter(g, 'biz_cd', 'contain', aBizCd.value.trim());
+  applyGridFilter(g, 'mgr_biz_yn', 'eq', aMgrYn.value);
+}
+
+// ── 마스터 조회(서버) + 클라이언트 필터 적용 ──
 async function onRetrieve() {
   if (!confirmDiscard()) return;
   try {
     const rows = await grid.value.retrieve({
       ME_INT0001_01: [{ company_cd: auth.companyCd || '01', base_ymd: baseYmd.value }],
     });
+    masterRows.value = Array.isArray(rows) ? rows : [];
     selBizCd.value = ''; selBizNm.value = ''; selIntBizId.value = '';   // 재조회 시 선택·디테일 초기화
     detail.value?.clearRows?.();
-    toast.success?.(`조회 ${rows?.length || 0}건`);
+    detailRows.value = [];
+    applyClientFilters();   // 재조회 후 적용된 클라 필터 재적용(빈 값이면 unfilter)
+    toast.success?.(`조회 ${masterShown.value}건`);
   } catch (e) {
     toast.error?.('조회 실패: ' + (e?.message || e));
   }
 }
+// [조회] — staged 입력을 applied 로 확정 후 조회.
+function onSearch() {
+  aBizNm.value = fBizNm.value.trim();
+  aBizCd.value = fBizCd.value.trim();
+  aMgrYn.value = fMgrYn.value;
+  onRetrieve();
+}
+// [초기화] — 검색 입력·필터·기준일자 초기화 후 조회.
+function onResetSearch() {
+  fBizNm.value = ''; fBizCd.value = ''; fMgrYn.value = '';
+  aBizNm.value = ''; aBizCd.value = ''; aMgrYn.value = '';
+  baseYmd.value = todayYmd();
+  onRetrieve();
+}
+
 function onAdd() {
   grid.value.addRow({
     int_biz_id: '', company_cd: auth.companyCd || '01', mgr_biz_yn: 'N',
@@ -166,15 +238,21 @@ async function onMasterClick(e) {
   selBizCd.value = row.biz_cd || '';
   selBizNm.value = row.biz_nm || '';
   selIntBizId.value = row.int_biz_id || '';
-  if (!selBizCd.value) { detail.value?.clearRows?.(); return; }   // 신규/미저장 행 — 디테일 비움
+  if (!selBizCd.value) { detail.value?.clearRows?.(); detailRows.value = []; return; }   // 신규/미저장 행 — 디테일 비움
   try {
-    await detail.value.retrieve({
+    const rows = await detail.value.retrieve({
       ME_INT0001_01: [{ company_cd: auth.companyCd || '01', base_ymd: baseYmd.value, biz_cd: selBizCd.value }],
     });
+    detailRows.value = Array.isArray(rows) ? rows : [];
   } catch (err) {
     toast.error?.('상위조직 조회 실패: ' + (err?.message || err));
   }
 }
+
+// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회 biz_cd 필터 / 신규 행 int_biz_id 연결).
+const selBizCd = ref('');
+const selBizNm = ref('');
+const selIntBizId = ref('');   // 상위 사업장 PK — 디테일 저장 FK(INT_Y08_BIZ_ORG.INT_BIZ_ID, biz_cd 아님)
 
 // ── 디테일(상위조직) ──
 function onDetailAdd() {
@@ -198,40 +276,91 @@ async function onDetailSave() {
   }
 }
 
-onMounted(onRetrieve);
+onMounted(onSearch);
 </script>
 
 <template>
-  <div class="biz">
-    <header class="biz__head">
-      <h1 class="biz__title">사업장관리</h1>
-      <p class="biz__sub">
-        사업장 정보 조회·등록·수정·삭제 — <code>ORM9999</code> · envelope
-        <code>INT_Y19_0001</code>
-      </p>
-    </header>
+  <div class="sg">
+    <!-- ★ (2026-06-18, dspark): 페이지 제목·식별정보는 상단 앱바로 이전(route.meta.title/objInfo).
+         본문은 검색 카드부터 바로 시작 — 상단바 바로 아래 검색이 보이도록. -->
 
-    <InCard class="biz__bar">
-      <div class="biz__search">
-        <label class="biz__label">기준일자</label>
-        <InDatePicker
-          :model-value="baseYmd"
-          hide-label
-          class="biz__ymd"
-          @update:model-value="(v) => (baseYmd = v || '')"
-          @change="onRetrieve"
-        />
-        <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onRetrieve">
-          조회
-        </InButton>
+    <!-- 검색 카드 (SG 규격: 검색박스 + 그리드) -->
+    <InCard class="sg__search">
+      <div v-show="filterOpen" class="sg__search-body">
+        <div class="sg__fields">
+          <div class="sg__field">
+            <label class="sg__label">기준일자</label>
+            <InDatePicker
+              :model-value="baseYmd"
+              hide-label
+              @update:model-value="(v) => (baseYmd = v || '')"
+              @change="onSearch"
+            />
+          </div>
+          <div class="sg__field">
+            <label class="sg__label">사업장명</label>
+            <InTextField
+              :model-value="fBizNm"
+              :show-label="false"
+              input="사업장명 포함검색"
+              @update:model-value="(v) => (fBizNm = v)"
+              @keyup.enter="onSearch"
+            />
+          </div>
+          <div class="sg__field">
+            <label class="sg__label">사업장코드</label>
+            <InTextField
+              :model-value="fBizCd"
+              :show-label="false"
+              input="코드 포함검색"
+              @update:model-value="(v) => (fBizCd = v)"
+              @keyup.enter="onSearch"
+            />
+          </div>
+          <div class="sg__field">
+            <label class="sg__label">주사업장</label>
+            <InSelect
+              :model-value="fMgrYn"
+              :options="mgrOptions"
+              :show-label="false"
+              input="전체"
+              size="sm"
+              @update:model-value="(v) => (fMgrYn = v)"
+            />
+          </div>
+        </div>
+        <div class="sg__search-actions">
+          <InButton variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onSearch">조회</InButton>
+          <InButton variant="default" :left-icon-show="false" :right-icon-show="false" @click="onResetSearch">초기화</InButton>
+        </div>
       </div>
+      <!-- 접기/펴기 토글 (기획 미팅: 검색박스 접기) -->
+      <button
+        type="button"
+        class="sg__toggle"
+        :aria-expanded="filterOpen"
+        :title="filterOpen ? '검색 접기' : '검색 펴기'"
+        @click="filterOpen = !filterOpen"
+      >
+        <span class="sg__chev" :class="{ 'sg__chev--up': filterOpen }" aria-hidden="true" />
+      </button>
     </InCard>
 
+    <!-- 활성 필터 칩 (3줄 초과 시 접힘 정합) -->
+    <div v-if="hasClientFilter" class="sg__chips">
+      <span v-if="aBizNm" class="sg__chip">사업장명: {{ aBizNm }}</span>
+      <span v-if="aBizCd" class="sg__chip">코드: {{ aBizCd }}</span>
+      <span v-if="aMgrYn" class="sg__chip">{{ aMgrYn === 'Y' ? '주사업장' : '비주사업장' }}</span>
+    </div>
+
     <!-- 마스터: 사업장 목록 -->
-    <section class="biz__grid-wrap">
-      <div class="biz__actions">
-        <strong class="biz__grid-title">사업장 목록</strong>
-        <div class="biz__btns">
+    <section class="sg__grid-wrap">
+      <div class="sg__list-head">
+        <strong class="sg__list-title">
+          사업장 목록 <span class="sg__count">총 {{ masterShown.toLocaleString() }}건</span>
+          <span v-if="hasClientFilter" class="sg__count sg__count--muted">/ 전체 {{ masterRows.length.toLocaleString() }}</span>
+        </strong>
+        <div class="sg__btns">
           <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onAdd">입력</InButton>
           <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDeleteChecked">삭제</InButton>
           <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onRestoreChecked">복원</InButton>
@@ -255,14 +384,14 @@ onMounted(onRetrieve);
     </section>
 
     <!-- 디테일: 상위조직 (선택 사업장) -->
-    <section class="biz__grid-wrap">
-      <div class="biz__actions">
-        <strong class="biz__grid-title">
-          상위조직
-          <span v-if="selBizCd" class="biz__sel">— {{ selBizNm }} ({{ selBizCd }})</span>
-          <span v-else class="biz__sel biz__sel--muted">— 사업장을 선택하세요</span>
+    <section class="sg__grid-wrap">
+      <div class="sg__list-head">
+        <strong class="sg__list-title">
+          상위조직 <span class="sg__count">총 {{ detailRows.length.toLocaleString() }}건</span>
+          <span v-if="selBizCd" class="sg__sel">— {{ selBizNm }} ({{ selBizCd }})</span>
+          <span v-else class="sg__sel sg__sel--muted">— 사업장을 선택하세요</span>
         </strong>
-        <div class="biz__btns">
+        <div class="sg__btns">
           <InButton size="sm" :left-icon-show="false" :right-icon-show="false" :disabled="!selBizCd" @click="onDetailAdd">입력</InButton>
           <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDetailDelete">삭제</InButton>
           <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onDetailRestore">복원</InButton>
@@ -287,18 +416,51 @@ onMounted(onRetrieve);
 </template>
 
 <style scoped>
-.biz { display: flex; flex-direction: column; gap: 16px; padding: 24px; font-family: var(--in-font-family-body); }
-.biz__title { margin: 0; font-size: 22px; line-height: 28px; font-weight: var(--in-font-weight-medium); color: var(--in-text-default); }
-.biz__sub { margin: 6px 0 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
-.biz__sub code { font-family: var(--in-font-family-mono, ui-monospace); color: var(--in-text-accent); }
-.biz__bar { padding: 16px; }
-.biz__search { display: flex; gap: 12px; align-items: center; }
-.biz__label { font-size: var(--in-font-size-sm); color: var(--in-text-default); white-space: nowrap; }
-.biz__ymd { width: 160px; }
-.biz__grid-wrap { display: flex; flex-direction: column; gap: 8px; }
-.biz__actions { display: flex; align-items: center; justify-content: space-between; }
-.biz__grid-title { font-size: var(--in-font-size-md); color: var(--in-text-default); }
-.biz__sel { font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-regular); color: var(--in-text-brand); margin-left: 4px; }
-.biz__sel--muted { color: var(--in-text-subtle); }
-.biz__btns { display: flex; gap: 6px; }
+.sg { display: flex; flex-direction: column; gap: 12px; padding: 20px 24px; font-family: var(--in-font-family-body); }
+
+/* 검색 카드 */
+.sg__search { padding: 16px 20px 0; }
+.sg__search-body { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; padding-bottom: 12px; }
+.sg__fields {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 28px;
+}
+.sg__field { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 10px; }
+.sg__label { text-align: right; font-size: var(--in-font-size-sm); color: var(--in-text-default); white-space: nowrap; }
+.sg__search-actions { flex: 0 0 auto; display: flex; gap: 8px; align-items: flex-start; }
+
+/* 접기/펴기 토글 — 카드 하단 중앙 (기획 미팅 정합) */
+.sg__toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 22px; margin: 0 -20px; padding: 0;
+  border: 0; border-top: 1px solid var(--in-border-subtle, #eee);
+  background: transparent; cursor: pointer; color: var(--in-text-subtle);
+}
+.sg__toggle:hover { color: var(--in-text-accent); }
+.sg__chev {
+  width: 0; height: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 6px solid currentColor; transition: transform 0.15s;
+}
+.sg__chev--up { transform: rotate(180deg); }
+
+/* 활성 필터 칩 */
+.sg__chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sg__chip {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+  font-size: var(--in-font-size-sm); color: var(--in-text-accent);
+  background: var(--in-bg-default); border: 1px solid var(--in-border-subtle, #e5e7eb); border-radius: 999px;
+}
+
+/* 리스트 헤더 (건수 + 툴바) */
+.sg__grid-wrap { display: flex; flex-direction: column; gap: 8px; }
+.sg__list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sg__list-title { font-size: var(--in-font-size-md); color: var(--in-text-default); }
+.sg__count { margin-left: 6px; font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-regular); color: var(--in-text-brand); }
+.sg__count--muted { color: var(--in-text-subtle); }
+.sg__sel { font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-regular); color: var(--in-text-brand); margin-left: 4px; }
+.sg__sel--muted { color: var(--in-text-subtle); }
+.sg__btns { display: flex; gap: 6px; }
 </style>
