@@ -32,6 +32,15 @@ function blankMeta() {
 }
 const screenOptions = computed(() => screens.value.map((m) => ({ value: m.objectId, label: `${m.objectId} — ${m.title}` })));
 const palette = computed(() => CATEGORIES.map((c) => ({ ...c, items: CONTROLS.filter((x) => x.cat === c.key) })));
+const gridColsOptions = [{ value: 12, label: '12 컬럼' }, { value: 24, label: '24 컬럼' }];
+// 컬럼 수 변경 — 기존 위젯 x/w 를 비율대로 스케일(레이아웃 유지, 정밀도만 변경). 행(y/h)은 불변.
+function onCols(v) {
+  const n = Number(v); const old = meta.value.grid?.cols || 12;
+  if (!n || n === old) return;
+  const f = n / old;
+  meta.value.widgets.forEach((w) => { w.x = Math.round(w.x * f); w.w = Math.max(1, Math.round(w.w * f)); });
+  meta.value.grid = { ...meta.value.grid, cols: n };
+}
 const selectedWidget = computed(() => meta.value.widgets.find((w) => w.i === selWid.value) || null);
 const selectedDef = computed(() => (selectedWidget.value ? CONTROL_MAP[selectedWidget.value.type] : null));
 
@@ -100,6 +109,7 @@ onMounted(() => {
         <InButton size="sm" variant="primary" :left-icon-show="false" :right-icon-show="false" @click="onSave">저장</InButton>
         <InButton size="sm" variant="danger" :left-icon-show="false" :right-icon-show="false" @click="onDelete">삭제</InButton>
         <InButton size="sm" :left-icon-show="false" :right-icon-show="false" @click="onRestoreSeed">데모 복원</InButton>
+        <InSelect :model-value="meta.grid.cols" :options="gridColsOptions" :show-label="false" size="sm" class="fd__cols" @update:model-value="onCols" />
         <InButton size="sm" :variant="mode === 'preview' ? 'primary' : 'default'" :left-icon-show="false" :right-icon-show="false" @click="mode = mode === 'design' ? 'preview' : 'design'">
           {{ mode === 'design' ? '미리보기' : '디자인' }}
         </InButton>
@@ -122,12 +132,13 @@ onMounted(() => {
       </aside>
 
       <!-- 캔버스 / 미리보기 -->
-      <main class="fd__canvas">
+      <main class="fd__canvas" :style="{ backgroundSize: (100 / meta.grid.cols).toFixed(4) + '% ' + meta.grid.rowHeight + 'px' }">
         <FormRenderer v-if="mode === 'preview'" :meta="meta" />
         <GridLayout
           v-else
-          v-model:layout="meta.widgets"
+          :layout="meta.widgets"
           :col-num="meta.grid.cols"
+          @update:layout="(v) => (meta.widgets = v)"
           :row-height="meta.grid.rowHeight"
           :is-draggable="true"
           :is-resizable="true"
@@ -193,7 +204,9 @@ onMounted(() => {
 .fd__ctl:hover { border-color: var(--in-border-brand, #36c1e8); background: var(--in-bg-accent-brand, #e1f5fc99); }
 .fd__ctl-g { width: 16px; text-align: center; }
 
-.fd__canvas { flex: 1 1 0; min-width: 0; overflow: auto; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 6px; padding: 8px; background: var(--in-bg-default); background-image: linear-gradient(var(--in-border-subtle, #f0f0f0) 1px, transparent 1px), linear-gradient(90deg, var(--in-border-subtle, #f0f0f0) 1px, transparent 1px); background-size: 8.33% 40px; }
+/* background-size 는 컬럼 수에 맞춰 인라인 :style 에서 동적 지정(12→8.33% / 24→4.17%). */
+.fd__canvas { flex: 1 1 0; min-width: 0; overflow: auto; border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 6px; padding: 8px; background: var(--in-bg-default); background-image: linear-gradient(var(--in-border-subtle, #f0f0f0) 1px, transparent 1px), linear-gradient(90deg, var(--in-border-subtle, #f0f0f0) 1px, transparent 1px); }
+.fd__cols { width: 110px; }
 
 .fd-w { position: relative; width: 100%; height: 100%; border: 1px dashed transparent; border-radius: 4px; padding: 2px; box-sizing: border-box; background: var(--in-bg-white, #fff); overflow: hidden; }
 .fd-w:hover { border-color: var(--in-border-input, #c9c9c9); }
