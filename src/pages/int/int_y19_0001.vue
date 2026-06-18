@@ -31,6 +31,7 @@ import InCard from '@/components/ui/InCard.vue';
 import InDatePicker from '@/components/ui/InDatePicker.vue';
 import InTextField from '@/components/ui/InTextField.vue';
 import InSelect from '@/components/ui/InSelect.vue';
+import InChip from '@/components/ui/InChip.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 
@@ -38,6 +39,11 @@ const toast = useToast();
 const auth = useAuthStore();
 const grid = ref(null);     // 마스터(사업장)
 const detail = ref(null);   // 디테일(상위조직)
+
+// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회 biz_cd 필터 / 신규 행 int_biz_id 연결).
+const selBizCd = ref('');
+const selBizNm = ref('');
+const selIntBizId = ref('');   // 상위 사업장 PK — 디테일 저장 FK(INT_Y08_BIZ_ORG.INT_BIZ_ID, biz_cd 아님)
 
 /** 오늘 YYYYMMDD — AS-IS getStdDate() 대응 (기준일자 기본값). */
 function todayYmd() {
@@ -249,11 +255,6 @@ async function onMasterClick(e) {
   }
 }
 
-// 선택 사업장 — 마스터 행 선택 시 세팅(디테일 조회 biz_cd 필터 / 신규 행 int_biz_id 연결).
-const selBizCd = ref('');
-const selBizNm = ref('');
-const selIntBizId = ref('');   // 상위 사업장 PK — 디테일 저장 FK(INT_Y08_BIZ_ORG.INT_BIZ_ID, biz_cd 아님)
-
 // ── 디테일(상위조직) ──
 function onDetailAdd() {
   if (!selBizCd.value) { toast.info?.('사업장을 먼저 선택하세요'); return; }
@@ -347,11 +348,11 @@ onMounted(onSearch);
     </InCard>
 
     <!-- 활성 필터 칩 — ★ (2026-06-18, dspark): 검색 접혔을 때만 표시(펼침 시 필드로 보여 중복).
-         기획 미팅 "검색박스 접기 + 칩 표시" 정합. -->
+         기획 미팅 "검색박스 접기 + 칩 표시" 정합. 표준 InChip(type=multi-select) 사용. -->
     <div v-if="!filterOpen && hasClientFilter" class="sg__chips">
-      <span v-if="aBizNm" class="sg__chip">사업장명: {{ aBizNm }}</span>
-      <span v-if="aBizCd" class="sg__chip">코드: {{ aBizCd }}</span>
-      <span v-if="aMgrYn" class="sg__chip">{{ aMgrYn === 'Y' ? '주사업장' : '비주사업장' }}</span>
+      <InChip v-if="aBizNm" type="multi-select" :label="`사업장명: ${aBizNm}`" />
+      <InChip v-if="aBizCd" type="multi-select" :label="`코드: ${aBizCd}`" />
+      <InChip v-if="aMgrYn" type="multi-select" :label="aMgrYn === 'Y' ? '주사업장' : '비주사업장'" />
     </div>
 
     <!-- 마스터: 사업장 목록 -->
@@ -459,13 +460,8 @@ onMounted(onSearch);
 }
 .sg__chev--up { transform: rotate(180deg); }
 
-/* 활성 필터 칩 */
+/* 활성 필터 칩 (InChip 표준 컴포넌트 — 컨테이너 정렬만) */
 .sg__chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.sg__chip {
-  display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
-  font-size: var(--in-font-size-sm); color: var(--in-text-accent);
-  background: var(--in-bg-default); border: 1px solid var(--in-border-subtle, #e5e7eb); border-radius: 999px;
-}
 
 /* 리스트 헤더 (건수 + 툴바) */
 .sg__grid-wrap { display: flex; flex-direction: column; gap: 8px; }
