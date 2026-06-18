@@ -27,14 +27,15 @@ defineProps({
   toolbar: { type: Boolean, default: true },        // 표준 입력/삭제/복원/저장 툴바 표시
   disabled: { type: Boolean, default: false },      // 입력+저장 비활성(상위 미선택 등). 삭제·복원은 유지
 });
-const emit = defineEmits(['add', 'delete', 'restore', 'save']);
+// title-click = 제목 텍스트 클릭(개발 도움말 5클릭 비밀 트리거 등 상위가 카운트). 일반 화면은 무시.
+const emit = defineEmits(['add', 'delete', 'restore', 'save', 'title-click']);
 </script>
 
 <template>
   <section class="grid-section">
     <div class="grid-section__head">
       <strong class="grid-section__title">
-        {{ title }}
+        <span class="grid-section__title-text" @click="emit('title-click')">{{ title }}</span>
         <span v-if="count != null" class="grid-section__count">총 {{ count.toLocaleString() }}건</span>
         <span v-if="sub" class="grid-section__count grid-section__count--muted">{{ sub }}</span>
         <span v-if="subtitle" class="grid-section__sub" :class="{ 'grid-section__sub--muted': subtitleMuted }">{{ subtitle }}</span>
@@ -57,6 +58,8 @@ const emit = defineEmits(['add', 'delete', 'restore', 'save']);
 .grid-section { display: flex; flex-direction: column; gap: 8px; }
 .grid-section__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .grid-section__title { font-size: var(--in-font-size-md); color: var(--in-text-default); }
+/* 제목 텍스트 — 도움말 5클릭 트리거 시 텍스트 선택 방지(연속 클릭). 일반 화면은 영향 없음. */
+.grid-section__title-text { user-select: none; }
 .grid-section__count { margin-left: 6px; font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-regular); color: var(--in-text-brand); }
 .grid-section__count--muted { color: var(--in-text-subtle); }
 .grid-section__sub { margin-left: 4px; font-size: var(--in-font-size-sm); font-weight: var(--in-font-weight-regular); color: var(--in-text-brand); }

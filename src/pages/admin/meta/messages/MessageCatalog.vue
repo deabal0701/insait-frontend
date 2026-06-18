@@ -9,20 +9,17 @@
 import { computed, onMounted, ref } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 import { shortCmd } from '@/utils/metaUtils';
 import { MSG_NAME_RE, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './MessageCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
@@ -37,19 +34,9 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', typeCd: '', allowChildYn: '', hasParent: '' },
-  chipLabels: { q: '검색', typeCd: 'type', allowChildYn: 'child', hasParent: 'parent' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onType(v) { staged.value.typeCd = v; }
-function onParent(v) { staged.value.hasParent = v; }
-
 // ★ (2026-06-08, dspark): #2 정합 — FRM_MSG_DEF.TYPE_CD 도메인은 DEFAULT/TREE 2종 (AS-IS 메뉴얼 03 §3.4).
-//   기존 MT/ME 옵션은 'ID 접두사'를 type_cd 로 혼동한 것 → 백엔드 WHERE TYPE_CD='MT' 는 항상 0건이라 제거.
 const typeOptions = [
-  { value: '',        label: '전체' },   // ★ (2026-06-12, dspark): '전체 type' → '전체' 통일 (#6)
+  { value: '',        label: '전체' },
   { value: 'DEFAULT', label: 'DEFAULT (평면)' },
   { value: 'TREE',    label: 'TREE (계층)' },
 ];
@@ -59,14 +46,21 @@ const parentOptions = [
   { value: 'N', label: '최상위' },
 ];
 
+// ── 검색 (SgSearchBar) — key = list filter 키 ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '메시지 ID prefix 또는 한글명 — 예: MT_IST0050' },
+  { key: 'typeCd', label: 'Type', type: 'select', placeholder: '전체', options: typeOptions },
+  { key: 'hasParent', label: '부모', type: 'select', placeholder: '전체', options: parentOptions },
+];
 
+// ── 목록 그리드 (tui-grid 컬럼) ──
 const columns = [
-  { field: 'msgDefId',     label: '메시지 ID', sortable: true, sortKey: 'msg_def_id', width: 220 },
-  { field: 'msgDefNm',     label: '한글명',   sortable: true, sortKey: 'msg_def_nm' },
-  { field: 'typeCd',       label: 'Type',     sortable: true, sortKey: 'type_cd',   align: 'center', width: 80 },
-  { field: 'allowChildYn', label: '자식허용', sortable: true, sortKey: 'allow_child_yn', align: 'center', width: 80 },
-  { field: 'parentId',     label: '부모',     width: 160 },
-  { field: 'columnCount',  label: '컬럼수',   align: 'right', width: 80 },
+  { name: 'msgDefId',     header: '메시지 ID', width: 220, sortKey: 'msg_def_id' },
+  { name: 'msgDefNm',     header: '한글명',   sortKey: 'msg_def_nm' },
+  { name: 'typeCd',       header: 'Type',     width: 90, align: 'center', sortKey: 'type_cd' },
+  { name: 'allowChildYn', header: '자식허용', width: 90, align: 'center', sortKey: 'allow_child_yn' },
+  { name: 'parentId',     header: '부모',     width: 160, formatter: ({ value }) => value || '—' },
+  { name: 'columnCount',  header: '컬럼수',   width: 80, align: 'right' },
 ];
 
 // ── 편집 폼 옵션 ──
@@ -239,50 +233,19 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="메시지 관리"
     :subtitle="`FRM_MSG_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="메시지 목록"
     row-key="msgDefId"
-    :active-filters="activeFilters"
-    :selected-row="selected"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="m-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="메시지 ID(앞부분) 또는 한글명 — 예: MT_IST0050 / 조회결과 (Enter 또는 [조회])"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InSelect :model-value="staged.typeCd" :options="typeOptions" label="Type" input="전체" layout="vertical" size="sm" @update:model-value="onType" />
-        <InSelect :model-value="staged.hasParent" :options="parentOptions" label="부모" input="전체" layout="vertical" size="sm" @update:model-value="onParent" />
-        <InButton class="m-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="m-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-msgDefId="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-typeCd="{ value }">
-      <InTag :label="value" :variant="value === 'TREE' ? 'brand' : 'default'" size="sm" />
-    </template>
-    <template #cell-allowChildYn="{ value }">
-      <span :class="value === 'Y' ? '' : 'muted'">{{ value || '—' }}</span>
-    </template>
-    <template #cell-parentId="{ value }"><span class="muted">{{ value || '—' }}</span></template>
-
     <template #drawer>
       <MetaDetailEditor
         :mode="mode"
@@ -418,14 +381,10 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.m-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.m-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.m-filters > :deep(.in-sel) { flex: 0 0 200px; }
-.m-filters__search-btn, .m-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
 .sql-load { display: flex; gap: 8px; align-items: flex-end; }
@@ -441,9 +400,6 @@ onMounted(() => list.reload());
 .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; word-break: break-all; }
-.form-grid { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; flex-direction: column; gap: 4px; }
-.hint { margin: 6px 0 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .resource-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .resource-list li {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;

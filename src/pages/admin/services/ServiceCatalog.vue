@@ -14,26 +14,21 @@ import { useRouter } from 'vue-router';
 import { adminApi } from '@/services/adminApi';
 import { buildEnvelope } from '@/services/envelope';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 import { shortCmd } from '@/utils/metaUtils';
 import { SERVICE_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
-import screenHelp from './ServiceCatalog.help.js';   // [DEV-HELP] 화면 도움말(실행 SQL+업무주의+컬럼정보) — 제거 시 이 줄 + 아래 :help prop 삭제
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
+import screenHelp from './ServiceCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
-import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 import InTooltip from '@/components/ui/InTooltip.vue';
-import InIcon from '@/components/ui/InIcon.vue';
 
 const router = useRouter();
 const toast = useToast();
@@ -47,37 +42,43 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', cmdClass: '', txSupportYn: '', useLogYn: '' },
-  chipLabels: { q: '검색', cmdClass: 'Cmd', txSupportYn: 'tx', useLogYn: 'log' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onCmdClass(v) { staged.value.cmdClass = v; }
-function onTx(v) { staged.value.txSupportYn = v; }
-function onUseLog(v) { staged.value.useLogYn = v; }
-
 const cmdOptions = [
-  { value: '', label: '전체' },   // ★ (2026-06-12, dspark): '전체 Command' → '전체' 통일 (#6)
+  { value: '', label: '전체' },
   { value: 'MultiQuery', label: 'MultiQuery (조회)' },
   { value: 'MultiSave',  label: 'MultiSave (저장)' },
   { value: 'Procedure',  label: 'Procedure (PL/SQL)' },
   { value: 'ElaService', label: 'ElaService (전자결재)' },
 ];
 
-const columns = [
-  { field: 'svDefNm',    label: '서비스명',     sortable: true, sortKey: 'sv_def_nm', width: 240 },
-  { field: 'cmdClassNm', label: 'Command',     sortable: true, sortKey: 'cmd_class_nm' },
-  { field: 'txSupportYn',label: 'TX',          sortable: true, sortKey: 'tx_support_yn', align: 'center', width: 50 },
-  { field: 'asyncYn',    label: 'Async',       sortable: true, sortKey: 'async_yn',     align: 'center', width: 60 },
-  { field: 'useLogYn',   label: 'Log',         sortable: true, sortKey: 'use_log_yn',   align: 'center', width: 50 },
-  { field: 'modDate',    label: '변경일',      sortable: true, sortKey: 'mod_date', width: 160 },
-  { field: 'note',       label: '비고' },
-  // ★ (2026-06-05, dspark): field 'actions' → 'ops'. 'actions' 는 헤더 슬롯명 'header-actions' 를
-  //   생성해 CatalogPage 의 페이지 헤더 슬롯(header-actions = [+신규] 버튼)과 충돌 →
-  //   [+신규] 가 이 컬럼 헤더에도 새어 들어가던 버그. 'ops' 로 회피.
-  { field: 'ops',        label: '액션', align: 'center', width: 150 },
+// ── 검색 (SgSearchBar) — key = list filter 키 ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '서비스명 prefix — 예: IST0050' },
+  { key: 'cmdClass', label: 'Command', type: 'select', placeholder: '전체', options: cmdOptions },
+  { key: 'txSupportYn', label: 'TX', type: 'select', placeholder: '전체', options: YN_FILTER_OPTIONS },
+  { key: 'useLogYn', label: 'Log', type: 'select', placeholder: '전체', options: YN_FILTER_OPTIONS },
 ];
+
+// ── 목록 그리드 (tui-grid 컬럼) — Command 는 shortCmd, 변경일은 날짜만 ──
+const columns = [
+  { name: 'svDefNm',    header: '서비스명', width: 240, sortKey: 'sv_def_nm' },
+  { name: 'cmdClassNm', header: 'Command', sortKey: 'cmd_class_nm', formatter: ({ value }) => shortCmd(value) },
+  { name: 'txSupportYn',header: 'TX',  width: 60, align: 'center', sortKey: 'tx_support_yn' },
+  { name: 'asyncYn',    header: 'Async', width: 70, align: 'center', sortKey: 'async_yn' },
+  { name: 'useLogYn',   header: 'Log', width: 60, align: 'center', sortKey: 'use_log_yn' },
+  { name: 'modDate',    header: '변경일', width: 120, sortKey: 'mod_date', formatter: ({ value }) => (value || '').slice(0, 10) },
+  { name: 'note',       header: '비고' },
+];
+
+// ── 행 우클릭 컨텍스트 메뉴 (tui-grid 셀에 버튼 불가 → 우클릭으로 행 액션 제공) ──
+const rowMenu = [
+  { key: 'test', label: '테스트 (ServiceTester)' },
+  { key: 'json', label: 'envelope JSON 복사' },
+];
+function onRowMenu({ key, row }) {
+  if (!row) return;
+  if (key === 'test') gotoTester(row);
+  else if (key === 'json') copyRowEnvelope(row);
+}
 
 // ─── 편집 폼 옵션 / 그리드 config ─────────────────────────────────────────
 const txAsyncLogOptions = [{ value: 'Y', label: 'Y' }, { value: 'N', label: 'N' }];
@@ -337,70 +338,21 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="서비스관리"
     :subtitle="`FRM_SERVICE_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="서비스 목록"
     row-key="svDefNm"
-    :active-filters="activeFilters"
-    :selected-row="selected"
+    :context-menu-items="rowMenu"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
+    @context-action="onRowMenu"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="svc-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="서비스명 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InSelect :model-value="staged.cmdClass" :options="cmdOptions" label="Command" input="전체" layout="vertical" size="sm" @update:model-value="onCmdClass" />
-        <InSelect :model-value="staged.txSupportYn" :options="YN_FILTER_OPTIONS" label="TX" input="전체" layout="vertical" size="sm" @update:model-value="onTx" />
-        <InSelect :model-value="staged.useLogYn" :options="YN_FILTER_OPTIONS" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onUseLog" />
-        <InButton class="svc-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="svc-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-svDefNm="{ value, row }">
-      <span class="svc-name">
-        <strong>{{ value }}</strong>
-        <InTooltip v-if="row.note" :text="row.note"><span class="svc-note-dot">·</span></InTooltip>
-      </span>
-    </template>
-    <template #cell-cmdClassNm="{ value }"><span class="svc-cmd">{{ shortCmd(value) }}</span></template>
-    <template #cell-txSupportYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" /><span v-else class="muted">N</span>
-    </template>
-    <template #cell-asyncYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="warning" size="sm" /><span v-else class="muted">N</span>
-    </template>
-    <template #cell-useLogYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="brand" size="sm" /><span v-else class="muted">N</span>
-    </template>
-    <template #cell-modDate="{ value }"><span class="muted">{{ (value || '').slice(0, 10) }}</span></template>
-    <template #cell-ops="{ row }">
-      <span class="svc-row-actions" @click.stop>
-        <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="gotoTester(row)">
-          <template #prefix><InIcon name="chevron-right" :size="14" /></template>테스트
-        </InButton>
-        <InButton variant="text" size="sm" :left-icon-show="true" :right-icon-show="false" @click="copyRowEnvelope(row)">
-          <template #prefix><InIcon name="content-copy" :size="14" /></template>JSON
-        </InButton>
-      </span>
-    </template>
-
     <template #drawer>
       <MetaDetailEditor
         :mode="mode"
@@ -619,22 +571,11 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.svc-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.svc-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.svc-filters > :deep(.in-sel) { flex: 0 0 160px; }
-.svc-filters__search-btn, .svc-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; margin-bottom: 0; }
-
-.svc-name { display: inline-flex; align-items: center; gap: 6px; }
-.svc-note-dot { color: var(--in-text-subtle); }
-.svc-row-actions { display: inline-flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap; white-space: nowrap; }
-.svc-row-actions :deep(.in-btn) { padding: 2px 6px; }
-.svc-cmd { color: var(--in-text-accent); }
 .muted { color: var(--in-text-subtle); }
-.hint { margin: 0; font-size: var(--in-font-size-sm); }
 
 .svc-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .svc-def-chip { margin-left: 8px; }
@@ -668,9 +609,6 @@ onMounted(() => list.reload());
 .svc-ela-row--missing td { background: var(--in-surface-accent-warning, #fffbeb); }
 .svc-ela-hint { color: var(--in-text-default); }
 .svc-section { padding: 12px 4px; }
-
-.form-grid { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; flex-direction: column; gap: 4px; }
 
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }

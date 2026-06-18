@@ -9,21 +9,17 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 import { shortCmd } from '@/utils/metaUtils';
 import { YN_FILTER_OPTIONS, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './EntityCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
-import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 
@@ -37,22 +33,20 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', historyTypeCd: '', logYn: '', unitCd: '' },
-  chipLabels: { q: '검색', historyTypeCd: 'history', logYn: 'log', unitCd: 'unit' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onLog(v) { staged.value.logYn = v; }
+// ── 검색 (SgSearchBar) — key = list filter 키 ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '테이블명 prefix — 예: PHM_' },
+  { key: 'logYn', label: 'Log', type: 'select', placeholder: '전체', options: YN_FILTER_OPTIONS },
+];
 
-
+// ── 목록 그리드 (tui-grid 컬럼) ──
 const columns = [
-  { field: 'entityNm',     label: '테이블명',  sortable: true, sortKey: 'entity_nm', width: 220 },
-  { field: 'displayNm',    label: '한글명',    sortable: true, sortKey: 'display_nm' },
-  { field: 'historyTypeCd', label: 'History',  sortable: true, sortKey: 'history_type_cd', align: 'center', width: 100 },
-  { field: 'logYn',        label: 'Log',       sortable: true, sortKey: 'log_yn',  align: 'center', width: 60 },
-  { field: 'unitCd',       label: 'Unit',      sortable: true, sortKey: 'unit_cd', width: 100 },
-  { field: 'columnCount',  label: '컬럼수',    align: 'right', width: 80 },
+  { name: 'entityNm',      header: '테이블명',  width: 220, sortKey: 'entity_nm' },
+  { name: 'displayNm',     header: '한글명',    sortKey: 'display_nm' },
+  { name: 'historyTypeCd', header: 'History',   width: 100, align: 'center', sortKey: 'history_type_cd' },
+  { name: 'logYn',         header: 'Log',       width: 70, align: 'center', sortKey: 'log_yn' },
+  { name: 'unitCd',        header: 'Unit',      width: 100, sortKey: 'unit_cd' },
+  { name: 'columnCount',   header: '컬럼수',    width: 80, align: 'right' },
 ];
 
 // ── 편집 폼 옵션 ──
@@ -181,47 +175,19 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="엔터티 관리"
     :subtitle="`FRM_ENTITY · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="엔터티 목록"
     row-key="entityNm"
-    :active-filters="activeFilters"
-    :selected-row="selected"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="e-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="테이블명 prefix — 예: PHM_ (Enter 또는 [조회] 버튼)"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <!-- ★ (2026-06-07, dspark): 미선언 변수 ynOptions → YN_FILTER_OPTIONS (Log 필터 옵션이 undefined 라 깨지던 버그 수정) -->
-        <InSelect :model-value="staged.logYn" :options="YN_FILTER_OPTIONS" label="Log" input="전체" layout="vertical" size="sm" @update:model-value="onLog" />
-        <InButton class="e-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="e-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-entityNm="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-logYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
-      <span v-else class="muted">N</span>
-    </template>
-
     <template #drawer>
       <MetaDetailEditor
         :mode="mode"
@@ -336,22 +302,15 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.e-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.e-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.e-filters > :deep(.in-sel) { flex: 0 0 200px; }
-.e-filters__search-btn, .e-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; word-break: break-all; }
-.form-grid { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; flex-direction: column; gap: 4px; }
-.hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .grid-title { margin: 0 0 8px; font-size: var(--in-font-size-md); font-weight: var(--in-font-weight-medium); color: var(--in-text-accent); }
 .map-section { margin-top: 20px; padding-top: 12px; border-top: 1px dashed var(--in-border-default); }
 .map-empty { padding: 12px; text-align: center; }

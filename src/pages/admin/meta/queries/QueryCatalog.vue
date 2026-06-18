@@ -9,22 +9,18 @@
 import { computed, onMounted } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 import { shortCmd } from '@/utils/metaUtils';
 import { SQL_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './QueryCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaCodeEditor from '@/components/feature/admin/MetaCodeEditor.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
-import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 
@@ -38,23 +34,22 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', dataSource: '', useYn: '', status: '' },
-  chipLabels: { q: '검색', dataSource: 'DS', useYn: 'use', status: 'status' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onDs(v) { staged.value.dataSource = v; }
-function onUseYn(v) { staged.value.useYn = v; }
+// ── 검색 (SgSearchBar) — key = list filter 키 ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: 'SQL 이름 prefix — 예: IST0050' },
+  { key: 'dataSource', label: 'DataSource', type: 'select', placeholder: '전체',
+    options: [{ value: '', label: '전체' }, { value: 'jdbc/h5prd', label: 'jdbc/h5prd' }] },
+  { key: 'useYn', label: 'Use', type: 'select', placeholder: '전체', options: YN_FILTER_OPTIONS },
+];
 
-
+// ── 목록 그리드 (tui-grid 컬럼) — sortKey 선언 컬럼은 WinGrid 기본 정렬 ──
 const columns = [
-  { field: 'queryName',   label: 'SQL 이름', sortable: true, sortKey: 'query_name', width: 260 },
-  { field: 'displayName', label: '한글명',   sortable: true, sortKey: 'display_name' },
-  { field: 'dataSource',  label: 'DataSource', sortable: true, sortKey: 'data_source', width: 140 },
-  { field: 'useYn',       label: 'Use',      sortable: true, sortKey: 'use_yn',  align: 'center', width: 60 },
-  { field: 'status',      label: 'Status',   sortable: true, sortKey: 'status',  align: 'center', width: 100 },
-  { field: 'version',     label: 'Ver',      sortable: true, sortKey: 'version', align: 'center', width: 60 },
+  { name: 'queryName',   header: 'SQL 이름', width: 260, sortKey: 'query_name' },
+  { name: 'displayName', header: '한글명',   sortKey: 'display_name' },
+  { name: 'dataSource',  header: 'DataSource', width: 140, sortKey: 'data_source' },
+  { name: 'useYn',       header: 'Use',  width: 70, align: 'center', sortKey: 'use_yn' },
+  { name: 'status',      header: 'Status', width: 110, align: 'center', sortKey: 'status' },
+  { name: 'version',     header: 'Ver',  width: 60, align: 'center', sortKey: 'version' },
 ];
 
 // ── 편집 폼 옵션 ──
@@ -162,63 +157,19 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="SQL 관리"
     :subtitle="`FRM_QUERY_DEF · 운영 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="SQL 목록"
     row-key="queryName"
-    :active-filters="activeFilters"
-    :selected-row="selected"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="q-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="SQL 이름 prefix — 예: IST0050 (Enter 또는 [조회] 버튼)"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InSelect
-          :model-value="staged.dataSource"
-          :options="[{value:'',label:'전체'}, {value:'jdbc/h5prd',label:'jdbc/h5prd'}]"
-          label="DataSource"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onDs"
-        />
-        <InSelect
-          :model-value="staged.useYn"
-          :options="YN_FILTER_OPTIONS"
-          label="Use"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onUseYn"
-        />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-queryName="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-useYn="{ value }">
-      <InTag v-if="value === 'Y'" label="Y" variant="success" size="sm" />
-      <span v-else class="muted">N</span>
-    </template>
-
     <template #drawer>
       <MetaDetailEditor
         :mode="mode"
@@ -301,22 +252,15 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) confirmDelete = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.q-filters > :deep(.in-sel) { flex: 0 0 200px; }
-.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
 .kv dd { margin: 0; color: var(--in-text-default); word-break: break-all; }
-.form-grid { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; flex-direction: column; gap: 4px; }
-.hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .body {
   margin: 0; padding: 12px;
   background: var(--in-bg-default); border-radius: var(--in-radius-xs);

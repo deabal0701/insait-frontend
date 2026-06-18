@@ -17,6 +17,7 @@ import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 
 import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
+import screenHelp from './ObjectCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
@@ -181,6 +182,7 @@ onMounted(() => list.reload());
     :list="list"
     :columns="columns"
     :search-fields="searchFields"
+    :help="screenHelp"
     grid-title="오브젝트 목록"
     row-key="objectNm"
     @row-click="openDetail"
@@ -296,7 +298,6 @@ onMounted(() => list.reload());
 <style scoped>
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
-.hint { margin: 0; font-size: var(--in-font-size-sm); color: var(--in-text-subtle); }
 .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; }
 /* ★ (2026-06-10) 바로편집 시 editor 위 읽기전용 정보 블록 — 폼과 시각 구분 */
 .kv--ro { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--in-border-subtle, var(--in-bg-default)); }
