@@ -34,3 +34,17 @@ body {
 button {
   font-family: inherit;
 }
+
+/* ★ (2026-06-18, dspark): 그리드(tui-grid) 셀 폰트를 앱 폰트(Pretendard)로 통일 — h5on.com 그리드 정합.
+ *   근거: h5on 그리드 셀 = `pretendard, sans-serif` 13px #565656 (Playwright 실측). insait 도 동일 Pretendard
+ *   로컬 @font-face 보유했으나 tui-grid 만 자체 기본 폰트였음. tui-grid applyTheme 은 색만 지원하고
+ *   font-family 미지원 → CSS 로 적용. tui-grid 기본 CSS 가 런타임 주입되어 순서가 뒤일 수 있어 !important.
+ *   컨테이너에 주면 셀/헤더/요약/에디터(input)가 상속. 색(#565656)은 figmaTheme 이 이미 일치. */
+.tui-grid-container,
+.tui-grid-container .tui-grid-cell,
+.tui-grid-container .tui-grid-cell-content,
+.tui-grid-container input,
+.tui-grid-container textarea,
+.tui-grid-container select {
+  font-family: var(--in-font-family-body) !important;
+}
