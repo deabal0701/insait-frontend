@@ -22,10 +22,12 @@
  *   - title / subtitle      : 페이지 제목·부제
  *   - list                  : usePagedList 인스턴스 (rows/total/page/size/sort/loading/error + setPage/setSize/setSort/setFilter/resetFilter/reload)
  *   - columns               : tui-grid 컬럼 [{ name, header, width, align, formatter?, sortKey? }]
- *                             · sortKey 가 있으면 그 컬럼은 서버 정렬 대상(헤더 클릭 → list.setSort)
+ *                             · sortKey 가 있으면 그 컬럼에 WinGrid 기본 클라 정렬을 켠다(현재 페이지 기준).
+ *                               서버 전량 정렬 아님(목록은 usePagedList defaultSort 로 1차 정렬되어 로드).
  *   - searchFields          : SgSearchBar fields [{ key, label, type, options?, placeholder?, chip? }]
  *                             · key 는 list 의 filter 키와 일치시킨다(직접 setFilter 매핑)
- *   - rowKey                : 행 식별 컬럼명 (tui-grid keyColumnName)
+ *   - rowKey                : (현재 미사용) keyColumnName 을 주면 tui-grid click 이벤트 rowKey 가 null 로
+ *                             와 행클릭→Drawer 가 깨진다 → 숫자 rowKey 사용. prop 은 호환을 위해 보존.
  *   - gridTitle             : 목록 섹션 제목 (기본 '목록')
  *   - createLabel/showCreate: [+신규] 버튼 라벨/표시
  *   - gridHeight/bodyHeight : 그리드 외곽/본문 높이
@@ -105,27 +107,14 @@ function onReset() {
   props.list.resetFilter();
 }
 
-// ── 정렬 (서버) — tui-grid 네이티브 sortable 헤더 → @sort → list.setSort ──
-const sortMap = computed(() => {
-  const m = {};
-  for (const c of props.columns) if (c && c.name && c.sortKey) m[c.name] = c.sortKey;
-  return m;
-});
-function onSort(e) {
-  const cols = e?.sortState?.columns || [];
-  let target = cols.find((c) => sortMap.value[c.columnName]);
-  if (!target && e?.columnName) target = { columnName: e.columnName, ascending: e.ascending };
-  if (!target) return;
-  const key = sortMap.value[target.columnName];
-  if (!key) return;
-  props.list.setSort(key, target.ascending ? 'asc' : 'desc');
-}
-
-// tui-grid 로 넘기는 컬럼 — sortKey(커스텀 키) 제거 + sortKey 있으면 sortable:true 부여.
+// ── 정렬 ──
+// ★ (2026-06-18, 사용자 결정) 서버 페이징 전량을 가로지르는 "서버 정렬"은 쓰지 않는다
+//   ("정렬버튼 없어도 되거나 그냥 wingrid 기본기능 사용"). sortKey 가 선언된 컬럼은 WinGrid(tui-grid)
+//   기본 클라 정렬만 켠다(현재 페이지 기준). 목록은 usePagedList defaultSort 로 서버에서 1차 정렬되어 로드.
 const gridColumns = computed(() => props.columns.map((c) => {
   if (!c || !c.name) return c;
-  const { sortKey, ...rest } = c;
-  return { ...rest, sortable: sortKey ? true : (rest.sortable ?? false) };
+  const { sortKey, ...rest } = c;   // sortKey 는 tui-grid 비표준 키 → 제거. 있으면 클라 정렬 on.
+  return sortKey ? { ...rest, sortable: true } : rest;
 }));
 
 const mergedOptions = computed(() => ({
@@ -142,7 +131,7 @@ function clearSelection() {
   prevSelKey = null;
 }
 function onGridClick(e) {
-  if (e?.rowKey == null) return;                  // 행 헤더/빈영역 클릭 무시
+  if (e?.rowKey == null) return;                  // 헤더/빈영역 클릭 무시(정렬은 WinGrid 기본 처리)
   const g = gridRef.value?.getInstance?.();
   if (!g) return;
   const row = g.getRow(e.rowKey);
@@ -208,18 +197,19 @@ defineExpose({ clearSelection, grid: gridRef });
       </InEmptyState>
 
       <!-- 그리드 (controlled — :data = 직접 REST 현재 페이지) -->
+      <!-- ★ row-key(keyColumnName) 미설정 의도적: keyColumnName 을 주면 tui-grid click 이벤트의
+           rowKey 가 null 로 와서 행클릭→Drawer 가 동작하지 않는다(검증됨). 카탈로그는 페이지마다
+           재조회하므로 안정적 업무키 rowKey 불필요 → 숫자 rowKey 사용(사업장관리 ORM9999 와 동일 패턴). -->
       <InDataTable
         v-else
         ref="gridRef"
         :columns="gridColumns"
         :data="rows"
-        :row-key="rowKey"
         :height="gridHeight"
         :loading="loading"
         :options="mergedOptions"
         :column-menu="false"
         @click="onGridClick"
-        @sort="onSort"
       />
     </SgGridSection>
 
