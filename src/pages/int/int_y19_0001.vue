@@ -446,11 +446,12 @@ onMounted(onSearch);
   position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%);
   display: inline-flex; align-items: center; justify-content: center;
   width: 46px; height: 20px; padding: 0; z-index: 1;
-  border: 1px solid var(--in-border-default, #e2e2e2); border-radius: 999px;
-  background: var(--in-surface-overlay, #fff); color: var(--in-text-subtle);
-  cursor: pointer; box-shadow: var(--in-shadow-elev-2);
+  /* ★ (2026-06-18, dspark): 회색 테두리+그림자가 너무 튀어 → 연한 하늘색으로 톤다운(테마 토큰). */
+  border: 1px solid var(--in-border-brand, #36c1e8); border-radius: 999px;
+  background: var(--in-bg-accent-brand, #e1f5fc99); color: var(--in-brand, #0ea1da);
+  cursor: pointer;
 }
-.sg__toggle:hover { color: var(--in-text-accent); border-color: var(--in-border-input, #c9c9c9); }
+.sg__toggle:hover { border-color: var(--in-brand, #0ea1da); color: var(--in-brand-bolder, #0b7fac); }
 .sg__chev {
   width: 0; height: 0;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
