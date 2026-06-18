@@ -66,14 +66,15 @@ export const CONTROLS = [
     schema: [T('fields', '검색필드(JSON)', 'json')] },
   { type: 'datagrid', name: '데이터그리드', cat: 'data', glyph: '▤', defaultSize: { w: 12, h: 6 },
     defaultProps: {
-      title: '목록', objectId: '', retrieveServiceId: '', saveServiceId: '', slot: '',
+      title: '목록', objectId: '', retrieveServiceId: '', saveServiceId: '',
+      slot: '', retrieveSlot: '',   // slot=결과(OUT) 메시지 / retrieveSlot=조회 조건(IN) 메시지 (다를 수 있음)
       toolbar: true, autoRetrieve: false,
       retrieveIn: { company_cd: '{session.companyCd}' },   // 조회 파라미터 ← 검색바 {search.<key>} / {session.X} / {today}
       columns: [{ name: 'col1', header: '컬럼1', width: 120 }],
     },
     schema: [
       T('title', '제목'), T('objectId', 'OBJECT ID'), T('retrieveServiceId', '조회 서비스ID'),
-      T('saveServiceId', '저장 서비스ID'), T('slot', '메시지 슬롯'),
+      T('saveServiceId', '저장 서비스ID'), T('slot', '결과 슬롯(OUT)'), T('retrieveSlot', '조회조건 슬롯(IN)'),
       T('toolbar', '툴바(입력/삭제/복원/저장)', 'switch'), T('autoRetrieve', '진입 시 자동조회', 'switch'),
       T('retrieveIn', '조회 파라미터(JSON) — {search.키}/{session.companyCd}', 'json'),
       T('columns', '컬럼(JSON)', 'json'),

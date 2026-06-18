@@ -53,7 +53,8 @@ function mapSave(row) { const o = { ...row }; Object.keys(o).forEach((k) => { if
 async function retrieveGrid(w) {
   const g = grids[w.i]; if (!g || !w.props.retrieveServiceId) return;
   const inObj = resolveObj(w.props.retrieveIn || {}, ctx());
-  try { await g.retrieve(w.props.slot ? { [w.props.slot]: [inObj] } : inObj); }
+  const inSlot = w.props.retrieveSlot || w.props.slot;   // 조회 조건(IN) 메시지 — 결과(OUT) 슬롯과 다를 수 있음
+  try { await g.retrieve(inSlot ? { [inSlot]: [inObj] } : inObj); }
   catch (e) { toast.error?.(`${w.props.title || '조회'} 실패: ${e?.message || e}`); }
 }
 function onSearch(values) { searchValues.value = values || {}; datagrids.value.forEach(retrieveGrid); }

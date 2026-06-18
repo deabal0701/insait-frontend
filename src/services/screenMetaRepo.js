@@ -24,7 +24,8 @@ export const DEMO_SEED = {
     } },
     { i: 'w3', type: 'datagrid', x: 0, y: 3, w: 12, h: 7, props: {
       title: '사업장 목록', objectId: 'ORM9999',
-      retrieveServiceId: 'INT_Y19_0001_01_R01', saveServiceId: 'INT_Y19_0001_01_S01', slot: 'ME_INT0001_02',
+      retrieveServiceId: 'INT_Y19_0001_01_R01', saveServiceId: 'INT_Y19_0001_01_S01',
+      slot: 'ME_INT0001_02', retrieveSlot: 'ME_INT0001_01',   // OUT=결과 / IN=조회조건
       toolbar: true, autoRetrieve: false,
       retrieveIn: { company_cd: '{session.companyCd}', base_ymd: '{search.baseYmd}' },   // [조회] → 이 파라미터로 envelope 조회
       columns: [
