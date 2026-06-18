@@ -37,6 +37,8 @@ const VIEWS = {
   CompanyCatalog:     () => import('@/pages/admin/system/company/CompanyCatalog.vue'),
   CommonCodeCatalog:  () => import('@/pages/admin/system/code/CommonCodeCatalog.vue'),
   UnitCatalog:        () => import('@/pages/admin/system/unit/UnitCatalog.vue'),
+  // ★ (2026-06-18, dspark): SCR0010 화면 디자이너 — OBJECT 레이아웃 메타 저작 + 라이브 미리보기(v1 localStorage).
+  ScreenDesigner:     () => import('@/pages/admin/meta/screens/ScreenDesigner.vue'),
 
   // P4~P6 진입 시 정식 화면 추가:
   // CCD0020: () => import('@/pages/admin/CCD0020.vue'),
@@ -61,6 +63,7 @@ const ADMIN_SCREENS = [
   { object: 'IST0030', path: 'ist0030', menuId: 'SD_MSG',   title: 'IST0030 메시지 관리',  view: 'MessageCatalog' },
   { object: 'IST0050', path: 'ist0050', menuId: 'SD_MSG1',  title: 'IST0050 서비스 카탈로그', view: 'ServiceCatalog' },
   { object: 'AUT0030', path: 'aut0030', menuId: 'SD_OBJ',   title: 'AUT0030 오브젝트 관리', view: 'ObjectCatalog' },
+  { object: 'SCR0010', path: 'meta/screens', menuId: 'SD_SCREEN', title: '화면 디자이너', view: 'ScreenDesigner' },
   // ★ (2026-06-07, dspark): 「사용자와 접근제어」 7 화면 메뉴 구성 — 라우트 골격(Placeholder).
   //   설계서 = 02-tobe/04-admin-lane/access-control/01~07. 화면 본체는 차수로 교체 예정.
   { object: 'AUT0010', path: 'aut0010', menuId: 'SA_USER',  title: 'AUT0010 사용자 관리',     view: 'UserCatalog' },

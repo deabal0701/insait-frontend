@@ -150,6 +150,7 @@ export const MENU_TREE = [
         { id: 'IST0020', label: '엔터티 관리',   routeName: 'IST0020', status: 'active' },
         { id: 'IST0050', label: '서비스 관리',   routeName: 'IST0050', status: 'active' },
         { id: 'IST0010', label: 'SQL 관리',      routeName: 'IST0010', status: 'active' },
+        { id: 'SCR0010', label: '화면 디자이너', routeName: 'SCR0010', status: 'active', source: 'insait-admin' },
       ] },
       { id: 'auth', label: '사용자와 접근제어', status: 'active', children: [
         { id: 'AUT0010', label: '사용자 관리',     routeName: 'AUT0010', status: 'active' },
@@ -302,7 +303,7 @@ export const PLACE_ITEM = Object.freeze({ key: 'place', label: '스마트 플레
 
 /** 시스템관리(설정) 하위 화면 OBJECT_ID 집합 — 라우트가 admin 화면인지 판정용. */
 export const ADMIN_OBJECT_IDS = new Set([
-  'AUT0030', 'IST0030', 'IST0020', 'IST0050', 'IST0010',
+  'AUT0030', 'IST0030', 'IST0020', 'IST0050', 'IST0010', 'SCR0010',
   'AUT0010', 'AUT0050', 'AUT0070', 'AUT0020', 'AUT0040', 'AUT0100', 'AUT0060',
   'CCD0040', 'CCD0080', 'CCD0010', 'CCD0050', 'CCD0030', 'CCD0220', 'CCD0020', 'CCD0070',
   'FRM0090', 'SETTINGS', 'COMPONENTS',
@@ -322,6 +323,7 @@ export function buildSettingsItem(current, expanded = {}) {
       { key: 'meta', label: '메타관리', expanded: !!expanded.meta, children: [
         leaf('AUT0030', '오브젝트 관리'), leaf('IST0030', '메시지 관리'), leaf('IST0020', '엔터티 관리'),
         leaf('IST0050', '서비스 관리'), leaf('IST0010', 'SQL 관리'),
+        leaf('SCR0010', '화면 디자이너'),
       ] },
       { key: 'auth', label: '사용자와 접근제어', expanded: !!expanded.auth, children: [
         leaf('AUT0010', '사용자 관리'), leaf('AUT0050', '메뉴 관리'), leaf('AUT0070', '권한기준 관리'),
