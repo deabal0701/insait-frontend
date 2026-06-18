@@ -18,12 +18,11 @@ import { useMetaEditor } from '@/composables/useMetaEditor';
 
 import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './ObjectCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InTag from '@/components/ui/InTag.vue';
-import InModal from '@/components/ui/InModal.vue';
 
 const toast = useToast();
 
@@ -141,10 +140,9 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer 스캐폴드(편집/저장/삭제 chrome)는 MetaCatalogDrawer 가 editor 로부터 직접 사용 → 여기선 화면이 직접
+//   참조하는 상태만 구조분해 (탭 내용 slot·tabItems·삭제문구·SgCatalogPage 이벤트용).
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 const defFields = computed(() => [
   { key: 'objectNm', type: 'text', label: 'OBJECT_NM', input: '예: TST0001_51', required: true,
@@ -190,22 +188,12 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="940"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="오브젝트 삭제"
+        :delete-message="`'${selected?.objectNm}' 를 삭제할까요? (속성·하위관계도 함께 삭제. 메뉴/서비스가 참조 중이면 런타임 영향 주의)`"
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
@@ -276,21 +264,7 @@ onMounted(() => list.reload());
             </ul>
           </template>
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="오브젝트 삭제"
-        :message="`'${selected?.objectNm}' 를 삭제할까요? (속성·하위관계도 함께 삭제. 메뉴/서비스가 참조 중이면 런타임 영향 주의)`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
     </template>
   </SgCatalogPage>
 </template>

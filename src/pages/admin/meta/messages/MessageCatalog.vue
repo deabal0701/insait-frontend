@@ -16,13 +16,12 @@ import { MSG_NAME_RE, YN_EDIT_OPTIONS } from '@/constants/catalogOptions';
 
 import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './MessageCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InButton from '@/components/ui/InButton.vue';
 import InTag from '@/components/ui/InTag.vue';
-import InModal from '@/components/ui/InModal.vue';
 
 const toast = useToast();
 
@@ -138,10 +137,8 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome 은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 const namePatternOk = computed(() => MSG_NAME_RE.test((form.value?.def?.msgDefId || '').trim()));
 
@@ -247,22 +244,12 @@ onMounted(() => list.reload());
     @retry="list.reload()"
   >
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="980"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="메시지 삭제"
+        :delete-message="`'${selected?.msgDefId}' 를 삭제할까요? 사용하는 서비스나 자식 메시지가 있으면 차단됩니다.`"
       >
         <!-- 컬럼 -->
         <section v-if="drawerTab === 'columns'" class="section">
@@ -365,21 +352,7 @@ onMounted(() => list.reload());
             <li v-if="!detail.usages?.length" class="muted">사용처 없음</li>
           </ul>
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="메시지 삭제"
-        :message="`'${selected?.msgDefId}' 를 삭제할까요? 사용하는 서비스나 자식 메시지가 있으면 차단됩니다.`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
     </template>
   </SgCatalogPage>
 </template>

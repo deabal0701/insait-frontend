@@ -22,12 +22,11 @@ import { SERVICE_NAME_RE, YN_FILTER_OPTIONS } from '@/constants/catalogOptions';
 import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './ServiceCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 import HealthDot from '@/components/feature/admin/HealthDot.vue';
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
 import InTag from '@/components/ui/InTag.vue';
-import InModal from '@/components/ui/InModal.vue';
 import InTooltip from '@/components/ui/InTooltip.vue';
 
 const router = useRouter();
@@ -191,10 +190,8 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome 은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 // ─── 진단 computeds (view 전용 — detail 기반, 기존 보존) ────────────────────
 const defFields = computed(() => [
@@ -354,22 +351,12 @@ onMounted(() => list.reload());
     @context-action="onRowMenu"
   >
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="940"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="서비스 삭제"
+        :delete-message="`'${selected?.svDefNm}' 를 삭제할까요? (함수매핑·속성도 함께 삭제)`"
       >
         <!-- 진단 배지 — 바로편집이라도 항상 표시 (detail 존재 시. create 엔 detail 없어 자연히 안 뜸) -->
         <div v-if="detail" class="svc-drawer-head">
@@ -555,21 +542,7 @@ onMounted(() => list.reload());
             </table>
           </div>
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="서비스 삭제"
-        :message="`'${selected?.svDefNm}' 를 삭제할까요? (함수매핑·속성도 함께 삭제)`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
     </template>
   </SgCatalogPage>
 </template>
