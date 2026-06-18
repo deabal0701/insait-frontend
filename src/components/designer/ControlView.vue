@@ -57,31 +57,21 @@ function p() { return props.widget.props || {}; }
       v-else-if="widget.type === 'searchbar'"
       :fields="p().fields || []"
       :model-value="{}"
-      :collapsible="!design"
     />
-    <template v-else-if="widget.type === 'datagrid'">
-      <!-- 디자인: 경량 미리보기(envelope 호출 X) -->
-      <div v-if="design" class="cv-grid-stub">
-        <div class="cv-grid-stub__head">{{ p().title || '데이터그리드' }} <span>· {{ (p().columns || []).length }}컬럼</span></div>
-        <div class="cv-grid-stub__cols">
-          <span v-for="(c, ci) in (p().columns || [])" :key="ci" class="cv-grid-stub__col">{{ c.header || c.name }}</span>
-        </div>
-        <div class="cv-grid-stub__note">디자인 모드 — 실제 데이터는 화면 실행 시</div>
-      </div>
-      <!-- 런타임: 실 그리드 -->
-      <InDataTable
-        v-else
-        :columns="p().columns || []"
-        :height="(widget.h * 40) - 40"
-        :options="{ rowHeaders: ['rowNum', 'checkbox'] }"
-        :retrieve-service-id="p().retrieveServiceId || undefined"
-        :save-service-id="p().saveServiceId || undefined"
-        :slot-name="p().slot || undefined"
-        :header="{ objectId: p().objectId }"
-        :auto-retrieve="!!p().autoRetrieve"
-        show-status
-      />
-    </template>
+    <!-- 데이터그리드 — ★ (2026-06-18) WYSIWYG: 디자인 모드도 실 그리드(빈) 렌더 → 미리보기/런타임과 동일 구조.
+         디자인 모드는 envelope 미연결(서비스ID 미전달·autoRetrieve off)이라 조회 호출은 안 함(빈 상태). -->
+    <InDataTable
+      v-else-if="widget.type === 'datagrid'"
+      :columns="p().columns || []"
+      :height="(widget.h * 40) - 40"
+      :options="{ rowHeaders: ['rowNum', 'checkbox'] }"
+      :retrieve-service-id="design ? undefined : (p().retrieveServiceId || undefined)"
+      :save-service-id="design ? undefined : (p().saveServiceId || undefined)"
+      :slot-name="design ? undefined : (p().slot || undefined)"
+      :header="{ objectId: p().objectId }"
+      :auto-retrieve="!design && !!p().autoRetrieve"
+      show-status
+    />
 
     <span v-else class="cv-unknown">알 수 없는 컨트롤: {{ widget.type }}</span>
   </div>
