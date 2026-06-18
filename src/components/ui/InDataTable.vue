@@ -121,11 +121,7 @@ function restoreChecked() {
 //   tui-grid/winGrid 코어는 기본 OFF(중립) — 모든 앱 그리드가 매번 켜야 했음 → 단일 창구
 //   (InDataTable)에서 기본값 주입. 화면이 :options="{ columnOptions:{ resizable:false } }" 를
 //   명시할 때만 잠긴다(사용자 columnOptions 를 default 위에 spread → 명시값이 이김). frozenCount 등 보존.
-// ★ (2026-06-18, dspark): 앱 기본 행 높이 30px (tui-grid 기본 40 → 콤팩트한 업무 그리드).
-//   단일 창구에서 기본값 주입 — 화면이 :options="{ rowHeight: N }" 로 명시하면 그 값이 이김
-//   (rowHeight 를 먼저 두고 props.options 를 뒤에 spread).
 const gridOptions = computed(() => ({
-  rowHeight: 30,
   ...props.options,
   columnOptions: { resizable: true, ...(props.options.columnOptions || {}) },
 }));
