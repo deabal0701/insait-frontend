@@ -13,7 +13,11 @@
   "dependencies": {
     "@codemirror/lang-vue": "^0.1.3",
     "@codemirror/theme-one-dark": "^6.1.3",
+    "@dagrejs/dagre": "^1.1.8",
     "@element-plus/icons-vue": "^2.3.1",
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.3",
+    "@vue-flow/core": "^1.48.2",
     "@win/grid": "file:../win-grid",
     "axios": "^1.7.7",
     "codemirror": "^6.0.2",

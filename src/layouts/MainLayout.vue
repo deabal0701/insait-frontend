@@ -125,8 +125,15 @@ function onClick2depth(parent, group) {
   }
 }
 function onClick3depth(parent, _group, child) {
-  // h5on 하드코딩 메뉴 — 화면 미연결(메뉴·서브메뉴만). 항상 준비 중.
+  // h5on 하드코딩 메뉴 — 리프 key('h5on:RD002')에서 prefix 제거 → 같은 이름 라우트가 있으면 이동,
+  //   없으면 미구현(준비 중). (★ 2026-06-19, dspark: 조직도 RD002 부터 화면 연결 시작 — 마이그레이션 1번 케이스)
   if (parent.key.startsWith('h5on:')) {
+    // child.route(우리 오브젝트 라우트, 예 ORM0002) 우선 → 없으면 h5on key 에서 prefix 제거.
+    const rn = child?.route || (child?.key || '').replace(/^h5on:/, '');
+    if (rn && router.hasRoute(rn)) {
+      if (rn !== route.name) router.push({ name: rn });
+      return;
+    }
     ElMessage.info(`${child?.label || ''} — 준비 중`);
     return;
   }
@@ -152,6 +159,11 @@ const currentTitle = computed(() => route.meta?.title || '');
 // ★ (2026-06-18, dspark): 상단바 제목 옆 화면 식별정보(예: "ORM9999 · envelope INT_Y19_0001").
 //   route.meta.objInfo 가 있는 화면만 표시 — 페이지 본문 헤더를 없애고 식별정보를 상단으로 이전.
 const currentObjInfo = computed(() => route.meta?.objInfo || '');
+
+// [DEV-HELP] 헤더 타이틀 클릭 → window 이벤트 발행. 현재 페이지가 듣고 5클릭 카운트해 화면 도움말을 연다(개발자 본인 전용).
+function onCrumbTitleClick() {
+  window.dispatchEvent(new CustomEvent('insait:title-click', { detail: { menuId: route.meta?.menuId || '' } }));
+}
 
 // ── rail 로드 (권한명 기준). admin 화면이 아니면 첫 업무 카테고리 자동 선택. ──
 async function reloadRail() {
@@ -218,7 +230,8 @@ watch(selectedAuthName, async (name, old) => {
              [<] 액션은 페이지 본문 헤더 우측으로 이전 (사용자 피드백 — 헤더에는 헤더에 있을 것).
              현재는 route.meta.title 표시. 추후 breadcrumb 격상은 별도 카드. -->
         <div class="main-layout__crumb">
-          {{ currentTitle }}
+          <!-- [DEV-HELP] 헤더 타이틀 클릭 시 window 이벤트 발행 → 현재 페이지가 5클릭 카운트해 도움말 노출(개발자 본인 전용). -->
+          <span class="main-layout__crumb-title" @click="onCrumbTitleClick">{{ currentTitle }}</span>
           <span v-if="currentObjInfo" class="main-layout__obj">{{ currentObjInfo }}</span>
         </div>
         <div class="main-layout__header-right">

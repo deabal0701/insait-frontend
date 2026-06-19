@@ -2,6 +2,7 @@
 //   Dashboard + 도메인 children 을 nesting. 도메인별 children 은 각 도메인 모듈에서 import.
 import adminRoutes from './admin';
 import intRoutes from './int';
+import ormRoutes from './orm';
 
 const routes = [
   {
@@ -18,6 +19,8 @@ const routes = [
       ...adminRoutes,
       // ★ (2026-06-17, dspark): 업무도메인 — int 모듈(AS-IS JSP 기준). route name=OBJECT_ID 로 동적 LNB 자동 연결.
       ...intRoutes,
+      // ★ (2026-06-19, dspark): 조직관리(orm) — 조직도 RD002 부터. route name=h5on 메뉴키(RD002) 로 LNB 자동 연결.
+      ...ormRoutes,
       // ★ (2026-06-02, dspark): Grid 기능 카탈로그 — dev 테스트(IBSheet 형태별 tui-grid + 실서비스 TST0002).
       //   LNB 시스템관리 > Playground. 운영 메뉴 분리 정책 (admin/도메인 routes 와 격리).
       //   ★ 별도 Playground 허브·Grid 페이지 폐지 → 카탈로그 단일화 (실서비스 그리드는 카탈로그 탭으로 통합).

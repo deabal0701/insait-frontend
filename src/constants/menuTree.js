@@ -360,7 +360,7 @@ export function buildSettingsItem(current, expanded = {}) {
 
 export const H5ON_MENU = [
   { key: 'h5on:R', label: '인사기본', icon: 'lnb-people', groups: [
-    { key: 'h5on:RD', label: '조직관리', children: [{ key: 'h5on:RD002', label: '조직도' }, { key: 'h5on:RD003', label: '조직개편' }, { key: 'h5on:RD005', label: '조직장관리' }, { key: 'h5on:RD004', label: '조직히스토리' } ] },
+    { key: 'h5on:RD', label: '조직관리', children: [{ key: 'h5on:RD002', label: '조직도', route: 'ORM0002' }, { key: 'h5on:RD003', label: '조직개편' }, { key: 'h5on:RD005', label: '조직장관리' }, { key: 'h5on:RD004', label: '조직히스토리' } ] },
     { key: 'h5on:RB', label: '구성원관리', children: [{ key: 'h5on:RB001', label: '모든구성원' }, { key: 'h5on:RB002', label: '구성원초대' } ] },
     { key: 'h5on:RE', label: '인사정보', children: [{ key: 'h5on:RE001', label: '개별인사정보' }, { key: 'h5on:RE002', label: '전체인사정보' }, { key: 'h5on:RE003', label: '변경내역조회' } ] },
     { key: 'h5on:RM', label: '신청서', children: [{ key: 'h5on:RM001', label: '신청내역' }, { key: 'h5on:RM002', label: '결재함' }, { key: 'h5on:RM003', label: '신청서 작성' }, { key: 'h5on:RM004', label: '임시보관함' }, { key: 'h5on:RM005', label: '신청서 양식 관리' } ] },
@@ -446,7 +446,7 @@ export function buildH5onItems(expanded = {}) {
       key: g.key,
       label: g.label,
       expanded: !!expanded[g.key],
-      children: g.children.map((c) => ({ key: c.key, label: c.label })),
+      children: g.children.map((c) => ({ key: c.key, label: c.label, route: c.route })),
     })),
   }));
 }
