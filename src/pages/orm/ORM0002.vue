@@ -41,11 +41,17 @@ const auth = useAuthStore();
 const svc = useService();
 // ★ setup 의 useVueFlow 와 <VueFlow> 가 동일 스토어를 공유하도록 명시 id (불일치 시 phantom watcher → draggable 에러).
 const flowId = 'orm0002-orgchart';
-const { fitView, zoomIn, zoomOut, setCenter, getViewport, setViewport } = useVueFlow(flowId);
+const { fitView, zoomIn, zoomOut, setCenter, getViewport, setViewport, updateNodeInternals } = useVueFlow(flowId);
 const VIEWPORT_KEY = 'insait.orgChart.ORM0002.viewport'; // 마지막 줌/위치 저장 키
 function saveViewport() {
   try { localStorage.setItem(VIEWPORT_KEY, JSON.stringify(getViewport())); } catch (_) { /* noop */ }
 }
+// ★ 툴바 확대/축소/맞춤 = 프로그램 줌 → @move-end 미발화 → 직접 저장해야 현재 크기 유지(재진입 복원).
+let _saveTimer = null;
+function scheduleSave() { if (_saveTimer) clearTimeout(_saveTimer); _saveTimer = setTimeout(saveViewport, 260); }
+function onZoomIn() { zoomIn({ duration: 150 }); scheduleSave(); }
+function onZoomOut() { zoomOut({ duration: 150 }); scheduleSave(); }
+function onFit() { fitView({ padding: 0.15, duration: 200 }); scheduleSave(); }
 
 // ── 조회영역 (기획서 §02_01) ──
 function todayYmd() {
@@ -360,6 +366,9 @@ function setDirection(dir) {
   if (direction.value === dir) return;
   direction.value = dir;
   buildGraph();
+  // ★ 방향 바뀌면 Handle 위치(좌우↔상하)가 reactive 변경되지만 Vue Flow 가 자동 재측정 안 함
+  //   → 엣지가 옛 Handle(좌우)로 라우팅돼 엉킴. updateNodeInternals 로 재측정 강제.
+  nextTick(() => { try { updateNodeInternals(); } catch (_) { /* noop */ } });
   fitCurrent();
 }
 function onReset() {
@@ -395,9 +404,9 @@ onBeforeUnmount(() => {
           <InButton variant="only-icon" size="sm" :class="{ 'ocp-tool-active': direction === 'LR' }" title="가로 배열" @click="setDirection('LR')"><img :src="IconLayoutH" alt="가로 배열" class="ocp-ico" /></InButton>
           <InButton variant="only-icon" size="sm" :class="{ 'ocp-tool-active': direction === 'TB' }" title="세로 배열" @click="setDirection('TB')"><img :src="IconLayoutV" alt="세로 배열" class="ocp-ico" /></InButton>
           <span class="ocp-toolbar__sep" />
-          <InButton variant="only-icon" size="sm" title="확대" @click="zoomIn()"><img :src="IconAdd" alt="확대" class="ocp-ico" /></InButton>
-          <InButton variant="only-icon" size="sm" title="축소" @click="zoomOut()"><img :src="IconRemove" alt="축소" class="ocp-ico" /></InButton>
-          <InButton variant="only-icon" size="sm" title="화면 맞춤" @click="fitView({ padding: 0.15 })"><img :src="IconFit" alt="화면 맞춤" class="ocp-ico" /></InButton>
+          <InButton variant="only-icon" size="sm" title="확대" @click="onZoomIn"><img :src="IconAdd" alt="확대" class="ocp-ico" /></InButton>
+          <InButton variant="only-icon" size="sm" title="축소" @click="onZoomOut"><img :src="IconRemove" alt="축소" class="ocp-ico" /></InButton>
+          <InButton variant="only-icon" size="sm" title="화면 맞춤" @click="onFit"><img :src="IconFit" alt="화면 맞춤" class="ocp-ico" /></InButton>
           <span class="ocp-toolbar__sep" />
           <InButton variant="only-icon" size="sm" title="다운로드(엑셀/PNG/PDF — 준비 중)" @click="onDownload"><img :src="IconDownload" alt="다운로드" class="ocp-ico" /></InButton>
         </div>
@@ -417,7 +426,7 @@ onBeforeUnmount(() => {
           @move-end="saveViewport">
           <template #node-org="{ data, selected }">
             <Handle type="target" :position="targetPos" style="opacity: 0" />
-            <OrgNodeCard :data="data" :selected="selected" @toggle="toggleCollapse" />
+            <OrgNodeCard :data="data" :selected="selected" :direction="direction" @toggle="toggleCollapse" />
             <Handle type="source" :position="sourcePos" style="opacity: 0" />
           </template>
           <Background pattern-color="#e2e8f0" :gap="18" />
