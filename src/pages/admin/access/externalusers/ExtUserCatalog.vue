@@ -6,23 +6,23 @@
  *   설계: 02-tobe/04-admin-lane/access-control/05_external-user-aut0100.md.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/external-users (+ /{id}/password-reset).
  *   ★ 보안: PASSWORD_VIEW(평문)·CTZ_NO(주민번호) 미노출(S1/S3) / 비번초기화=랜덤 임시비번(S2).
+ * ★ (2026-06-19, dspark): SG 규격 전환 — CatalogPage(InTable) → SgCatalogPage(SgSearchBar + InDataTable/WinGrid
+ *   + 서버페이징) + MetaCatalogDrawer. 메타관리 화면과 동일 표현 컴포넌트로 통일.
+ *   업무 프로세스(직접 REST + 서버 페이징 + Drawer 편집)는 보존. 검색=SgSearchBar(q).
  */
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor, adminErrMsg } from '@/composables/useMetaEditor';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
+import screenHelp from './ExtUserCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
 import InButton from '@/components/ui/InButton.vue';
 import InModal from '@/components/ui/InModal.vue';
-
-import screenHelp from './ExtUserCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 
 const toast = useToast();
 
@@ -34,20 +34,19 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '' },
-  chipLabels: { q: '검색' },
-});
-function onSearch(v) { staged.value.q = v; }
+// ── 검색 (SgSearchBar) — key = list filter 키. q(성명/로그인ID) ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '성명 또는 로그인ID' },
+];
 
+// ── 목록 그리드 (tui-grid 컬럼) — sortKey 선언 컬럼은 WinGrid 기본 정렬 ──
 const columns = [
-  { field: 'userNm',    label: '성명',     sortable: true, sortKey: 'user_nm', width: 120 },
-  { field: 'loginId',   label: '로그인ID', sortable: true, sortKey: 'login_id', width: 160 },
-  { field: 'companyNm', label: '파견업체', width: 160 },
-  { field: 'deptNm',    label: '부서',     width: 140 },
-  { field: 'posNm',     label: '직위',     width: 110 },
-  { field: 'telNo1',    label: '연락처',   width: 130 },
+  { name: 'userNm',    header: '성명',     width: 120, sortKey: 'user_nm' },
+  { name: 'loginId',   header: '로그인ID', width: 160, sortKey: 'login_id', formatter: ({ value }) => value || '—' },
+  { name: 'companyNm', header: '파견업체', width: 160, formatter: ({ value }) => value || '—' },
+  { name: 'deptNm',    header: '부서',     width: 140, formatter: ({ value }) => value || '—' },
+  { name: 'posNm',     header: '직위',     width: 110, formatter: ({ value }) => value || '—' },
+  { name: 'telNo1',    header: '연락처',   width: 130, formatter: ({ value }) => value || '—' },
 ];
 
 const tabItems = [{ name: 'def', tabLabel: '정의' }];
@@ -83,10 +82,9 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome 은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+// (단일 탭이라 drawerTab 미사용 — active-tab 은 MetaCatalogDrawer 내부 처리.)
+const { mode, selected, detail, form, openDetail, openCreate } = editor;
 
 const defFields = computed(() => [
   { key: 'userNm', type: 'text', label: '성명', input: '예: 홍길동', required: true },
@@ -124,58 +122,26 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="외부사용자 관리"
     :subtitle="`FRM_EXT_USER_INFO · ` + (list.total.value || 0).toLocaleString() + `명`"
-    :help="screenHelp"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
+    :help="screenHelp"
+    grid-title="외부사용자 목록"
     row-key="extUserId"
-    :active-filters="activeFilters"
-    :selected-row="selected"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="q-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="성명 또는 로그인ID (Enter 또는 [조회])"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-userNm="{ value }"><strong>{{ value }}</strong></template>
-
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="820"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="외부사용자 삭제"
+        :delete-message="`'${selected?.userNm}' 외부사용자를 삭제할까요?`"
       >
         <section class="section">
           <dl v-if="mode === 'view'" class="kv">
@@ -196,21 +162,7 @@ onMounted(() => list.reload());
             <span class="hint">랜덤 임시비번 발급(S2). 연결 로그인 계정(FRM_USER)이 없으면 실패합니다.</span>
           </div>
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="외부사용자 삭제"
-        :message="`'${selected?.userNm}' 외부사용자를 삭제할까요?`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
 
       <!-- 임시비번 표시 (1회) -->
       <InModal
@@ -226,13 +178,10 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) pwDialog.open = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }

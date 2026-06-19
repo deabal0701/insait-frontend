@@ -2,10 +2,14 @@
 /**
  * UserCatalog — AUT0010 사용자관리 (admin lane access 차선, 직접 REST).
  * ★ (2026-06-08, dspark): access-control 첫 화면(파일럿). 메타 카탈로그 공통 자산 재사용
- *   (usePagedList + useCatalogFilter + useMetaEditor + CatalogPage + MetaDetailEditor + MetaChildGrid + MetaDefForm).
+ *   (usePagedList + useMetaEditor + MetaDetailEditor + MetaChildGrid + MetaDefForm).
  *   설계: 02-tobe/04-admin-lane/access-control/01_user-aut0010.md.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/users (+ /exists?loginId, /{id}/password-reset).
  *   보안: 비밀번호 미노출 / 비번초기화 = 랜덤 임시비번(S2) / 삭제 = 단일 트랜잭션(S4, 그룹멤버 가드).
+ * ★ (2026-06-19, dspark): SG 규격 전환 — CatalogPage(InTable) → SgCatalogPage(SgSearchBar + InDataTable/WinGrid
+ *   + 서버페이징) + MetaCatalogDrawer. 메타관리 5화면(IST/AUT0030)과 동일 표현 컴포넌트로 통일.
+ *   업무 프로세스(직접 REST + 서버 페이징 + Drawer 편집)는 보존. 그리드=조회+행클릭→Drawer 전용.
+ *   검색=SgSearchBar(q/statusCd, list filter 키 직결). 셀 커스텀(상태 배지 등)은 tui-grid formatter.
  *
  * ★ TEMP (2026-06-08, dspark, 추후 삭제 예정): [신규] 로그인ID 등록은 "편의상" 제공하는 임시 기능.
  *   AS-IS 정상 경로 = 로그인ID(=사번)가 인사발령(채용발령관리 CAM0050) "발령 확정" 시 자동 생성
@@ -15,20 +19,16 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor, adminErrMsg } from '@/composables/useMetaEditor';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
 import screenHelp from './UserCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaChildGrid from '@/components/feature/admin/MetaChildGrid.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
 import InButton from '@/components/ui/InButton.vue';
-import InTag from '@/components/ui/InTag.vue';
 import InModal from '@/components/ui/InModal.vue';
 import TestAccountPanel from './TestAccountPanel.vue';   // ★ TEMP (2026-06-09) — 제거 시 이 줄 + 버튼 + 패널 삭제
 
@@ -45,16 +45,8 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', statusCd: '' },
-  chipLabels: { q: '검색', statusCd: '상태' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onStatus(v) { staged.value.statusCd = v; }
-
 const statusFilterOptions = [
-  { value: '', label: '전체' },   // ★ (2026-06-12, dspark): '전체 상태' → '전체' 통일 (#6)
+  { value: '', label: '전체' },
   { value: 'Y', label: '사용 (Y)' },
   { value: 'N', label: '잠금 (N)' },
 ];
@@ -63,13 +55,22 @@ const statusEditOptions = [
   { value: 'N', label: '잠금 (N)' },
 ];
 
+// ── 검색 (SgSearchBar) — key = list filter 키. q(로그인ID/성명) + statusCd(상태) ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '로그인ID 또는 성명' },
+  { key: 'statusCd', label: '상태', type: 'select', placeholder: '전체', options: statusFilterOptions },
+];
+
+// ── 목록 그리드 (tui-grid 컬럼) — sortKey 선언 컬럼은 WinGrid 기본 정렬 ──
 const columns = [
-  { field: 'loginId',       label: '로그인ID', sortable: true, sortKey: 'login_id', width: 170 },
-  { field: 'userNm',        label: '성명',     sortable: true, sortKey: 'user_nm',  width: 120 },
-  { field: 'orgNm',         label: '소속',     width: 200 },
-  { field: 'statusCd',      label: '상태',     sortable: true, sortKey: 'status_cd', align: 'center', width: 90 },
-  { field: 'tryCnt',        label: '접속시도횟수', sortable: true, sortKey: 'try_cnt', align: 'center', width: 110 },
-  { field: 'bindingTypeCd', label: '사용자구분', align: 'center', width: 100 },
+  { name: 'loginId',       header: '로그인ID', width: 170, sortKey: 'login_id' },
+  { name: 'userNm',        header: '성명',     width: 120, sortKey: 'user_nm' },
+  { name: 'orgNm',         header: '소속',     width: 200, formatter: ({ value }) => value || '—' },
+  { name: 'statusCd',      header: '상태',     width: 90,  align: 'center', sortKey: 'status_cd',
+    formatter: ({ value }) => (value === 'Y' ? '사용' : '잠금') },
+  { name: 'tryCnt',        header: '접속시도횟수', width: 110, align: 'center', sortKey: 'try_cnt' },
+  { name: 'bindingTypeCd', header: '사용자구분', width: 100, align: 'center',
+    formatter: ({ value }) => value || '—' },
 ];
 
 // ★ (2026-06-08, dspark): 사용자구분(bindingTypeCd) = 로그인 계정과 사원(인물)의 연결 유형.
@@ -131,10 +132,8 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome(편집/저장/삭제)은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 const defFields = computed(() => [
   { key: 'loginId', type: 'text', label: '로그인ID', input: '예: white', required: true,
@@ -185,76 +184,31 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="사용자 관리"
     :subtitle="`FRM_USER · 재직 활성 계정 ` + (list.total.value || 0).toLocaleString() + `건`"
     :list="list"
     :columns="columns"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="사용자 목록"
     row-key="userId"
-    :active-filters="activeFilters"
-    :selected-row="selected"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <!-- ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성 — 추후 이 버튼만 삭제 -->
+    <!-- ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성 — 추후 이 버튼만 삭제 -->
+    <template #toolbar-extra>
       <InButton variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="testPanelOpen = true">🧪 테스트 계정</InButton>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="q-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="로그인ID 또는 성명 (Enter 또는 [조회])"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InSelect
-          :model-value="staged.statusCd"
-          :options="statusFilterOptions"
-          label="상태"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onStatus"
-        />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-loginId="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-statusCd="{ value }">
-      <InTag v-if="value === 'Y'" label="사용" variant="success" size="sm" />
-      <span v-else class="muted">잠금</span>
-    </template>
-    <template #cell-bindingTypeCd="{ value }">
-      <span :title="bindingTypeText(value) + ' — 로그인 계정과 사원의 연결 유형'">{{ value || '—' }}</span>
     </template>
 
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="880"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="사용자 삭제"
+        :delete-message="`'${selected?.loginId}' 계정을 삭제할까요? 옵션·사원매핑까지 단일 트랜잭션으로 삭제됩니다. (그룹 멤버이면 차단됩니다.)`"
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
@@ -289,21 +243,7 @@ onMounted(() => list.reload());
           </ul>
           <MetaChildGrid v-else :rows="form.options" :columns="optionColumns" key-field="optionId" :new-row="newOption" />
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="사용자 삭제"
-        :message="`'${selected?.loginId}' 계정을 삭제할까요? 옵션·사원매핑까지 단일 트랜잭션으로 삭제됩니다. (그룹 멤버이면 차단됩니다.)`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
 
       <!-- ★ TEMP (2026-06-09, dspark): 발령확정 전 테스트 계정 생성/관리 패널 -->
       <TestAccountPanel v-model="testPanelOpen" @changed="list.reload()" />
@@ -322,14 +262,10 @@ onMounted(() => list.reload());
         @update:model-value="(v) => { if (!v) pwDialog.open = false; }"
       />
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.q-filters > :deep(.in-sel) { flex: 0 0 200px; }
-.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }

@@ -1,30 +1,26 @@
 <script setup>
 /**
  * GroupCatalog — AUT0020 사용자그룹 관리 (admin lane access 차선, 직접 REST).
- * ★ (2026-06-10, dspark): AUT0010 레시피 복제 (usePagedList + useCatalogFilter + useMetaEditor
- *   + CatalogPage + MetaDetailEditor + MetaDefForm) + 멤버 탭(사용자 picker).
+ * ★ (2026-06-10, dspark): AUT0010 레시피 복제 (usePagedList + useMetaEditor
+ *   + MetaDetailEditor + MetaDefForm) + 멤버 탭(RelationEditor — 사용자 검색·추가/제거).
  *   설계: 02-tobe/04-admin-lane/access-control/02_user-group-aut0020.md.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/user-groups (+ /exists?usergroupId).
  *   멤버 변경(추가/제거)은 PUT body members[].rowStatus(I/D) — 백엔드가 감사로그(GRANT/REVOKE) 동반.
+ * ★ (2026-06-19, dspark): SG 규격 전환 — CatalogPage(InTable) → SgCatalogPage(SgSearchBar + InDataTable/WinGrid
+ *   + 서버페이징) + MetaCatalogDrawer. 메타관리 화면과 동일 표현 컴포넌트로 통일.
+ *   업무 프로세스(직접 REST + 서버 페이징 + Drawer 편집 + 멤버 RelationEditor)는 보존.
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
+import screenHelp from './GroupCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 import RelationEditor from '@/components/feature/access/RelationEditor.vue';
-
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InSelect from '@/components/ui/InSelect.vue';
-import InButton from '@/components/ui/InButton.vue';
-import InModal from '@/components/ui/InModal.vue';
-
-import screenHelp from './GroupCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 
 const toast = useToast();
 
@@ -35,14 +31,6 @@ const list = usePagedList({
   defaultSort: ['usergroup_id,asc'],
   syncUrl: true,
 });
-
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '', groupType: '' },
-  chipLabels: { q: '검색', groupType: '그룹유형' },
-});
-function onSearch(v) { staged.value.q = v; }
-function onType(v) { staged.value.groupType = v; }
 
 // GROUP_TYPE 실측 분포(매뉴얼 11 §4.1): 90=운영자(14)·20(4)·10(3)·51(1)·30(1). 90 만 의미 확정.
 const GROUP_TYPE_LABELS = { '90': '운영자' };
@@ -57,14 +45,21 @@ const groupTypeEditOptions = [
   { value: '30', label: '30' },
   { value: '51', label: '51' },
 ];
-// ★ (2026-06-12, dspark): '전체 유형' → '전체' — 필터 전체옵션 라벨 통일 (#6, 셀렉트에 label="그룹유형" 있음)
 const groupTypeFilterOptions = [{ value: '', label: '전체' }, ...groupTypeEditOptions];
 
+// ── 검색 (SgSearchBar) — key = list filter 키. q(그룹ID/그룹명) + groupType(그룹유형) ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '그룹ID 또는 그룹명' },
+  { key: 'groupType', label: '그룹유형', type: 'select', placeholder: '전체', options: groupTypeFilterOptions },
+];
+
+// ── 목록 그리드 (tui-grid 컬럼) — sortKey 선언 컬럼은 WinGrid 기본 정렬 ──
 const columns = [
-  { field: 'usergroupId', label: '그룹ID',  sortable: true, sortKey: 'usergroup_id', width: 200 },
-  { field: 'usergroupNm', label: '그룹명',  sortable: true, sortKey: 'usergroup_nm', width: 220 },
-  { field: 'groupType',   label: '그룹유형', sortable: true, sortKey: 'group_type', align: 'center', width: 120 },
-  { field: 'bigo',        label: '비고' },
+  { name: 'usergroupId', header: '그룹ID',  width: 200, sortKey: 'usergroup_id' },
+  { name: 'usergroupNm', header: '그룹명',  width: 220, sortKey: 'usergroup_nm' },
+  { name: 'groupType',   header: '그룹유형', width: 120, align: 'center', sortKey: 'group_type',
+    formatter: ({ value }) => groupTypeText(value) },
+  { name: 'bigo',        header: '비고',    formatter: ({ value }) => value || '—' },
 ];
 
 // ── 편집 상태기계 (def + members) ──
@@ -104,10 +99,8 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome 은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 const defFields = computed(() => [
   { key: 'usergroupId', type: 'text', label: '그룹ID', input: '예: ADMIN_GROUP', required: true,
@@ -151,68 +144,26 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="사용자그룹 관리"
     :subtitle="`FRM_USER_GROUP · ` + (list.total.value || 0).toLocaleString() + `개 그룹`"
     :list="list"
     :columns="columns"
-    row-key="usergroupId"
-    :active-filters="activeFilters"
-    :selected-row="selected"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="사용자그룹 목록"
+    row-key="usergroupId"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="q-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="그룹ID 또는 그룹명 (Enter 또는 [조회])"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InSelect
-          :model-value="staged.groupType"
-          :options="groupTypeFilterOptions"
-          label="그룹유형"
-          input="전체"
-          layout="vertical"
-          size="sm"
-          @update:model-value="onType"
-        />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-usergroupId="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-groupType="{ value }">{{ groupTypeText(value) }}</template>
-
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="860"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="사용자그룹 삭제"
+        :delete-message="`'${selected?.usergroupId}' 그룹을 삭제할까요? 멤버까지 단일 트랜잭션으로 삭제됩니다. (권한 바인딩이 있으면 차단됩니다.)`"
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
@@ -250,30 +201,12 @@ onMounted(() => list.reload());
             />
           </template>
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="사용자그룹 삭제"
-        :message="`'${selected?.usergroupId}' 그룹을 삭제할까요? 멤버까지 단일 트랜잭션으로 삭제됩니다. (권한 바인딩이 있으면 차단됩니다.)`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.q-filters > :deep(.in-sel) { flex: 0 0 200px; }
-.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .muted { color: var(--in-text-subtle); }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }

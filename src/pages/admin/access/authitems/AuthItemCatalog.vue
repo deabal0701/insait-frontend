@@ -2,29 +2,26 @@
 /**
  * AuthItemCatalog — AUT0040 권한 관리 (admin lane access 차선, 직접 REST).
  * ★ (2026-06-10, dspark): 권한항목(FRM_AUTH_ITEM) + 3종 바인딩(그룹/사용자/메뉴) 편집.
- *   ★ 3 바인딩 탭 모두 공통부품 RelationEditor 재사용 (search/columns/mapResult 만 주입) → 통일 UI/UX.
+ *   ★ 그룹·사용자 바인딩 탭은 공통부품 RelationEditor 재사용, 메뉴 탭은 MenuBindingTree(트리+체크박스).
  *   설계: 02-tobe/04-admin-lane/access-control/03_authority-aut0040.md.
  *   백엔드: GET/POST/PUT/DELETE /api/admin/access/auth-items (+ ?expand=groups,users,menus).
  *   바인딩 변경은 rowStatus I/D → 백엔드가 감사 로그(AUTHGROUP/AUTHUSER/AUTHMENU × GRANT/REVOKE) 동반.
+ * ★ (2026-06-19, dspark): SG 규격 전환 — CatalogPage(InTable) → SgCatalogPage(SgSearchBar + InDataTable/WinGrid
+ *   + 서버페이징) + MetaCatalogDrawer. 메타관리 화면과 동일 표현 컴포넌트로 통일.
+ *   업무 프로세스(직접 REST + 서버 페이징 + Drawer 편집 + 3 바인딩 탭)는 보존.
  */
 import { computed, onMounted } from 'vue';
 import { adminApi } from '@/services/adminApi';
 import { usePagedList } from '@/composables/usePagedList';
-import { useCatalogFilter } from '@/composables/useCatalogFilter';
 import { useToast } from '@/composables/useToast';
 import { useMetaEditor } from '@/composables/useMetaEditor';
 
-import CatalogPage from '@/components/feature/admin/CatalogPage.vue';
-import MetaDetailEditor from '@/components/feature/admin/MetaDetailEditor.vue';
+import SgCatalogPage from '@/components/feature/admin/SgCatalogPage.vue';
+import screenHelp from './AuthItemCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
+import MetaCatalogDrawer from '@/components/feature/admin/MetaCatalogDrawer.vue';
 import MetaDefForm from '@/components/feature/admin/MetaDefForm.vue';
 import RelationEditor from '@/components/feature/access/RelationEditor.vue';
 import MenuBindingTree from '@/components/feature/access/MenuBindingTree.vue';
-
-import InSearchField from '@/components/ui/InSearchField.vue';
-import InButton from '@/components/ui/InButton.vue';
-import InModal from '@/components/ui/InModal.vue';
-
-import screenHelp from './AuthItemCatalog.help.js';   // [DEV-HELP] 화면 도움말 — 제거 시 이 줄 + 아래 :help prop 삭제
 
 const toast = useToast();
 
@@ -36,19 +33,19 @@ const list = usePagedList({
   syncUrl: true,
 });
 
-const { staged, activeFilters, applyFilter, resetFilter, removeFilter } = useCatalogFilter({
-  list,
-  initial: { q: '' },
-  chipLabels: { q: '검색' },
-});
-function onSearch(v) { staged.value.q = v; }
-
-const columns = [
-  { field: 'authItemName', label: '권한이름', sortable: true, sortKey: 'auth_item_name', width: 240 },
-  { field: 'authItemType', label: '유형', align: 'center', width: 120 }, // ★ (2026-06-12, dspark): 90→120 — '01 (메뉴접근)' 두 줄 줄바꿈 해소
-  { field: 'note', label: '설명' },
+// ── 검색 (SgSearchBar) — key = list filter 키. q(권한이름/설명) ──
+const searchFields = [
+  { key: 'q', label: '검색', type: 'text', placeholder: '권한이름 또는 설명' },
 ];
+
+// ── 목록 그리드 (tui-grid 컬럼) — sortKey 선언 컬럼은 WinGrid 기본 정렬 ──
 function typeText(cd) { return cd === '01' ? '01 (메뉴접근)' : (cd || '—'); }
+const columns = [
+  { name: 'authItemName', header: '권한이름', width: 240, sortKey: 'auth_item_name' },
+  { name: 'authItemType', header: '유형', width: 120, align: 'center',
+    formatter: ({ value }) => typeText(value) },
+  { name: 'note', header: '설명', formatter: ({ value }) => value || '—' },
+];
 
 // ── 바인딩 공통 설정 (RelationEditor 주입) ──
 const groupCols = [{ key: 'usergroupId', label: '그룹ID', code: true }, { key: 'usergroupNm', label: '그룹명' }];
@@ -57,7 +54,6 @@ const userCols  = [{ key: 'loginId', label: '로그인ID', code: true }, { key: 
 
 const mapGroup = (g) => ({ usergroupId: g.usergroupId, usergroupNm: g.usergroupNm });
 const mapUser  = (u) => ({ userId: u.userId, loginId: u.loginId, empNm: u.userNm || u.empNm });
-// 메뉴 탭은 트리(MenuBindingTree)로 처리 — 평면 검색(searchMenus/mapMenu) 불요.
 
 async function searchGroups(q) {
   const res = await adminApi.access.userGroups.list({ q, size: 100, page: 1 });
@@ -75,7 +71,7 @@ const editor = useMetaEditor({
   domainLabel: '권한',
   expand: ['groups', 'users', 'menus'],
   defaultTab: 'def',
-  openInEdit: true,   // ★ (2026-06-10, dspark) 방식1: 행 클릭 시 바로 편집(조회 단계 생략, 클릭 수 축소)
+  openInEdit: true,   // ★ (2026-06-10, dspark) 표준: 행 클릭 시 바로 편집(조회 단계 생략, 클릭 수 축소)
   reload: () => list.reload(),
   blankForm: () => ({
     def: { authItemName: '', note: '', authItemType: '01', etcNote: '', companyCd: '' },
@@ -104,10 +100,8 @@ const editor = useMetaEditor({
     return true;
   },
 });
-const {
-  mode, selected, detail, detailLoading, drawerTab, saving, confirmDelete, form, isEditing, modalTitle,
-  openDetail, openCreate, enterEdit, cancelEdit, closePanel, save, doDelete,
-} = editor;
+// Drawer chrome 은 MetaCatalogDrawer 가 editor 로 직접 처리 → 화면 직접 참조 상태만 구조분해.
+const { mode, selected, detail, drawerTab, form, isEditing, openDetail, openCreate } = editor;
 
 const defFields = computed(() => [
   { key: 'authItemName', type: 'text', label: '권한이름', input: '예: ACCESS_ADMIN_GROUP', required: true },
@@ -133,59 +127,26 @@ onMounted(() => list.reload());
 </script>
 
 <template>
-  <CatalogPage
+  <SgCatalogPage
     title="권한 관리"
     :subtitle="`FRM_AUTH_ITEM · ` + (list.total.value || 0).toLocaleString() + `개 권한`"
     :list="list"
     :columns="columns"
-    row-key="authItemId"
-    :active-filters="activeFilters"
-    :selected-row="selected"
+    :search-fields="searchFields"
     :help="screenHelp"
+    grid-title="권한 목록"
+    row-key="authItemId"
     @row-click="openDetail"
-    @filter-remove="removeFilter"
+    @create="openCreate"
     @retry="list.reload()"
   >
-    <template #header-actions>
-      <InButton variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="openCreate">+ 신규</InButton>
-    </template>
-
-    <template #filters>
-      <div class="q-filters">
-        <InSearchField
-          :model-value="staged.q"
-          label="검색"
-          input="권한이름 또는 설명 (Enter 또는 [조회])"
-          layout="vertical"
-          :icon-clickable="false"
-          @update:model-value="onSearch"
-          @search="applyFilter"
-        />
-        <InButton class="q-filters__search-btn" variant="primary" size="md" :left-icon-show="false" :right-icon-show="false" @click="applyFilter">조회</InButton>
-        <InButton class="q-filters__reset-btn" variant="default" size="md" :left-icon-show="false" :right-icon-show="false" @click="resetFilter">초기화</InButton>
-      </div>
-    </template>
-
-    <template #cell-authItemName="{ value }"><strong>{{ value }}</strong></template>
-    <template #cell-authItemType="{ value }">{{ typeText(value) }}</template>
-
     <template #drawer>
-      <MetaDetailEditor
-        :mode="mode"
-        :title="modalTitle"
-        :loading="detailLoading"
-        :saving="saving"
+      <MetaCatalogDrawer
+        :editor="editor"
         :tabs="tabItems"
-        :active-tab="drawerTab"
-        :has-content="mode === 'create' || !!detail"
         :width="880"
-        deletable-in-edit
-        @update:active-tab="(t) => { drawerTab = t; }"
-        @edit="enterEdit"
-        @delete="confirmDelete = true"
-        @save="save"
-        @cancel="cancelEdit"
-        @close="closePanel"
+        delete-title="권한 삭제"
+        :delete-message="`'${selected?.authItemName}' 권한을 삭제할까요? 그룹·사용자·메뉴 바인딩까지 단일 트랜잭션으로 함께 삭제됩니다.`"
       >
         <!-- 정의 -->
         <section v-if="drawerTab === 'def'" class="section">
@@ -227,29 +188,12 @@ onMounted(() => list.reload());
           <MenuBindingTree v-if="mode === 'view'" :list="detail.menuBindings || []" read-only />
           <MenuBindingTree v-else :list="form.menuBindings" />
         </section>
-      </MetaDetailEditor>
-
-      <!-- 삭제 확인 -->
-      <InModal
-        v-if="confirmDelete"
-        :model-value="confirmDelete"
-        type="confirm"
-        title="권한 삭제"
-        :message="`'${selected?.authItemName}' 권한을 삭제할까요? 그룹·사용자·메뉴 바인딩까지 단일 트랜잭션으로 함께 삭제됩니다.`"
-        confirm-text="삭제"
-        cancel-text="취소"
-        @confirm="doDelete"
-        @cancel="confirmDelete = false"
-        @update:model-value="(v) => { if (!v) confirmDelete = false; }"
-      />
+      </MetaCatalogDrawer>
     </template>
-  </CatalogPage>
+  </SgCatalogPage>
 </template>
 
 <style scoped>
-.q-filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.q-filters > :deep(.in-sf) { flex: 1 1 320px; min-width: 280px; }
-.q-filters__search-btn, .q-filters__reset-btn { flex: 0 0 auto; align-self: flex-end; }
 .section { padding: 12px 4px; }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0; }
 .kv dt { color: var(--in-text-subtle); font-size: var(--in-font-size-sm); }
