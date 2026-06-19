@@ -58,9 +58,11 @@ function todayYmd() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+// ★ 기획서 v1.5 §02_01: 조직도 기준일은 미래 일자 조회 불가 → el-date-picker 비활성 판정(오늘 이후 차단).
+function disableFuture(d) { return dayjs(d).isAfter(dayjs(), 'day'); }
 // SgSearchBar 필드 config (메타화면 공통 패턴). type: date | select | text.
 const searchFields = [
-  { key: 'baseYmd', label: '기준일', type: 'date', chip: false },
+  { key: 'baseYmd', label: '기준일', type: 'date', chip: false, disabledDate: disableFuture },
   { key: 'viewMode', label: '보기 방식', type: 'select', chip: false,
     options: [
       { value: 'hierarchy', label: '하위 조직 구성원 포함 표시' },
@@ -69,7 +71,6 @@ const searchFields = [
   { key: 'orgName', label: '조직명', type: 'text', placeholder: '조직명 검색', chip: false },
 ];
 const search = ref({ baseYmd: todayYmd(), viewMode: 'hierarchy', orgName: '' });
-// TODO(기획서 v1.5): 미래 일자 조회 불가 — SgSearchBar date 필드에 disabled-date 전달(슬롯) 후속.
 
 // ── 그래프 상태 ──
 const rawOrgs = ref([]);
@@ -84,6 +85,8 @@ const retrieved = ref(false);
 // ── 인스펙터 (기획서 §02_05/06) ──
 const selectedNode = ref(null);
 const inspectorTab = ref('info');
+const detail = ref(null);          // 조직정보 보기 — 조직기본정보 (envelope ORM0010_01_R01)
+const detailLoading = ref(false);
 const members = ref([]);           // 조직인원 보기 — 선택 조직 구성원 (envelope ORM0040_01_R01)
 const membersLoading = ref(false);
 
@@ -274,6 +277,37 @@ function onNodeClick(e) {
   selectedNode.value = e?.node?.data || null;
 }
 
+/** 조직정보 보기 — 선택 조직의 기본정보 조회 (envelope ORM0010_01_R01 "조직기본정보조회"). 기획서 §02_05.
+ *   IN  슬롯 = ME_ORM0010_02 (func_map ARG) → SQL bind :org_id / :locale_cd / :base_ymd
+ *   OUT 슬롯 = ME_ORM0010_01_01 (func_map RET) — org_for_nm(영문명)·sta_ymd(실행일)·end_ymd(종료일)·org_type_nm(조직유형)·cost_cd(코스트센터)·company_nm·super_org_nm·org_head_emp_nm 등.
+ *   ※ 사업장(bplc)은 AS-IS 조직기본정보 SQL(ORM_ORG)에 컬럼 없음 → 별도 사업장 매핑 데이터 필요(미구축). */
+async function loadDetail() {
+  const org = selectedNode.value;
+  if (!org || !org.orgId) { detail.value = null; return; }
+  detailLoading.value = true;
+  try {
+    const body = {
+      ME_ORM0010_02: [{
+        org_id: org.orgId,
+        company_cd: auth.companyCd || '01',
+        locale_cd: (localStorage.getItem('insait.locale') || 'KO').toUpperCase(),
+        base_ymd: toYmd8(search.value.baseYmd),
+      }],
+    };
+    const resp = await svc.call('ORM0010_01_R01', body, { suppressError: true });
+    const rows = resp ? (parseResponse(resp, 'ME_ORM0010_01_01') || []) : [];
+    detail.value = rows[0] || null;
+  } finally {
+    detailLoading.value = false;
+  }
+}
+function detailField(name) { return field(detail.value, name) ?? ''; }
+// 조직 선택 시 조직정보(info 탭 디폴트) 자동 로드. 노드 해제 시 초기화.
+watch(() => selectedNode.value?.orgId, (id) => {
+  if (id) loadDetail();
+  else detail.value = null;
+});
+
 /** 조직인원 보기 — 선택 조직의 구성원 조회 (envelope ORM0040_01_R01). 기획서 §02_06. */
 async function loadMembers() {
   const org = selectedNode.value;
@@ -311,6 +345,21 @@ watch([inspectorTab, () => selectedNode.value?.orgId], () => {
   else members.value = [];
 });
 
+// ── 보기방식(기획서 §02_02) — 인원 집계 범위 분기 (프론트 only, 백엔드 무의존) ──
+// ★ ORM0040_01_R01 SQL 은 ORG_LINE LIKE 프리픽스 매칭(F_FRM_ORM_ORG_NM(:org_id,...,'LL')||'%')으로
+//   '선택 조직 + 하위 조직 전체' 구성원을 반환 = '하위 조직 구성원 포함 표시'(hierarchy)가 백엔드 기본 동작.
+//   → '선택 조직 구성원만 표시'(self)는 백엔드 모드가 없으므로, 하위 포함 결과를 선택 조직명으로 클라이언트 필터.
+//   ※ ORM0040 OUT 에 구성원 org_id 가 없어(org_nm 만 존재) 조직명 매칭 휴리스틱. 동명 조직이 같은 서브트리에
+//      공존하면 부정확할 수 있음(정확 매칭은 OUT 에 org_id 추가하는 백엔드 보강 후속).
+function stripConcurrent(s) { return String(s || '').replace(/\s*\(겸\)\s*$/, '').trim(); } // ' (겸)' 접미(겸직) 제거
+const viewMembers = computed(() => {
+  if (search.value.viewMode === 'self' && selectedNode.value) {
+    const sel = String(selectedNode.value.name || '').trim();
+    return members.value.filter((m) => stripConcurrent(memberField(m, 'org')) === sel);
+  }
+  return members.value;
+});
+
 // ── 조직인원 정렬 + 조직장/구성원 분리 (기획서 §02_06) ──
 const memberSort = ref('org'); // org(조직순서) | duty(직책·직위) | name(이름)
 // ※ 조직장 판정: ORM0040 에 조직장 플래그 없음 → 직책(duty)이 '…장/이사' 인 휴리스틱. 정확한 조직장은 조직장 서비스 후속.
@@ -318,7 +367,7 @@ function isLeaderRow(m) {
   return /(장|이사)$/.test(String(memberField(m, 'jbttl') || ''));
 }
 const sortedMembers = computed(() => {
-  const arr = [...members.value];
+  const arr = [...viewMembers.value];
   if (memberSort.value === 'name') {
     arr.sort((a, b) => String(memberField(a, 'name')).localeCompare(String(memberField(b, 'name')), 'ko'));
   } else if (memberSort.value === 'duty') {
@@ -442,27 +491,32 @@ onBeforeUnmount(() => {
             <button :class="{ on: inspectorTab === 'member' }" @click="inspectorTab = 'member'">조직인원 보기</button>
           </div>
           <div v-if="inspectorTab === 'info'" class="ocp-form">
-            <div class="ocp-form__row"><span>조직명</span><b>{{ selectedNode.name }}</b></div>
-            <div class="ocp-form__row"><span>조직코드</span><b>{{ selectedNode.code || '—' }}</b></div>
-            <div class="ocp-form__row"><span>영문명</span><b>—</b></div>
-            <div class="ocp-form__row"><span>실행일</span><b>—</b></div>
-            <div class="ocp-form__row"><span>종료일</span><b>—</b></div>
-            <div class="ocp-form__row"><span>조직유형</span><b>—</b></div>
-            <div class="ocp-form__row"><span>사업장</span><b>—</b></div>
-            <p class="ocp-form__note">※ 영문명·실행일·종료일·조직유형·사업장은 조직기본정보 서비스(ORM0010_01_R01) 후속 배선 예정.</p>
+            <div v-if="detailLoading" class="ocp-form__note">조직정보를 불러오는 중…</div>
+            <template v-else>
+              <div class="ocp-form__row"><span>조직명</span><b>{{ detailField('org_nm') || selectedNode.name }}</b></div>
+              <div class="ocp-form__row"><span>조직코드</span><b>{{ detailField('org_cd') || selectedNode.code || '—' }}</b></div>
+              <div class="ocp-form__row"><span>영문명</span><b>{{ detailField('org_for_nm') || '—' }}</b></div>
+              <div class="ocp-form__row"><span>실행일</span><b>{{ detailField('sta_ymd') || '—' }}</b></div>
+              <div class="ocp-form__row"><span>종료일</span><b>{{ detailField('end_ymd') || '—' }}</b></div>
+              <div class="ocp-form__row"><span>조직유형</span><b>{{ detailField('org_type_nm') || '—' }}</b></div>
+              <div class="ocp-form__row"><span>사업장</span><b>{{ detailField('bplc_nm') || '—' }}</b></div>
+              <div class="ocp-form__row"><span>코스트센터</span><b>{{ detailField('cost_cd') || '—' }}</b></div>
+              <p class="ocp-form__note">※ 조회용 필드. 사업장은 AS-IS 조직기본정보(ORM0010_01_R01)에 미포함 — 별도 사업장 매핑 데이터 필요.</p>
+            </template>
           </div>
           <div v-else class="ocp-form">
             <div v-if="membersLoading" class="ocp-form__note">구성원을 불러오는 중…</div>
             <template v-else>
               <div class="ocp-mem__hd">
-                <span class="ocp-mem__count">총 <b>{{ members.length }}</b>명</span>
-                <select v-model="memberSort" class="ocp-mem__sort" aria-label="정렬 순서">
+                <span class="ocp-mem__count">총 <b>{{ viewMembers.length }}</b>명</span>
+                <!-- 정렬순서는 '하위 포함' 보기일 때만 노출 (기획서 §02_06) -->
+                <select v-if="search.viewMode === 'hierarchy'" v-model="memberSort" class="ocp-mem__sort" aria-label="정렬 순서">
                   <option value="org">조직 순서</option>
                   <option value="duty">직책·직위 순서</option>
                   <option value="name">이름 순서</option>
                 </select>
               </div>
-              <div v-if="members.length === 0" class="ocp-form__note">조직원이 없습니다.</div>
+              <div v-if="viewMembers.length === 0" class="ocp-form__note">조직원이 없습니다.</div>
               <template v-else>
                 <template v-if="leaderMembers.length">
                   <div class="ocp-mem__sec">조직장</div>
@@ -473,13 +527,15 @@ onBeforeUnmount(() => {
                       :jbps="memberField(m, 'jbps')" :jbttl="memberField(m, 'jbttl')" :jbgd="memberField(m, 'jbgd')" />
                   </div>
                 </template>
-                <div class="ocp-mem__sec">구성원</div>
-                <div class="ocp-mem__list">
-                  <OrgMemberCard
-                    v-for="(m, i) in regularMembers" :key="'M' + i"
-                    :name="memberField(m, 'name')" :emp-no="memberField(m, 'empno')" :org-nm="memberField(m, 'org')"
-                    :jbps="memberField(m, 'jbps')" :jbttl="memberField(m, 'jbttl')" :jbgd="memberField(m, 'jbgd')" />
-                </div>
+                <template v-if="regularMembers.length">
+                  <div class="ocp-mem__sec">구성원</div>
+                  <div class="ocp-mem__list">
+                    <OrgMemberCard
+                      v-for="(m, i) in regularMembers" :key="'M' + i"
+                      :name="memberField(m, 'name')" :emp-no="memberField(m, 'empno')" :org-nm="memberField(m, 'org')"
+                      :jbps="memberField(m, 'jbps')" :jbttl="memberField(m, 'jbttl')" :jbgd="memberField(m, 'jbgd')" />
+                  </div>
+                </template>
               </template>
             </template>
           </div>

@@ -20,6 +20,7 @@
  *   - 커스텀 필드: #field-{key} 슬롯 (type 기반 렌더 대체). slotProps = { field, value, set(v), search() }
  *
  * type: 'date'(InDatePicker) | 'text'(InTextField) | 'select'(InSelect). 그 외/특수는 슬롯.
+ *   - date 필드 옵션 disabledDate: (Date)=>boolean — 비활성 날짜 판정(예: 미래일자 조회 차단). 미지정 시 제한 없음.
  */
 import { ref, computed } from 'vue';
 import InCard from '@/components/ui/InCard.vue';
@@ -93,6 +94,7 @@ const hasChips = computed(() => chips.value.length > 0);
                 v-if="f.type === 'date'"
                 :model-value="modelValue[f.key]"
                 hide-label
+                :disabled-date="f.disabledDate"
                 @update:model-value="(v) => setVal(f.key, v || '')"
                 @change="triggerSearch"
               />

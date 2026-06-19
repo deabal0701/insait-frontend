@@ -34,6 +34,7 @@ const props = defineProps({
   },
   format: { type: String, default: undefined },           // 표시 형식 (default 'YYYY.MM.DD')
   valueFormat: { type: String, default: 'YYYYMMDD' },     // v-model 형식 (envelope 정합)
+  disabledDate: { type: Function, default: undefined },   // (Date)=>boolean — 비활성 날짜 판정(el-date-picker 위임). 예: 미래일자 차단
   placeholder: { type: String, default: undefined },
   layout: {
     type: String,
@@ -108,6 +109,7 @@ const wrapperClasses = computed(() => [
         :placeholder="resolvedPlaceholder"
         :disabled="disabled"
         :readonly="readonly"
+        :disabled-date="disabledDate"
         @update:model-value="(v) => $emit('update:modelValue', v)"
         @change="(v) => $emit('change', v)"
       />
